@@ -8,7 +8,7 @@ import {
 
 import Badge from "../ui/badge/Badge";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface Tenant {
   id: number;
@@ -53,6 +53,7 @@ interface AlarmBasicTableProps {
   totalCount?: number;
   loading?: boolean;
   currentPage?: number;
+  onSearchChange?: (search: string) => void;
 }
 
 export default function AlarmBasicTable({ 
@@ -60,11 +61,69 @@ export default function AlarmBasicTable({
   onPageChange,
   totalCount = 0,
   loading = false,
-  currentPage: externalPage = 1
+  currentPage: externalPage = 1,
+  onSearchChange
 }: AlarmBasicTableProps) {
-  const [searchText, setSearchText] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(externalPage);
+  const [searchTerm, setSearchTerm] = useState("");
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
+
+  // Update current page when externalPage changes
+  useEffect(() => {
+    setCurrentPage(externalPage);
+  }, [externalPage]);
+
+  // Debounced search function
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      if (onSearchChange) {
+        onSearchChange(value);
+      }
+    }, 500); // 500ms delay
+  }, [onSearchChange]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleEntriesPerPageChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSize = e.target.value;
+    setEntriesPerPage(newSize);
+    setCurrentPage(1);
+    onPageChange?.(1, parseInt(newSize));
+  }, [onPageChange]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (currentPage > 1) {
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage);
+      onPageChange?.(newPage, parseInt(entriesPerPage));
+    }
+  }, [currentPage, entriesPerPage, onPageChange]);
+
+  const handleNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage);
+      onPageChange?.(newPage, parseInt(entriesPerPage));
+    }
+  }, [currentPage, entriesPerPage, onPageChange, totalPages]);
 
   const getStatusColor = (stage: string) => {
     switch (stage.toLowerCase()) {
@@ -87,7 +146,7 @@ export default function AlarmBasicTable({
       alarm.suburb,
       alarm.state,
       alarm.postal_code,
-      alarm.country === 'Australia' ? null : alarm.country // Only show country if not Australia
+      alarm.country === 'Australia' ? null : alarm.country
     ].filter(Boolean);
     return parts.join(', ');
   };
@@ -100,34 +159,9 @@ export default function AlarmBasicTable({
     return format(new Date(date), 'dd/MM/yyyy');
   };
 
-  const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      const newPage = currentPage - 1;
-      setCurrentPage(newPage);
-      onPageChange?.(newPage, parseInt(entriesPerPage));
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      const newPage = currentPage + 1;
-      setCurrentPage(newPage);
-      onPageChange?.(newPage, parseInt(entriesPerPage));
-    }
-  };
-
-  const handleEntriesPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSize = e.target.value;
-    setEntriesPerPage(newSize);
-    setCurrentPage(1);
-    onPageChange?.(1, parseInt(newSize));
-  };
-
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-      <div className="flex flex-col gap-2 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-gray-500 dark:text-gray-400">Show</span>
           <div className="relative z-20 bg-transparent">
@@ -150,21 +184,27 @@ export default function AlarmBasicTable({
           </div>
           <span className="text-gray-500 dark:text-gray-400">entries</span>
         </div>
-        <div className="relative">
-          <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none left-4 top-1/2 dark:text-gray-400">
-            <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M3.04199 9.37363C3.04199 5.87693 5.87735 3.04199 9.37533 3.04199C12.8733 3.04199 15.7087 5.87693 15.7087 9.37363C15.7087 12.8703 12.8733 15.7053 9.37533 15.7053C5.87735 15.7053 3.04199 12.8703 3.04199 9.37363ZM9.37533 1.54199C5.04926 1.54199 1.54199 5.04817 1.54199 9.37363C1.54199 13.6991 5.04926 17.2053 9.37533 17.2053C11.2676 17.2053 13.0032 16.5344 14.3572 15.4176L17.1773 18.238C17.4702 18.5309 17.945 18.5309 18.2379 18.238C18.5308 17.9451 18.5309 17.4703 18.238 17.1773L15.4182 14.3573C16.5367 13.0033 17.2087 11.2669 17.2087 9.37363C17.2087 5.04817 13.7014 1.54199 9.37533 1.54199Z" fill=""></path>
-            </svg>
-          </span>
-          <input
-            placeholder="Search..."
-            className="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-11 pr-4 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[300px]"
-            type="text"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
+        
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 dark:text-gray-400">Search:</span>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Search by address, contact, work order, tenant..."
+              className="w-64 py-2 pl-3 pr-10 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="m14 14-2.9-2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+          </div>
         </div>
       </div>
+
       <div className="max-w-full overflow-x-auto">
         <Table>
           <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
@@ -273,6 +313,7 @@ export default function AlarmBasicTable({
           </TableBody>
         </Table>
       </div>
+
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           Showing {alarms.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries

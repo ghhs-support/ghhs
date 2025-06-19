@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Alarm, Tenant
-from .serializers import AlarmSerializer
+from .serializers import AlarmSerializer, TenantSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -10,24 +10,26 @@ from rest_framework.pagination import PageNumberPagination
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
-    page_size_query_param = 'pageSize'
+    page_size_query_param = 'page_size'
     max_page_size = 200
     page_query_param = 'page'
 
     def get_page_size(self, request):
         if self.page_size_query_param:
-            try:
-                page_size = int(request.query_params.get(self.page_size_query_param, self.page_size))
-                if page_size in [10, 25, 50, 100, 200]:
-                    return page_size
-            except (TypeError, ValueError):
-                pass
+            page_size = request.query_params.get(self.page_size_query_param)
+            if page_size:
+                try:
+                    page_size_int = int(page_size)
+                    if page_size_int in [10, 25, 50, 100, 200]:
+                        return page_size_int
+                except (TypeError, ValueError):
+                    pass
         return self.page_size
 
 # Create your views here.
 
 class AlarmViewSet(viewsets.ModelViewSet):
-    queryset = Alarm.objects.all()
+    queryset = Alarm.objects.all().order_by('-created_at')
     serializer_class = AlarmSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
@@ -37,12 +39,12 @@ class AlarmViewSet(viewsets.ModelViewSet):
         print("DEBUG: User:", self.request.user)
         print("DEBUG: User authenticated:", self.request.user.is_authenticated)
         
-        queryset = Alarm.objects.all()
+        queryset = super().get_queryset()
         
         # Get query parameters
         stage = self.request.query_params.get('stage', None)
         completed = self.request.query_params.get('completed', None)
-        search = self.request.query_params.get('search', None)
+        search = self.request.query_params.get('search', '').strip()
         
         # Apply filters
         if stage:
@@ -50,15 +52,25 @@ class AlarmViewSet(viewsets.ModelViewSet):
         if completed is not None:
             queryset = queryset.filter(completed=completed == 'true')
         if search:
-            queryset = queryset.filter(
-                Q(street_number__icontains=search) |
-                Q(street_name__icontains=search) |
-                Q(suburb__icontains=search) |
-                Q(who_contacted__icontains=search) |
-                Q(work_order_number__icontains=search) |
-                Q(stage__icontains=search) |
-                Q(tenants__name__icontains=search)
-            ).distinct()
+            search_terms = search.split()
+            q_objects = Q()
+            
+            for term in search_terms:
+                q_objects |= (
+                    Q(realestate_name__icontains=term) |
+                    Q(street_number__icontains=term) |
+                    Q(street_name__icontains=term) |
+                    Q(suburb__icontains=term) |
+                    Q(city__icontains=term) |
+                    Q(state__icontains=term) |
+                    Q(postal_code__icontains=term) |
+                    Q(who_contacted__icontains=term) |
+                    Q(work_order_number__icontains=term) |
+                    Q(tenants__name__icontains=term) |
+                    Q(tenants__phone__icontains=term)
+                )
+            
+            queryset = queryset.filter(q_objects).distinct()
             
         return queryset.order_by('-date')
 
@@ -110,3 +122,7 @@ class AlarmViewSet(viewsets.ModelViewSet):
             print("DEBUG: Serializer save failed with error:", str(e))
             print("DEBUG: Serializer errors:", serializer.errors)
             raise
+
+class TenantViewSet(viewsets.ModelViewSet):
+    queryset = Tenant.objects.all()
+    serializer_class = TenantSerializer

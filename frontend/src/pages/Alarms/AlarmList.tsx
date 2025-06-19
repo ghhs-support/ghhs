@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import AlarmBasicTable from "../../components/alarms/AlarmBasictable";
@@ -6,6 +6,7 @@ import ComponentCard from "../../components/common/ComponentCard";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
+
 import api from "../../services/api";
 
 interface Tenant {
@@ -55,34 +56,40 @@ interface PaginatedResponse {
 export default function AlarmListPage() {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageSize, setCurrentPageSize] = useState(10);
+  const [currentSearch, setCurrentSearch] = useState("");
+  const [error, setError] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchAlarms = async (page = 1, pageSize = 10) => {
-    setLoading(true);
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string) => {
     try {
-      const response = await api.get<PaginatedResponse>('/api/alarms/', {
-        params: {
-          page,
-          pageSize
-        }
+      setLoading(true);
+      setError("");
+      
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
       });
-      console.log('API Response:', response.data);
+      
+      if (search?.trim()) {
+        params.append('search', search.trim());
+      }
+
+      const response = await api.get(`/api/alarms/?${params.toString()}`);
       setAlarms(response.data.results);
       setTotalCount(response.data.count);
       setCurrentPage(page);
-    } catch (err) {
-      console.error('Error fetching alarms:', err);
-      setError('Failed to fetch alarms');
+      setCurrentPageSize(pageSize);
+      setCurrentSearch(search || "");
+    } catch (error) {
+      console.error('Error fetching alarms:', error);
+      setError('Failed to fetch alarms. Please try again.');
+      // Keep the previous data on error
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchAlarms(currentPage);
   }, []);
 
   const handleAddClick = () => {
@@ -94,12 +101,34 @@ export default function AlarmListPage() {
   };
 
   const handleAlarmCreated = () => {
-    fetchAlarms(currentPage);
+    fetchAlarms(currentPage, currentPageSize, currentSearch);
   };
 
-  const handlePageChange = (page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize);
-  };
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    fetchAlarms(page, pageSize, currentSearch);
+  }, [fetchAlarms, currentSearch]);
+
+  const handleSearchChange = useCallback((search: string) => {
+    fetchAlarms(1, currentPageSize, search);
+  }, [fetchAlarms, currentPageSize]);
+
+  // Initial load
+  useEffect(() => {
+    fetchAlarms(1, 10, "");
+  }, [fetchAlarms]);
+
+  // Reset when component unmounts
+  useEffect(() => {
+    return () => {
+      setAlarms([]);
+      setLoading(true);
+      setTotalCount(0);
+      setCurrentPage(1);
+      setCurrentPageSize(10);
+      setCurrentSearch("");
+      setError("");
+    };
+  }, []);
 
   return (
     <>
@@ -119,11 +148,7 @@ export default function AlarmListPage() {
           </Button>
         </div>
         <ComponentCard title="Alarm List">
-          {loading && alarms.length === 0 ? (
-            <div className="flex justify-center items-center min-h-[400px]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="flex justify-center items-center min-h-[400px] text-red-500">{error}</div>
           ) : (
             <AlarmBasicTable 
@@ -132,6 +157,7 @@ export default function AlarmListPage() {
               totalCount={totalCount}
               onPageChange={handlePageChange}
               currentPage={currentPage}
+              onSearchChange={handleSearchChange}
             />
           )}
         </ComponentCard>
