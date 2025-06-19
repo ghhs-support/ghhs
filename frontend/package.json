@@ -16,6 +16,7 @@
     "@fullcalendar/list": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
+    "@kinde-oss/kinde-auth-react": "^5.5.0",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
     "apexcharts": "^4.1.0",
@@ -29,6 +30,7 @@
     "react-dropzone": "^14.3.5",
     "react-helmet-async": "^2.0.5",
     "react-router": "^7.1.5",
+    "react-router-dom": "^7.6.2",
     "swiper": "^11.2.3",
     "tailwind-merge": "^3.0.1"
   },

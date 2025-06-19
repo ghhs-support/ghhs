@@ -18,15 +18,43 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import AdminAccess from "./pages/AdminAccess";
+import { KindeProvider } from "@kinde-oss/kinde-auth-react";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+
+// Suppress Kinde SDK error logs in development
+if (import.meta.env.DEV) {
+  const originalError = console.error;
+  console.error = (...args) => {
+    // Filter out Kinde token exchange errors that don't affect functionality
+    const errorMessage = args.join(' ');
+    if (errorMessage.includes('Token exchange failed: 500') || 
+        errorMessage.includes('POST https://ghhs.kinde.com/oauth2/token 500')) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
 
 export default function App() {
   return (
-    <>
+    <KindeProvider
+      clientId="9b6e7df3e3ec46beb2d09a89565da00b"
+      domain="https://ghhs.kinde.com"
+      redirectUri="http://localhost:5173"
+      logoutUri="http://localhost:5173"
+    >
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
+          {/* Protected Dashboard Layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index path="/" element={<Home />} />
 
             {/* Others Page */}
@@ -53,7 +81,10 @@ export default function App() {
             <Route path="/bar-chart" element={<BarChart />} />
           </Route>
 
-          {/* Auth Layout */}
+          {/* Admin Access - Protected */}
+          <Route path="/admin" element={<AdminAccess />} />
+
+          {/* Auth Layout - Not Protected */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
 
@@ -61,6 +92,6 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
-    </>
+    </KindeProvider>
   );
 }
