@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'auth_app',
     'rest_framework',
     'corsheaders',
 ]
@@ -52,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend.middleware.AdminLoginRedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -133,22 +135,23 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Kinde Configuration
-KINDE_ISSUER_URL = 'https://ghhs.kinde.com'
-KINDE_CLIENT_ID = '8e219e4343ba4cd2b27ef9ab9f007d84'
-KINDE_CLIENT_SECRET = 'P8nmCkaLX8BJQFgYlpNuOEGtDB6e0hzencrXQPb9baErUpf3516'
-KINDE_CALLBACK_URL = 'http://localhost:8000/api/auth/callback/'
-KINDE_LOGOUT_URL = 'http://localhost:8000/api/auth/logout'
-KINDE_DOMAIN = "https://ghhs.kinde.com"
-KINDE_CLIENT_ID_M2M = '2eb5ecf704ad4da087ba45141f7977a4'
-KINDE_CLIENT_SECRET_M2M = 'lKmnGsvAKkfck109MgWweNvEz8EO5wt4phdeHFMhhtk48zx6dDq'
-KINDE_MGMNT_AUDIENCE="https://ghhs.kinde.com/api"
+# Kinde Configuration for Django Backend
+KINDE_ISSUER_URL = os.environ.get('KINDE_ISSUER_URL')
+KINDE_CLIENT_ID = os.environ.get('KINDE_CLIENT_ID')
+KINDE_CLIENT_SECRET = os.environ.get('KINDE_CLIENT_SECRET')      
+KINDE_CALLBACK_URL = os.environ.get('KINDE_CALLBACK_URL')
+KINDE_LOGOUT_URL = os.environ.get('KINDE_LOGOUT_URL')
+
+# Machine-to-Machine (M2M) credentials for backend API calls
+KINDE_CLIENT_ID_M2M = os.environ.get('KINDE_CLIENT_ID_M2M')
+KINDE_CLIENT_SECRET_M2M = os.environ.get('KINDE_CLIENT_SECRET_M2M')
+KINDE_MGMNT_AUDIENCE = os.environ.get('KINDE_MGMNT_AUDIENCE')       
 
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
     "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -174,6 +177,16 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# CSRF Configuration
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+]
+
+# Allow admin access from frontend
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
+
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -185,9 +198,5 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    'backend.authentication.KindeBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-
-LOGIN_URL = '/api/auth/login/'  # Updated to use our custom login view
-LOGIN_REDIRECT_URL = '/admin/'  # Where to go after login
