@@ -56,11 +56,11 @@ Successfully migrated from Django backend authentication to frontend-only authen
 
 ## Environment Variables
 ```env
-# Frontend
-VITE_KINDE_CLIENT_ID=9b6e7df3e3ec46beb2d09a89565da00b
+# Frontend (.env)
+VITE_KINDE_CLIENT_ID=your_client_id
 VITE_KINDE_DOMAIN=https://ghhs.kinde.com
 
-# Backend
+# Backend (.env)
 KINDE_CLIENT_ID_M2M=your_m2m_client_id
 KINDE_CLIENT_SECRET_M2M=your_m2m_client_secret
 KINDE_MGMNT_AUDIENCE=your_audience_url
@@ -77,5 +77,6 @@ KINDE_MGMNT_AUDIENCE=your_audience_url
 - ✅ CSRF protection maintained
 - ✅ Secure user creation/retrieval
 - ✅ Staff and superuser privileges
+- ✅ Environment variables for configuration
 
 This implementation provides secure authentication with seamless Django admin access. 
