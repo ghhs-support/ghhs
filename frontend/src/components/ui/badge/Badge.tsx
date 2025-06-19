@@ -1,5 +1,5 @@
 type BadgeVariant = "light" | "solid";
-type BadgeSize = "sm" | "md";
+type BadgeSize = "xs" | "sm" | "md";
 type BadgeColor =
   | "primary"
   | "success"
@@ -26,13 +26,13 @@ const Badge: React.FC<BadgeProps> = ({
   endIcon,
   children,
 }) => {
-  const baseStyles =
-    "inline-flex items-center px-2.5 py-0.5 justify-center gap-1 rounded-full font-medium";
+  const baseStyles = "inline-flex items-center justify-center gap-1 rounded-full font-medium";
 
   // Define size styles
   const sizeStyles = {
-    sm: "text-theme-xs", // Smaller padding and font size
-    md: "text-sm", // Default padding and font size
+    xs: "px-1.5 py-0.5 text-[10px]", // Extra small size
+    sm: "px-2 py-0.5 text-xs", // Small size
+    md: "px-2.5 py-1 text-sm", // Default size
   };
 
   // Define color styles for variants
@@ -67,9 +67,9 @@ const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span className={`${baseStyles} ${sizeClass} ${colorStyles}`}>
-      {startIcon && <span className="mr-1">{startIcon}</span>}
+      {startIcon && <span className="mr-0.5">{startIcon}</span>}
       {children}
-      {endIcon && <span className="ml-1">{endIcon}</span>}
+      {endIcon && <span className="ml-0.5">{endIcon}</span>}
     </span>
   );
 };

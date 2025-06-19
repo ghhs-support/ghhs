@@ -159,13 +159,15 @@ export default function AlarmBasicTable({ alarms }: AlarmBasicTableProps) {
                   </span>
                 </TableCell>
                 <TableCell className="px-3 py-2 text-start">
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color={getStatusColor(alarm.stage)}
-                  >
-                    {alarm.stage.replace(/_/g, ' ').toUpperCase()}
-                  </Badge>
+                  <div className="w-24 whitespace-nowrap">
+                    <Badge
+                      size="xs"
+                      variant="light"
+                      color={getStatusColor(alarm.stage)}
+                    >
+                      {alarm.stage.replace(/_/g, ' ').toUpperCase()}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell className="px-3 py-2 text-start">
                   <span className="text-theme-xs text-gray-800 dark:text-white/90">
