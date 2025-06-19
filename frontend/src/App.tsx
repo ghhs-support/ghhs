@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -21,6 +21,7 @@ import Home from "./pages/Dashboard/Home";
 import AdminAccess from "./pages/AdminAccess";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import AlarmListPage from "./pages/Alarms/AlarmList";
 
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
+            <Route path="/alarms" element={<AlarmListPage />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

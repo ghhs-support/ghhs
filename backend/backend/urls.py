@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -81,4 +81,5 @@ def admin_access(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/admin-access/', admin_access, name='admin_access'),
+    path('api/', include('alarms.urls')),  # Add alarms URLs under /api/ prefix
 ]
