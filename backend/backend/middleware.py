@@ -13,17 +13,21 @@ class AdminLoginRedirectMiddleware:
             kinde_authenticated = request.session.get('kinde_authenticated', False)
             
             # Debug logging
-            print(f"Admin access attempt - Kinde session: {kinde_authenticated}, Django auth: {request.user.is_authenticated}")
+            print(f"Admin access attempt - Path: {request.path}")
+            print(f"  - Kinde session: {kinde_authenticated}")
+            print(f"  - Django auth: {request.user.is_authenticated}")
+            print(f"  - User: {request.user.username if request.user.is_authenticated else 'Anonymous'}")
+            print(f"  - Session keys: {list(request.session.keys())}")
             
             # Check if user is authenticated via Kinde session or Django
             if kinde_authenticated or request.user.is_authenticated:
                 if kinde_authenticated:
-                    print("Allowing access via Kinde session authentication")
+                    print("  ✓ Allowing access via Kinde session authentication")
                 else:
-                    print("Allowing access via Django authentication")
+                    print("  ✓ Allowing access via Django authentication")
                 return self.get_response(request)
             else:
-                print("No authentication found, redirecting to login")
+                print("  ✗ No authentication found, redirecting to login")
                 return redirect('http://localhost:5173/signin')
         
         return self.get_response(request)
