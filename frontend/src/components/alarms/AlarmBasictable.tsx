@@ -49,11 +49,22 @@ interface Alarm {
 
 interface AlarmBasicTableProps {
   alarms: Alarm[];
+  onPageChange?: (page: number, pageSize: number) => void;
+  totalCount?: number;
+  loading?: boolean;
+  currentPage?: number;
 }
 
-export default function AlarmBasicTable({ alarms }: AlarmBasicTableProps) {
+export default function AlarmBasicTable({ 
+  alarms, 
+  onPageChange,
+  totalCount = 0,
+  loading = false,
+  currentPage: externalPage = 1
+}: AlarmBasicTableProps) {
   const [searchText, setSearchText] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [currentPage, setCurrentPage] = useState(externalPage);
 
   const getStatusColor = (stage: string) => {
     switch (stage.toLowerCase()) {
@@ -89,16 +100,30 @@ export default function AlarmBasicTable({ alarms }: AlarmBasicTableProps) {
     return format(new Date(date), 'dd/MM/yyyy');
   };
 
-  const filteredAlarms = alarms.filter((alarm) => {
-    const searchLower = searchText.toLowerCase();
-    return (
-      formatAddress(alarm).toLowerCase().includes(searchLower) ||
-      alarm.who_contacted.toLowerCase().includes(searchLower) ||
-      alarm.work_order_number.toLowerCase().includes(searchLower) ||
-      formatTenants(alarm.tenants).toLowerCase().includes(searchLower) ||
-      alarm.stage.toLowerCase().includes(searchLower)
-    );
-  });
+  const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage);
+      onPageChange?.(newPage, parseInt(entriesPerPage));
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage);
+      onPageChange?.(newPage, parseInt(entriesPerPage));
+    }
+  };
+
+  const handleEntriesPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSize = e.target.value;
+    setEntriesPerPage(newSize);
+    setCurrentPage(1);
+    onPageChange?.(1, parseInt(newSize));
+  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -108,12 +133,14 @@ export default function AlarmBasicTable({ alarms }: AlarmBasicTableProps) {
           <div className="relative z-20 bg-transparent">
             <select
               value={entriesPerPage}
-              onChange={(e) => setEntriesPerPage(e.target.value)}
+              onChange={handleEntriesPerPageChange}
               className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-transparent border border-gray-300 rounded-lg appearance-none dark:bg-dark-900 h-9 bg-none shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
-              <option value="5" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">5</option>
-              <option value="8" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">8</option>
               <option value="10" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">10</option>
+              <option value="25" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">25</option>
+              <option value="50" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">50</option>
+              <option value="100" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">100</option>
+              <option value="200" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">200</option>
             </select>
             <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
               <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -182,53 +209,90 @@ export default function AlarmBasicTable({ alarms }: AlarmBasicTableProps) {
           </TableHeader>
 
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {filteredAlarms.slice(0, parseInt(entriesPerPage)).map((alarm) => (
-              <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                <TableCell className="px-3 py-2 text-start">
-                  <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
-                    {formatDate(alarm.date)}
-                  </span>
-                </TableCell>
-                <TableCell className="px-3 py-2 text-start">
-                  <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                    {formatAddress(alarm)}
-                  </span>
-                </TableCell>
-                <TableCell className="px-3 py-2 text-start">
-                  <div className="space-y-0.5">
-                    <div className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
-                      {alarm.who_contacted}
-                    </div>
-                    <div className="text-theme-xs text-gray-500 dark:text-gray-400">
-                      {alarm.contact_method}
-                    </div>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="px-3 py-8 text-center">
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
                   </div>
-                </TableCell>
-                <TableCell className="px-3 py-2 text-start">
-                  <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                    {alarm.work_order_number || '-'}
-                  </span>
-                </TableCell>
-                <TableCell className="px-3 py-2 text-start">
-                  <div className="w-24 whitespace-nowrap">
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color={getStatusColor(alarm.stage)}
-                    >
-                      {alarm.stage.replace(/_/g, ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="px-3 py-2 text-start">
-                  <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                    {formatTenants(alarm.tenants)}
-                  </span>
                 </TableCell>
               </TableRow>
-            ))}
+            ) : alarms.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No alarms found
+                </TableCell>
+              </TableRow>
+            ) : (
+              alarms.map((alarm) => (
+                <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                  <TableCell className="px-3 py-2 text-start">
+                    <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
+                      {formatDate(alarm.date)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-start">
+                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      {formatAddress(alarm)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-start">
+                    <div className="space-y-0.5">
+                      <div className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
+                        {alarm.who_contacted}
+                      </div>
+                      <div className="text-theme-xs text-gray-500 dark:text-gray-400">
+                        {alarm.contact_method}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-start">
+                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      {alarm.work_order_number || '-'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-start">
+                    <div className="w-24 whitespace-nowrap">
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color={getStatusColor(alarm.stage)}
+                      >
+                        {alarm.stage.replace(/_/g, ' ').toUpperCase()}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3 py-2 text-start">
+                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      {formatTenants(alarm.tenants)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Showing {alarms.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+            className="px-3 py-1 text-sm text-gray-500 bg-white border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage >= totalPages}
+            className="px-3 py-1 text-sm text-gray-500 bg-white border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
