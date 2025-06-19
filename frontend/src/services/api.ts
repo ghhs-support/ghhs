@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8000',  // Django development server
   headers: {
@@ -7,10 +14,20 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor to include credentials
+// Add a request interceptor to include credentials and CSRF token
 api.interceptors.request.use(
   (config) => {
+    // Include credentials (cookies)
     config.withCredentials = true;
+
+    // Add CSRF token for non-GET requests
+    if (config.method !== 'get') {
+      const csrfToken = getCookie('csrftoken');
+      if (csrfToken) {
+        config.headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+
     return config;
   },
   (error) => {

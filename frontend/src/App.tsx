@@ -22,6 +22,8 @@ import AdminAccess from "./pages/AdminAccess";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import AlarmListPage from "./pages/Alarms/AlarmList";
+import { useEffect } from 'react';
+import api from './services/api';
 
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
@@ -38,6 +40,13 @@ if (import.meta.env.DEV) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Fetch CSRF token by making a GET request to Django
+    api.get('/api/alarms/').catch(error => {
+      console.error('Error fetching initial data:', error);
+    });
+  }, []);
+
   return (
     <KindeProvider
       clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
