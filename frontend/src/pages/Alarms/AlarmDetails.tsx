@@ -269,9 +269,11 @@ export default function AlarmDetails() {
           formData.append('alarm', id!);
           formData.append('update_time', updateResponse.data.created_at);
           
+          // Add description to link images to this specific update
           selectedImages.forEach(image => {
             formData.append('images', image);
           });
+          formData.append('description', `update_${updateResponse.data.id}`);
 
           try {
             const imageResponse = await api.post('/api/alarm-images/', formData, {
@@ -309,9 +311,11 @@ export default function AlarmDetails() {
         formData.append('alarm', id!);
         formData.append('update_time', update.created_at);
         
+        // Add description to link images to this specific update
         selectedImages.forEach(image => {
           formData.append('images', image);
         });
+        formData.append('description', `update_${selectedUpdateId}`);
 
         try {
           const imageResponse = await api.post('/api/alarm-images/', formData, {
@@ -558,9 +562,14 @@ export default function AlarmDetails() {
             </Button>
           </div>
 
-          <div className="h-[600px] relative bg-white dark:bg-gray-800 rounded-lg">
-            <div className={`h-full transition-all duration-300 ${updatesLoading ? 'blur-[2px]' : ''}`}>
-              <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg">
+            <div className={`transition-all duration-300 ${updatesLoading ? 'blur-[2px]' : ''}`}>
+              <div className="overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500" 
+                style={{
+                  minHeight: '200px',
+                  maxHeight: '600px',
+                  height: 'auto'
+                }}>
                 {updates.length > 0 ? (
                   <div className="space-y-4 py-4">
                     {updates.map((update) => {
@@ -579,10 +588,17 @@ export default function AlarmDetails() {
                         : `User ${update.created_by}`;
 
                       const matchingImages = alarm.images?.filter(image => {
+                        // If the image has a description that matches the update ID, it was uploaded to this specific update
+                        if (image.description && image.description.startsWith(`update_${update.id}`)) {
+                          return true;
+                        }
+                        
+                        // For legacy images or when no specific update is linked, use timestamp matching
                         const imageTime = new Date(image.uploaded_at).getTime();
                         const updateTime = new Date(update.created_at).getTime();
                         const timeDiff = Math.abs(imageTime - updateTime);
-                        return timeDiff < 60000;
+                        // Reduce time window to 10 seconds for more precise matching
+                        return timeDiff < 10000; // 10 seconds window
                       }) || [];
                       
                       return (
@@ -665,7 +681,7 @@ export default function AlarmDetails() {
                     })}
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center">
+                  <div className="h-[200px] flex items-center justify-center">
                     <p className="text-center text-gray-500 dark:text-gray-400">
                       No updates yet. Click "Add Update" to create the first update.
                     </p>
@@ -970,17 +986,17 @@ export default function AlarmDetails() {
               </Button>
             </div>
             {alarm.images && alarm.images.length > 0 ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+              <div className="flex flex-wrap gap-3">
                 {alarm.images.map((image) => (
                   <div 
                     key={image.id} 
-                    className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                    className="relative w-24 h-24 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 group flex-shrink-0"
                     onClick={() => handleImageClick(image, alarm.images || [])}
                   >
                     <img
                       src={image.image_url}
                       alt={`Image ${image.id}`}
-                      className="h-full w-full object-cover transition-transform hover:scale-105"
+                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
                       loading="lazy"
                       onError={(e) => {
                         const imgElement = e.currentTarget;
@@ -990,8 +1006,10 @@ export default function AlarmDetails() {
                         }
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-xs text-white text-center">
-                      {format(new Date(image.uploaded_at), 'dd/MM/yy')}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                      <div className="text-[10px] text-white text-center font-medium">
+                        {format(new Date(image.uploaded_at), 'dd/MM/yy HH:mm')}
+                      </div>
                     </div>
                   </div>
                 ))}
