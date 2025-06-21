@@ -71,10 +71,13 @@ export default function AlarmListPage() {
   const [currentAddressFilter, setCurrentAddressFilter] = useState("");
   const [currentDateFrom, setCurrentDateFrom] = useState("");
   const [currentDateTo, setCurrentDateTo] = useState("");
+  const [currentExactDate, setCurrentExactDate] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedDateFrom, setSelectedDateFrom] = useState("");
   const [selectedDateTo, setSelectedDateTo] = useState("");
+  const [selectedExactDate, setSelectedExactDate] = useState("");
+  const [isDateRangeMode, setIsDateRangeMode] = useState(true);
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
   const [error, setError] = useState("");
@@ -89,7 +92,7 @@ export default function AlarmListPage() {
     { value: 'to_be_called', label: 'To Be Called' },
   ];
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string) => {
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string, dateExact?: string) => {
     try {
       setLoading(true);
       setError("");
@@ -119,6 +122,10 @@ export default function AlarmListPage() {
         params.append('date_to', dateTo.trim());
       }
 
+      if (dateExact?.trim()) {
+        params.append('date_exact', dateExact.trim());
+      }
+
       const response = await api.get(`/api/alarms/?${params.toString()}`);
       
       setAlarms(response.data.results);
@@ -130,6 +137,7 @@ export default function AlarmListPage() {
       setCurrentAddressFilter(address || "");
       setCurrentDateFrom(dateFrom || "");
       setCurrentDateTo(dateTo || "");
+      setCurrentExactDate(dateExact || "");
     } catch (error) {
       console.error('Error fetching alarms:', error);
       setError('Failed to fetch alarms. Please try again.');
@@ -161,16 +169,16 @@ export default function AlarmListPage() {
   };
 
   const handleAlarmCreated = () => {
-    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter);
+    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
   };
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo);
-  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo]);
+    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
+  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
 
   const handleSearchChange = useCallback((search: string) => {
-    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo);
-  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo]);
+    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
+  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
 
   const handleStageFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStage(e.target.value);
@@ -228,31 +236,68 @@ export default function AlarmListPage() {
     }
   };
 
+  const handleExactDateChange = (selectedDates: Date[]) => {
+    if (selectedDates.length > 0) {
+      const date = selectedDates[0];
+      const backendDateStr = formatDateToBackend(date);
+      setSelectedExactDate(backendDateStr);
+    } else {
+      setSelectedExactDate('');
+    }
+  };
+
+  const handleDateModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const isRange = e.target.value === 'range';
+    setIsDateRangeMode(isRange);
+    // Clear all date filters when switching modes
+    setSelectedDateFrom('');
+    setSelectedDateTo('');
+    setSelectedExactDate('');
+    setCurrentDateFrom('');
+    setCurrentDateTo('');
+    setCurrentExactDate('');
+  };
+
   const handleApplyFilters = useCallback(() => {
-    // Only apply date filters if both dates are selected
-    const dateFrom = (selectedDateFrom && selectedDateTo) ? selectedDateFrom : '';
-    const dateTo = (selectedDateFrom && selectedDateTo) ? selectedDateTo : '';
+    let dateFrom = '';
+    let dateTo = '';
+    let dateExact = '';
     
-    // Show error if only one date is selected
-    if ((selectedDateFrom && !selectedDateTo) || (!selectedDateFrom && selectedDateTo)) {
-      setError("Please select both From and To dates for date range filtering");
-      return;
+    if (isDateRangeMode) {
+      // Only apply date range filters if both dates are selected
+      dateFrom = (selectedDateFrom && selectedDateTo) ? selectedDateFrom : '';
+      dateTo = (selectedDateFrom && selectedDateTo) ? selectedDateTo : '';
+      
+      // Show error if only one date is selected
+      if ((selectedDateFrom && !selectedDateTo) || (!selectedDateFrom && selectedDateTo)) {
+        setError("Please select both From and To dates for date range filtering");
+        return;
+      }
+    } else {
+      // Apply exact date filter
+      dateExact = selectedExactDate;
     }
     
     setError(""); // Clear any existing error
-    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo);
-  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo]);
+    setCurrentDateFrom(dateFrom);
+    setCurrentDateTo(dateTo);
+    setCurrentExactDate(dateExact);
+    
+    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo, dateExact);
+  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo, selectedExactDate, isDateRangeMode]);
 
   const handleClearAllFilters = useCallback(() => {
     setSelectedStage("");
     setSelectedAddress("");
     setSelectedDateFrom("");
     setSelectedDateTo("");
+    setSelectedExactDate("");
     setCurrentStageFilter("");
     setCurrentAddressFilter("");
     setCurrentDateFrom("");
     setCurrentDateTo("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "");
+    setCurrentExactDate("");
+    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "", "");
   }, [fetchAlarms, currentPageSize, currentSearch]);
 
   const handleClearStageFilter = useCallback(() => {
@@ -268,12 +313,16 @@ export default function AlarmListPage() {
   const handleClearDateFilter = useCallback(() => {
     setSelectedDateFrom("");
     setSelectedDateTo("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "");
+    setSelectedExactDate("");
+    setCurrentDateFrom("");
+    setCurrentDateTo("");
+    setCurrentExactDate("");
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "", "");
   }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter]);
 
   // Initial load
   useEffect(() => {
-    fetchAlarms(1, 10, "", "", "", "", "");
+    fetchAlarms(1, 10, "", "", "", "", "", "");
   }, [fetchAlarms]);
 
   // Reset when component unmounts
@@ -293,6 +342,9 @@ export default function AlarmListPage() {
       setSelectedAddress("");
       setSelectedDateFrom("");
       setSelectedDateTo("");
+      setSelectedExactDate("");
+      setCurrentExactDate("");
+      setIsDateRangeMode(true);
       setAddressOptions([]);
       setError("");
       
@@ -363,27 +415,62 @@ export default function AlarmListPage() {
                 />
               </div>
 
-              {/* Date From Filter */}
+              {/* Date Filter Section */}
               <div className="space-y-2">
-                <DatePicker
-                  id="date-from-filter"
-                  label="Date From"
-                  placeholder="Select start date"
-                  onChange={handleDateFromChange}
-                  value={selectedDateFrom}
-                />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Filter Type</label>
+                <div className="relative">
+                  <select
+                    value={isDateRangeMode ? 'range' : 'exact'}
+                    onChange={handleDateModeChange}
+                    className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                  >
+                    <option value="range">Date Range</option>
+                    <option value="exact">Exact Date</option>
+                  </select>
+                  <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
+                    <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
+                    </svg>
+                  </span>
+                </div>
               </div>
 
-              {/* Date To Filter */}
-              <div className="space-y-2">
-                <DatePicker
-                  id="date-to-filter"
-                  label="Date To"
-                  placeholder="Select end date"
-                  onChange={handleDateToChange}
-                  value={selectedDateTo}
-                />
-              </div>
+              {isDateRangeMode ? (
+                <>
+                  {/* Date From Filter */}
+                  <div className="space-y-2">
+                    <DatePicker
+                      id="date-from-filter"
+                      label="Date From"
+                      placeholder="Select start date"
+                      onChange={handleDateFromChange}
+                      value={selectedDateFrom}
+                    />
+                  </div>
+
+                  {/* Date To Filter */}
+                  <div className="space-y-2">
+                    <DatePicker
+                      id="date-to-filter"
+                      label="Date To"
+                      placeholder="Select end date"
+                      onChange={handleDateToChange}
+                      value={selectedDateTo}
+                    />
+                  </div>
+                </>
+              ) : (
+                /* Exact Date Filter */
+                <div className="space-y-2">
+                  <DatePicker
+                    id="date-exact-filter"
+                    label="Exact Date"
+                    placeholder="Select date"
+                    onChange={handleExactDateChange}
+                    value={selectedExactDate}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Action Buttons and Error Display */}
@@ -444,14 +531,16 @@ export default function AlarmListPage() {
                     </div>
                   )}
 
-                  {(currentDateFrom || currentDateTo) && (
+                  {(currentDateFrom || currentDateTo || currentExactDate) && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm dark:bg-purple-900 dark:text-purple-200">
                       <span>
-                        Date: {currentDateFrom && currentDateTo 
-                          ? `${formatDateForDisplay(currentDateFrom)} to ${formatDateForDisplay(currentDateTo)}` 
-                          : currentDateFrom 
-                            ? `From ${formatDateForDisplay(currentDateFrom)}` 
-                            : `To ${formatDateForDisplay(currentDateTo)}`
+                        {currentExactDate 
+                          ? `Date: ${formatDateForDisplay(currentExactDate)}`
+                          : currentDateFrom && currentDateTo 
+                            ? `Date: ${formatDateForDisplay(currentDateFrom)} to ${formatDateForDisplay(currentDateTo)}` 
+                            : currentDateFrom 
+                              ? `From ${formatDateForDisplay(currentDateFrom)}` 
+                              : `To ${formatDateForDisplay(currentDateTo)}`
                         }
                       </span>
                       <button

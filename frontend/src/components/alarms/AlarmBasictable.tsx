@@ -187,134 +187,159 @@ export default function AlarmBasicTable({
         
         <div className="flex items-center gap-4">
           {/* Search */}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 dark:text-gray-400">Search:</span>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Search by address, contact, work order, tenant..."
-                className="w-64 py-2 pl-3 pr-10 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="m14 14-2.9-2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 dark:text-gray-400">Search:</span>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Search by address, contact, work order, tenant..."
+                  className="w-64 py-2 pl-3 pr-10 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="m14 14-2.9-2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+              </div>
             </div>
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  if (onSearchChange) {
+                    onSearchChange('');
+                  }
+                }}
+                className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 self-end mr-2"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-full overflow-x-auto">
-        <Table>
-          <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-            <TableRow>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Date
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Address
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Contact
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Work Order
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Stage
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Tenant
-              </TableCell>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="px-3 py-8 text-center">
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : alarms.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
-                  No alarms found
-                </TableCell>
-              </TableRow>
-            ) : (
-              alarms.map((alarm) => (
-                <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                  <TableCell className="px-3 py-2 text-start">
-                    <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
-                      {formatDate(alarm.date)}
-                    </span>
+      <div className="max-w-full overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="overflow-hidden">
+            <Table>
+              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.03]">
+                <TableRow>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Date
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-start">
-                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                      {formatAddress(alarm)}
-                    </span>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Address
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-start">
-                    <div className="space-y-0.5">
-                      <div className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
-                        {alarm.who_contacted}
-                      </div>
-                      <div className="text-theme-xs text-gray-500 dark:text-gray-400">
-                        {alarm.contact_method}
-                      </div>
-                    </div>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Contact
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-start">
-                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                      {alarm.work_order_number || '-'}
-                    </span>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Work Order
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-start">
-                    <div className="w-24 whitespace-nowrap">
-                      <Badge
-                        size="xs"
-                        variant="light"
-                        color={getStatusColor(alarm.stage)}
-                      >
-                        {alarm.stage.replace(/_/g, ' ').toUpperCase()}
-                      </Badge>
-                    </div>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Stage
                   </TableCell>
-                  <TableCell className="px-3 py-2 text-start">
-                    <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                      {formatTenants(alarm.tenants)}
-                    </span>
+                  <TableCell
+                    isHeader
+                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                  >
+                    Tenant
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+            </Table>
+          </div>
+
+          <div className="overflow-y-auto max-h-[432px] min-h-[432px]">
+            <Table>
+              <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="px-3 py-8 text-center">
+                      <div className="flex items-center justify-center h-[360px]">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : alarms.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="px-3 py-8 text-center">
+                      <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
+                        No alarms found
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  alarms.map((alarm) => (
+                    <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                      <TableCell className="px-3 py-2 text-start">
+                        <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
+                          {formatDate(alarm.date)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {formatAddress(alarm)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-start">
+                        <div className="space-y-0.5">
+                          <div className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
+                            {alarm.who_contacted}
+                          </div>
+                          <div className="text-theme-xs text-gray-500 dark:text-gray-400">
+                            {alarm.contact_method}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {alarm.work_order_number || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-start">
+                        <div className="w-24 whitespace-nowrap">
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color={getStatusColor(alarm.stage)}
+                          >
+                            {alarm.stage.replace(/_/g, ' ').toUpperCase()}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {formatTenants(alarm.tenants)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
