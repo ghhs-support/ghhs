@@ -9,6 +9,8 @@ import api from "../../services/api";
 import { format } from "date-fns";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
+import SmallMap from "../../components/ui/map/SmallMap";
+import MapViewerModal from "../../components/ui/map/MapViewerModal";
 
 interface Tenant {
   id: number;
@@ -54,6 +56,7 @@ export default function AlarmDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMapViewerOpen, setIsMapViewerOpen] = useState(false);
 
   const fetchAlarmDetails = async () => {
     try {
@@ -171,6 +174,57 @@ export default function AlarmDetails() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Address Information */}
+          <ComponentCard title="Address Information">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Street Address</span>
+                <span className="text-gray-900 dark:text-white">
+                  {alarm.street_number} {alarm.street_name}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Suburb</span>
+                <span className="text-gray-900 dark:text-white">{alarm.suburb || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">State</span>
+                <span className="text-gray-900 dark:text-white">{alarm.state || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Postal Code</span>
+                <span className="text-gray-900 dark:text-white">{alarm.postal_code || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 dark:text-gray-400">Country</span>
+                <span className="text-gray-900 dark:text-white">{alarm.country || 'Australia'}</span>
+              </div>
+              
+              {/* Map Section */}
+              {alarm.latitude && alarm.longitude ? (
+                <div className="mt-6 flex flex-col items-center">
+                  <div 
+                    onClick={() => setIsMapViewerOpen(true)}
+                    className="cursor-pointer"
+                  >
+                    <SmallMap 
+                      latitude={alarm.latitude} 
+                      longitude={alarm.longitude} 
+                      className="w-32 h-32"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                    Click map to view larger
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4">
+                  No map available (missing coordinates)
+                </p>
+              )}
+            </div>
+          </ComponentCard>
+
           {/* Status Card */}
           <ComponentCard title="Status Information">
             <div className="space-y-4">
@@ -222,15 +276,6 @@ export default function AlarmDetails() {
                   <span className="text-gray-900 dark:text-white">{alarm.realestate_name}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600 dark:text-gray-400">Privacy Setting</span>
-                <Badge
-                  variant="light"
-                  color={alarm.is_private ? 'warning' : 'success'}
-                >
-                  {alarm.is_private ? 'PRIVATE' : 'PUBLIC'}
-                </Badge>
-              </div>
             </div>
           </ComponentCard>
 
@@ -333,6 +378,17 @@ export default function AlarmDetails() {
           initialData={alarm || undefined}
         />
       </Modal>
+
+      {/* Map Viewer Modal */}
+      {alarm && alarm.latitude && alarm.longitude && (
+        <MapViewerModal
+          isOpen={isMapViewerOpen}
+          onClose={() => setIsMapViewerOpen(false)}
+          latitude={alarm.latitude}
+          longitude={alarm.longitude}
+          title={`Map View - ${formatAddress(alarm)}`}
+        />
+      )}
     </>
   );
 } 

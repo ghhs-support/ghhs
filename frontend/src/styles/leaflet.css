@@ -1,0 +1,47 @@
+/* Ensure leaflet controls are visible */
+.leaflet-control-zoom a {
+  color: #000 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #0078A8 !important;
+}
+
+/* Fix positioning issues */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leaflet-container {
+  overflow: hidden;
+}
+
+/* Dark mode adjustments */
+.dark .leaflet-control-zoom a {
+  color: #fff !important;
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.dark .leaflet-control-zoom a:hover {
+  background-color: #374151;
+}
+
+.dark .leaflet-control-attribution {
+  background-color: rgba(31, 41, 55, 0.8) !important;
+  color: #9ca3af !important;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #60a5fa !important;
+} 
