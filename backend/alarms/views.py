@@ -29,7 +29,7 @@ class CustomPagination(PageNumberPagination):
 # Create your views here.
 
 class AlarmViewSet(viewsets.ModelViewSet):
-    queryset = Alarm.objects.all().order_by('-created_at')
+    queryset = Alarm.objects.all().prefetch_related('tenants').order_by('-created_at')
     serializer_class = AlarmSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
@@ -70,7 +70,8 @@ class AlarmViewSet(viewsets.ModelViewSet):
                     Q(tenants__phone__icontains=term)
                 )
             
-            queryset = queryset.filter(q_objects).distinct()
+            # Apply search filter and ensure we still have prefetch_related
+            queryset = queryset.filter(q_objects).distinct().prefetch_related('tenants')
             
         return queryset.order_by('-date')
 
@@ -124,5 +125,5 @@ class AlarmViewSet(viewsets.ModelViewSet):
             raise
 
 class TenantViewSet(viewsets.ModelViewSet):
-    queryset = Tenant.objects.all()
+    queryset = Tenant.objects.all().select_related('alarm')
     serializer_class = TenantSerializer
