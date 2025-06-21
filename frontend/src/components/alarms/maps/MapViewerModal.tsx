@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { Modal } from '../modal';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fixLeafletIcon } from '../../../utils/leaflet';
+import { Modal } from '../../ui/modal';
 
 interface MapViewerModalProps {
   isOpen: boolean;

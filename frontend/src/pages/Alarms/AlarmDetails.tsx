@@ -9,8 +9,8 @@ import api from "../../services/api";
 import { format } from "date-fns";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
-import SmallMap from "../../components/ui/map/SmallMap";
-import MapViewerModal from "../../components/ui/map/MapViewerModal";
+import SmallMap from "../../components/alarms/maps/SmallMap";
+import MapViewerModal from "../../components/alarms/maps/MapViewerModal";
 
 interface Tenant {
   id: number;

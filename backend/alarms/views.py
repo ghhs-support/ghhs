@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Alarm, Tenant
-from .serializers import AlarmSerializer, TenantSerializer
+from .models import Alarm, Tenant, AlarmUpdate
+from .serializers import AlarmSerializer, TenantSerializer, AlarmUpdateSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -268,3 +268,30 @@ def get_tenant_suggestions(request):
         })
     
     return Response(suggestions)
+
+class AlarmUpdateViewSet(viewsets.ModelViewSet):
+    queryset = AlarmUpdate.objects.all().select_related('alarm', 'created_by')
+    serializer_class = AlarmUpdateSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        alarm_id = self.request.query_params.get('alarm', None)
+        
+        if alarm_id:
+            queryset = queryset.filter(alarm_id=alarm_id)
+        
+        return queryset.order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def list(self, request, *args, **kwargs):
+        # If no alarm_id is provided, return a 400 error
+        if not request.query_params.get('alarm'):
+            return Response(
+                {"detail": "alarm parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().list(request, *args, **kwargs)

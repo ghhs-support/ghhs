@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import Alarm, Tenant
+from .models import Alarm, Tenant, AlarmUpdate
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class TenantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -70,3 +73,22 @@ class AlarmSerializer(serializers.ModelSerializer):
                 Tenant.objects.create(alarm=instance, **tenant_data)
         
         return instance 
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+
+class AlarmUpdateSerializer(serializers.ModelSerializer):
+    created_by = UserBasicSerializer(read_only=True)
+    
+    class Meta:
+        model = AlarmUpdate
+        fields = ['id', 'alarm', 'update_type', 'note', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ('created_at', 'updated_at', 'created_by')
+
+    def create(self, validated_data):
+        # Get the user from the context
+        user = self.context['request'].user
+        validated_data['created_by'] = user
+        return super().create(validated_data) 

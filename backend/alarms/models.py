@@ -1,4 +1,7 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 # Create your models here.
 
@@ -75,3 +78,24 @@ class Tenant(models.Model):
 
     class Meta:
         ordering = ['created_at']
+
+class AlarmUpdate(models.Model):
+    UPDATE_TYPE_CHOICES = [
+        ('call_attempt', 'Call Attempt'),
+        ('customer_contact', 'Customer Contact'),
+        ('status_change', 'Status Change'),
+        ('general_note', 'General Note'),
+    ]
+
+    alarm = models.ForeignKey(Alarm, on_delete=models.CASCADE, related_name='updates')
+    update_type = models.CharField(max_length=50, choices=UPDATE_TYPE_CHOICES)
+    note = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='alarm_updates')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_update_type_display()} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+    class Meta:
+        ordering = ['-created_at']  # Most recent updates first

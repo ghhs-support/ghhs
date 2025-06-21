@@ -7,7 +7,7 @@ import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
 import SearchableDropdown from "../../components/alarms/SearchableDropdown";
-import DatePicker from "../../components/form/date-picker";
+import DatePicker from "../../components/alarms/date-picker/DatePicker";
 
 import api from "../../services/api";
 

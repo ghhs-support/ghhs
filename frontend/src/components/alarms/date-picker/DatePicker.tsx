@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
-import Label from "./Label";
-import { CalenderIcon } from "../../icons";
+import { CalenderIcon } from "../../../icons";
 import Hook = flatpickr.Options.Hook;
 import DateOption = flatpickr.Options.DateOption;
 
@@ -58,7 +57,11 @@ export default function DatePicker({
 
   return (
     <div>
-      {label && <Label htmlFor={id}>{label}</Label>}
+      {label && (
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">
+          {label}
+        </label>
+      )}
 
       <div className="relative">
         <input
@@ -73,4 +76,4 @@ export default function DatePicker({
       </div>
     </div>
   );
-}
+} 
