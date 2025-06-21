@@ -12,6 +12,7 @@ from django.db.models import CharField, Value
 from django.db.models.functions import Concat
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import get_user_model
+from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -303,105 +304,90 @@ class AlarmUpdateViewSet(viewsets.ModelViewSet):
 class AlarmImageViewSet(viewsets.ModelViewSet):
     queryset = AlarmImage.objects.all()
     serializer_class = AlarmImageSerializer
-    parser_classes = (MultiPartParser, FormParser)
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
-    def create(self, request, *args, **kwargs):
-        print("\nDEBUG: Starting image upload")
-        print(f"DEBUG: Request data: {request.data}")
-        print(f"DEBUG: Files: {request.FILES}")
-        
+    def perform_create(self, serializer):
         try:
-            # Validate input
-            alarm_id = request.data.get('alarm')
-            images = request.FILES.getlist('images')
+            print("\n=== Starting Image Upload Process ===")
+            print(f"Request Data: {self.request.data}")
+            print(f"Request Files: {self.request.FILES}")
             
-            print(f"DEBUG: Alarm ID: {alarm_id}")
-            print(f"DEBUG: Number of images: {len(images)}")
+            # Get the alarm ID from the request data
+            alarm_id = self.request.data.get('alarm')
+            print(f"Alarm ID from request: {alarm_id}")
             
-            if not alarm_id or not images:
-                return Response(
-                    {'error': 'Both alarm ID and images are required'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            try:
-                alarm = Alarm.objects.get(id=alarm_id)
-                print(f"DEBUG: Found alarm: {alarm}")
-            except Alarm.DoesNotExist:
-                return Response(
-                    {'error': 'Alarm not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+            if not alarm_id:
+                print("Error: No alarm ID provided")
+                raise ValidationError('Alarm ID is required')
 
-            # Check S3 configuration
-            from django.conf import settings
-            print(f"DEBUG: S3 Settings:")
-            print(f"DEBUG: AWS_ACCESS_KEY_ID exists: {bool(settings.AWS_ACCESS_KEY_ID)}")
-            print(f"DEBUG: AWS_SECRET_ACCESS_KEY exists: {bool(settings.AWS_SECRET_ACCESS_KEY)}")
-            print(f"DEBUG: AWS_STORAGE_BUCKET_NAME: {settings.AWS_STORAGE_BUCKET_NAME}")
-            print(f"DEBUG: AWS_S3_ENDPOINT_URL: {settings.AWS_S3_ENDPOINT_URL}")
+            # Get the update time if provided
+            update_time = self.request.data.get('update_time')
+            print(f"Update time from request: {update_time}")
             
+            # Save each image
+            images = self.request.FILES.getlist('images')
+            print(f"Number of images received: {len(images)}")
+            
+            if not images:
+                print("Error: No images provided in request")
+                raise ValidationError('No images provided')
+
             created_images = []
-            for image in images:
-                print(f"\nDEBUG: Processing image: {image.name}")
-                print(f"DEBUG: Image content type: {image.content_type}")
-                print(f"DEBUG: Image size: {image.size} bytes")
+            for idx, image in enumerate(images):
+                print(f"\nProcessing image {idx + 1}/{len(images)}")
+                print(f"Image name: {image.name}")
+                print(f"Image size: {image.size} bytes")
+                print(f"Image content type: {image.content_type}")
                 
                 try:
-                    # Create the image object
-                    alarm_image = AlarmImage(
-                        alarm=alarm,
-                        uploaded_by=request.user
+                    # Create the image instance
+                    print("Creating AlarmImage instance...")
+                    instance = AlarmImage(
+                        alarm_id=alarm_id,
+                        image=image,
+                        uploaded_by=self.request.user,
+                        description=f"Image uploaded by {self.request.user.get_full_name() or self.request.user.email}"
                     )
                     
-                    # Assign the image file
-                    alarm_image.image = image
+                    # Save with the update time
+                    print(f"Saving image with update time: {update_time}")
+                    instance.save(update_time=update_time)
+                    print(f"Successfully saved image with ID: {instance.id}")
                     
-                    # Save the object (this will trigger the save method with image processing)
-                    alarm_image.save()
-                    print(f"DEBUG: Successfully created AlarmImage object: {alarm_image.id}")
-                    
-                    # Try to get the URL
-                    try:
-                        url = alarm_image.image.url
-                        print(f"DEBUG: Generated URL: {url}")
-                    except Exception as url_err:
-                        print(f"DEBUG: Error generating URL: {str(url_err)}")
-                        print(f"DEBUG: URL error traceback:")
-                        import traceback
-                        print(traceback.format_exc())
-                        # Don't raise here, just log the error
-                    
-                    created_images.append(alarm_image)
-                    
+                    created_images.append(instance)
                 except Exception as img_err:
-                    print(f"DEBUG: Error processing individual image: {str(img_err)}")
-                    print(f"DEBUG: Image processing error traceback:")
+                    print(f"Error saving individual image: {str(img_err)}")
                     import traceback
-                    print(traceback.format_exc())
-                    # If this image fails, try to clean up
-                    try:
-                        if alarm_image.id:
-                            alarm_image.delete()
-                    except:
-                        pass
-                    # Return error for this specific image
-                    return Response(
-                        {'error': f'Error processing image {image.name}: {str(img_err)}'},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
+                    print(f"Traceback: {traceback.format_exc()}")
+                    raise ValidationError(f"Error saving image {image.name}: {str(img_err)}")
 
-            serializer = self.get_serializer(created_images, many=True)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            print(f"\nSuccessfully created {len(created_images)} images")
+            return created_images
             
         except Exception as e:
-            print(f"DEBUG: Unexpected error in create view: {str(e)}")
-            print(f"DEBUG: Full error traceback:")
+            print(f"\nError in perform_create: {str(e)}")
             import traceback
-            print(traceback.format_exc())
+            print(f"Traceback: {traceback.format_exc()}")
+            raise ValidationError(str(e))
+
+    def create(self, request, *args, **kwargs):
+        try:
+            print("\n=== Starting create method ===")
+            created_images = self.perform_create(serializer=None)
+            print("Getting serializer for response...")
+            serializer = self.get_serializer(created_images, many=True)
+            print("Returning successful response")
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            print(f"Validation error in create: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Unexpected error in create: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
             return Response(
-                {'error': f'Unexpected error: {str(e)}'},
+                {'error': f'Unexpected error: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -416,3 +402,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         if user_ids:
             queryset = queryset.filter(id__in=user_ids)
         return queryset
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Get the current user's details"""
+    serializer = UserBasicSerializer(request.user)
+    return Response(serializer.data)

@@ -6,6 +6,7 @@ from django.utils import timezone
 from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 User = get_user_model()
 
@@ -107,54 +108,57 @@ def alarm_image_path(instance, filename):
     return f'alarm_images/alarm_{instance.alarm.id}/{clean_filename}'
 
 class AlarmImage(models.Model):
-    alarm = models.ForeignKey('Alarm', on_delete=models.CASCADE, related_name='images')
+    alarm = models.ForeignKey(Alarm, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to=alarm_image_path)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    description = models.CharField(max_length=255, blank=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # If we're setting a specific upload time, we need to handle it before auto_now_add takes effect
+        update_time = kwargs.pop('update_time', None)
+        
+        if self.image:
+            # Open the image using PIL
+            img = PILImage.open(self.image)
+            
+            # Convert RGBA to RGB if needed
+            if img.mode == 'RGBA':
+                # Create a white background
+                background = PILImage.new('RGB', img.size, (255, 255, 255))
+                # Paste the image on the background using alpha channel
+                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # Resize if larger than max dimensions
+            if img.height > 1200 or img.width > 1200:
+                output_size = (1200, 1200)
+                img.thumbnail(output_size, PILImage.Resampling.LANCZOS)
+
+            # Save the processed image
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=85)
+            buffer.seek(0)
+            self.image = InMemoryUploadedFile(
+                buffer,
+                'ImageField',
+                f"{os.path.splitext(self.image.name)[0]}.jpg",
+                'image/jpeg',
+                buffer.getbuffer().nbytes,
+                None
+            )
+
+        # First save without the update_time to let the model handle the file
+        super().save(*args, **kwargs)
+        
+        # If we have an update_time, set it after the initial save
+        if update_time:
+            AlarmImage.objects.filter(pk=self.pk).update(uploaded_at=update_time)
 
     def __str__(self):
         return f"Image for Alarm {self.alarm.id} uploaded at {self.uploaded_at.strftime('%Y-%m-%d %H:%M')}"
-        
-    def save(self, *args, **kwargs):
-        if not self.pk:  # Only on creation
-            try:
-                print(f"DEBUG: Processing image: {self.image.name}")
-                print(f"DEBUG: Image size: {self.image.size} bytes")
-                
-                # Open the image
-                img = PILImage.open(self.image)
-                print(f"DEBUG: Original image mode: {img.mode}")
-                print(f"DEBUG: Original image size: {img.size}")
-                
-                # Convert to RGB if necessary
-                if img.mode not in ('RGB', 'RGBA'):
-                    print(f"DEBUG: Converting image from {img.mode} to RGB")
-                    img = img.convert('RGB')
-                
-                # Save the processed image
-                buffer = BytesIO()
-                img.save(buffer, format='JPEG', quality=85)
-                buffer_value = buffer.getvalue()
-                print(f"DEBUG: Processed image size: {len(buffer_value)} bytes")
-                
-                # Update the ImageField
-                name = os.path.splitext(self.image.name)[0] + '.jpg'
-                self.image.save(
-                    name,
-                    ContentFile(buffer_value),
-                    save=False
-                )
-                print("DEBUG: Image processing completed successfully")
-                
-            except Exception as e:
-                import traceback
-                print(f"DEBUG: Error processing image: {str(e)}")
-                print(f"DEBUG: Full traceback:")
-                print(traceback.format_exc())
-                raise
-            
-        super().save(*args, **kwargs)
 
 class AlarmUpdate(models.Model):
     UPDATE_TYPE_CHOICES = [

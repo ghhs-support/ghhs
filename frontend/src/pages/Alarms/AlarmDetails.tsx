@@ -88,8 +88,10 @@ export default function AlarmDetails() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMapViewerOpen, setIsMapViewerOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isGalleryUploadModalOpen, setIsGalleryUploadModalOpen] = useState(false);
   const [updates, setUpdates] = useState<AlarmUpdate[]>([]);
   const [users, setUsers] = useState<{ [key: number]: User }>({});
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [updateType, setUpdateType] = useState<AlarmUpdate['update_type']>('general_note');
   const [updateNote, setUpdateNote] = useState('');
@@ -97,6 +99,8 @@ export default function AlarmDetails() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [modalState, setModalState] = useState<ImageModalState | null>(null);
+  const [selectedUpdateId, setSelectedUpdateId] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fetchAlarmDetails = async () => {
     try {
@@ -155,10 +159,21 @@ export default function AlarmDetails() {
     }
   };
 
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await api.get('/api/current-user/');
+      console.log('Current user response:', response.data);
+      setCurrentUser(response.data);
+    } catch (err) {
+      console.error('Error fetching current user:', err);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchAlarmDetails();
       fetchUpdates();
+      fetchCurrentUser();
     }
   }, [id]);
 
@@ -223,42 +238,87 @@ export default function AlarmDetails() {
   };
 
   const handleUpdateSubmit = async () => {
-    if (!updateNote.trim()) {
-      return; // Don't submit empty notes
-    }
-
     try {
       setIsSubmittingUpdate(true);
+      setUploadError(null);
       
-      // First create the update
-      const updateResponse = await api.post('/api/alarm-updates/', {
-        alarm: id,
-        update_type: updateType,
-        note: updateNote.trim()
-      });
-      console.log('Update response:', updateResponse.data);
+      // Only create a new update if we have a note and no selectedUpdateId
+      if (updateNote.trim() && !selectedUpdateId) {
+        const updateResponse = await api.post('/api/alarm-updates/', {
+          alarm: id,
+          update_type: updateType,
+          note: updateNote.trim()
+        });
+        console.log('Update response:', updateResponse.data);
+        
+        // If we created a new update, use its timestamp for the images
+        if (selectedImages.length > 0) {
+          const formData = new FormData();
+          formData.append('alarm', id!);
+          formData.append('update_time', updateResponse.data.created_at);
+          
+          selectedImages.forEach(image => {
+            formData.append('images', image);
+          });
 
-      // If there are images, upload them
-      if (selectedImages.length > 0) {
-        console.log('Selected images to upload:', selectedImages);
+          try {
+            const imageResponse = await api.post('/api/alarm-images/', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+              onUploadProgress: (progressEvent) => {
+                const progress = progressEvent.total
+                  ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                  : 0;
+                setUploadProgress(progress);
+              },
+            });
+            console.log('Image upload response:', imageResponse.data);
+          } catch (uploadErr: any) {
+            console.error('Error uploading images:', uploadErr);
+            setUploadError(uploadErr.response?.data?.error || 'Failed to upload images');
+            return;
+          }
+        }
+      } else if (selectedUpdateId && selectedImages.length > 0) {
+        // Adding images to an existing update
+        const update = updates.find(u => u.id === selectedUpdateId);
+        if (!update) {
+          setUploadError('Update not found');
+          return;
+        }
+
+        console.log('Adding images to existing update:', {
+          updateId: selectedUpdateId,
+          timestamp: update.created_at
+        });
+
         const formData = new FormData();
         formData.append('alarm', id!);
+        formData.append('update_time', update.created_at);
+        
         selectedImages.forEach(image => {
           formData.append('images', image);
         });
 
-        const imageResponse = await api.post('/api/alarm-images/', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            const progress = progressEvent.total
-              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              : 0;
-            setUploadProgress(progress);
-          },
-        });
-        console.log('Image upload response:', imageResponse.data);
+        try {
+          const imageResponse = await api.post('/api/alarm-images/', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            onUploadProgress: (progressEvent) => {
+              const progress = progressEvent.total
+                ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+                : 0;
+              setUploadProgress(progress);
+            },
+          });
+          console.log('Image upload response:', imageResponse.data);
+        } catch (uploadErr: any) {
+          console.error('Error uploading images:', uploadErr);
+          setUploadError(uploadErr.response?.data?.error || 'Failed to upload images');
+          return;
+        }
       }
 
       // Refresh updates list and alarm details to get new images
@@ -269,6 +329,7 @@ export default function AlarmDetails() {
       setUpdateNote('');
       setSelectedImages([]);
       setUploadProgress(0);
+      setSelectedUpdateId(null);
       setIsUpdateModalOpen(false);
     } catch (err) {
       console.error('Error submitting update:', err);
@@ -333,6 +394,46 @@ export default function AlarmDetails() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [modalState]);
+
+  const handleGalleryUpload = async () => {
+    try {
+      setIsSubmittingUpdate(true);
+      setUploadError(null);
+      
+      const formData = new FormData();
+      formData.append('alarm', id!);
+      
+      selectedImages.forEach(image => {
+        formData.append('images', image);
+      });
+
+      const response = await api.post('/api/alarm-images/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        },
+      });
+      console.log('Image upload response:', response.data);
+
+      // Refresh updates list and alarm details to get new images
+      await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
+
+      // Reset form and close modal
+      setSelectedImages([]);
+      setUploadProgress(0);
+      setIsGalleryUploadModalOpen(false);
+    } catch (err: any) {
+      console.error('Error uploading images:', err);
+      setUploadError(err.response?.data?.error || 'Failed to upload images');
+    } finally {
+      setIsSubmittingUpdate(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -405,13 +506,15 @@ export default function AlarmDetails() {
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
               {updates.map((update) => {
                 const user = users[update.created_by];
+                const isOwnUpdate = currentUser?.id === update.created_by;
+                
                 console.log('User data for update:', {
                   updateId: update.id,
                   userId: update.created_by,
-                  userDetails: user
+                  userDetails: user,
+                  isOwnUpdate
                 });
                 
-                // Format the user's name
                 const userName = user
                   ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
                   : `User ${update.created_by}`;
@@ -449,6 +552,21 @@ export default function AlarmDetails() {
                           </span>
                         </div>
                       </div>
+                      {isOwnUpdate && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setIsUpdateModalOpen(true);
+                            setUpdateType('general_note');
+                            setUpdateNote('');
+                            // Set the update we're adding images to
+                            setSelectedUpdateId(update.id);
+                          }}
+                        >
+                          Add Images
+                        </Button>
+                      )}
                     </div>
                     <div className="pl-11">
                       <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
@@ -460,7 +578,7 @@ export default function AlarmDetails() {
                             <div 
                               key={image.id} 
                               className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                              onClick={() => handleImageClick(image, alarm.images || [])}
+                              onClick={() => handleImageClick(image, matchingImages)}
                             >
                               <img
                                 src={image.image_url}
@@ -684,37 +802,46 @@ export default function AlarmDetails() {
 
           {/* All Images Gallery */}
           <ComponentCard title="Image Gallery">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {alarm.images && alarm.images.length > 0 
+                  ? `All images uploaded for this alarm (${alarm.images.length} total)`
+                  : 'No images uploaded yet'}
+              </p>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsGalleryUploadModalOpen(true)}
+              >
+                Upload Images
+              </Button>
+            </div>
             {alarm.images && alarm.images.length > 0 ? (
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  All images uploaded for this alarm ({alarm.images.length} total)
-                </p>
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                  {alarm.images.map((image) => (
-                    <div 
-                      key={image.id} 
-                      className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                      onClick={() => handleImageClick(image, alarm.images || [])}
-                    >
-                      <img
-                        src={image.image_url}
-                        alt={`Image ${image.id}`}
-                        className="h-full w-full object-cover transition-transform hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          const imgElement = e.currentTarget;
-                          if (!imgElement.src.includes('/api/proxy/')) {
-                            const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
-                            imgElement.src = proxyUrl;
-                          }
-                        }}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5 text-[10px] text-white text-center">
-                        {format(new Date(image.uploaded_at), 'dd/MM/yy')}
-                      </div>
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                {alarm.images.map((image) => (
+                  <div 
+                    key={image.id} 
+                    className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                    onClick={() => handleImageClick(image, alarm.images || [])}
+                  >
+                    <img
+                      src={image.image_url}
+                      alt={`Image ${image.id}`}
+                      className="h-full w-full object-cover transition-transform hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        const imgElement = e.currentTarget;
+                        if (!imgElement.src.includes('/api/proxy/')) {
+                          const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
+                          imgElement.src = proxyUrl;
+                        }
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5 text-[10px] text-white text-center">
+                      {format(new Date(image.uploaded_at), 'dd/MM/yy')}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center py-4">
@@ -756,41 +883,48 @@ export default function AlarmDetails() {
           setIsUpdateModalOpen(false);
           setSelectedImages([]);
           setUploadProgress(0);
+          setSelectedUpdateId(null);
+          setUpdateNote('');
+          setUploadError(null);
         }}
         className="max-w-2xl"
       >
         <div className="p-6">
           <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-            Add Update
+            {selectedUpdateId ? 'Add Images to Update' : 'Add Update'}
           </h3>
           <div className="space-y-4">
-            <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Update Type
-              </label>
-              <select
-                value={updateType}
-                onChange={(e) => setUpdateType(e.target.value as AlarmUpdate['update_type'])}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-              >
-                <option value="call_attempt">Call Attempt</option>
-                <option value="customer_contact">Customer Contact</option>
-                <option value="status_change">Status Change</option>
-                <option value="general_note">General Note</option>
-              </select>
-            </div>
-            <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                Note
-              </label>
-              <textarea
-                value={updateNote}
-                onChange={(e) => setUpdateNote(e.target.value)}
-                rows={4}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                placeholder="Enter update details..."
-              />
-            </div>
+            {!selectedUpdateId && (
+              <>
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Update Type
+                  </label>
+                  <select
+                    value={updateType}
+                    onChange={(e) => setUpdateType(e.target.value as AlarmUpdate['update_type'])}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="call_attempt">Call Attempt</option>
+                    <option value="customer_contact">Customer Contact</option>
+                    <option value="status_change">Status Change</option>
+                    <option value="general_note">General Note</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Note
+                  </label>
+                  <textarea
+                    value={updateNote}
+                    onChange={(e) => setUpdateNote(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    placeholder="Enter update details..."
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 Images
@@ -817,6 +951,11 @@ export default function AlarmDetails() {
                     />
                   </label>
                 </div>
+                {uploadError && (
+                  <div className="text-sm text-red-600 dark:text-red-400 text-center">
+                    {uploadError}
+                  </div>
+                )}
                 {selectedImages.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                     {selectedImages.map((image, index) => (
@@ -857,6 +996,9 @@ export default function AlarmDetails() {
                   setIsUpdateModalOpen(false);
                   setSelectedImages([]);
                   setUploadProgress(0);
+                  setSelectedUpdateId(null);
+                  setUpdateNote('');
+                  setUploadError(null);
                 }}
                 disabled={isSubmittingUpdate}
               >
@@ -865,9 +1007,9 @@ export default function AlarmDetails() {
               <Button
                 variant="primary"
                 onClick={handleUpdateSubmit}
-                disabled={isSubmittingUpdate}
+                disabled={isSubmittingUpdate || (selectedUpdateId ? selectedImages.length === 0 : !updateNote.trim())}
               >
-                {isSubmittingUpdate ? 'Saving...' : 'Save Update'}
+                {isSubmittingUpdate ? 'Saving...' : (selectedUpdateId ? 'Add Images' : 'Save Update')}
               </Button>
             </div>
           </div>
@@ -917,6 +1059,111 @@ export default function AlarmDetails() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Gallery Upload Modal */}
+      <Modal
+        isOpen={isGalleryUploadModalOpen}
+        onClose={() => {
+          setIsGalleryUploadModalOpen(false);
+          setSelectedImages([]);
+          setUploadProgress(0);
+          setUploadError(null);
+        }}
+        className="max-w-2xl"
+      >
+        <div className="p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Upload Images to Gallery
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Images
+              </label>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                      </svg>
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or JPEG</p>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      disabled={isSubmittingUpdate}
+                    />
+                  </label>
+                </div>
+                {uploadError && (
+                  <div className="text-sm text-red-600 dark:text-red-400 text-center">
+                    {uploadError}
+                  </div>
+                )}
+                {selectedImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                    {selectedImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Selected ${index + 1}`}
+                          className="h-24 w-full object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          disabled={isSubmittingUpdate}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4">
+                    <div 
+                      className="bg-brand-500 h-2.5 rounded-full" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsGalleryUploadModalOpen(false);
+                  setSelectedImages([]);
+                  setUploadProgress(0);
+                  setUploadError(null);
+                }}
+                disabled={isSubmittingUpdate}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleGalleryUpload}
+                disabled={isSubmittingUpdate || selectedImages.length === 0}
+              >
+                {isSubmittingUpdate ? 'Uploading...' : 'Upload Images'}
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
     </>
   );

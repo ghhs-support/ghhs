@@ -7,7 +7,8 @@ from .views import (
     AlarmImageViewSet, 
     get_address_suggestions, 
     get_tenant_suggestions,
-    UserViewSet
+    UserViewSet,
+    get_current_user
 )
 
 router = DefaultRouter()
@@ -21,4 +22,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('address-suggestions/', get_address_suggestions, name='address-suggestions'),
     path('tenant-suggestions/', get_tenant_suggestions, name='tenant-suggestions'),
+    path('current-user/', get_current_user, name='current-user'),
 ] 
