@@ -27,16 +27,18 @@ interface AlarmImage {
   description: string;
 }
 
+interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 interface AlarmUpdate {
   id: number;
   update_type: 'call_attempt' | 'customer_contact' | 'status_change' | 'general_note';
   note: string;
-  created_by: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  created_by: number;  // This is just the ID now
   created_at: string;
 }
 
@@ -87,6 +89,7 @@ export default function AlarmDetails() {
   const [isMapViewerOpen, setIsMapViewerOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updates, setUpdates] = useState<AlarmUpdate[]>([]);
+  const [users, setUsers] = useState<{ [key: number]: User }>({});
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [updateType, setUpdateType] = useState<AlarmUpdate['update_type']>('general_note');
   const [updateNote, setUpdateNote] = useState('');
@@ -111,11 +114,40 @@ export default function AlarmDetails() {
     }
   };
 
+  const fetchUserDetails = async (userId: number) => {
+    try {
+      const response = await api.get(`/api/users/${userId}/`);
+      console.log('User details response:', response.data);
+      setUsers(prev => ({
+        ...prev,
+        [userId]: response.data as User
+      }));
+    } catch (err) {
+      console.error('Error fetching user details:', err);
+      // Store a placeholder user object on error
+      setUsers(prev => ({
+        ...prev,
+        [userId]: {
+          id: userId,
+          first_name: '',
+          last_name: '',
+          email: `User ${userId}`
+        }
+      }));
+    }
+  };
+
   const fetchUpdates = async () => {
     try {
       setUpdatesLoading(true);
       const response = await api.get(`/api/alarm-updates/?alarm=${id}`);
-      setUpdates(response.data.results);
+      console.log('Raw updates response:', response.data);
+      const updatesData: AlarmUpdate[] = response.data.results;
+      setUpdates(updatesData);
+      
+      // Fetch user details for each unique user
+      const userIds = [...new Set(updatesData.map(update => update.created_by))];
+      await Promise.all(userIds.map(userId => fetchUserDetails(userId)));
     } catch (err) {
       console.error('Error fetching updates:', err);
     } finally {
@@ -188,17 +220,6 @@ export default function AlarmDetails() {
 
   const formatUpdateType = (type: string) => {
     return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
-
-  const getDisplayName = (user: AlarmUpdate['created_by']) => {
-    if (user.first_name && user.last_name) {
-      return `${user.first_name} ${user.last_name}`;
-    } else if (user.first_name) {
-      return user.first_name;
-    } else if (user.last_name) {
-      return user.last_name;
-    }
-    return 'User';
   };
 
   const handleUpdateSubmit = async () => {
@@ -383,7 +404,18 @@ export default function AlarmDetails() {
           ) : updates.length > 0 ? (
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
               {updates.map((update) => {
-                console.log('Rendering update:', update);
+                const user = users[update.created_by];
+                console.log('User data for update:', {
+                  updateId: update.id,
+                  userId: update.created_by,
+                  userDetails: user
+                });
+                
+                // Format the user's name
+                const userName = user
+                  ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
+                  : `User ${update.created_by}`;
+
                 const matchingImages = alarm.images?.filter(image => {
                   const imageTime = new Date(image.uploaded_at).getTime();
                   const updateTime = new Date(update.created_at).getTime();
@@ -397,13 +429,13 @@ export default function AlarmDetails() {
                       <div className="flex items-center gap-3">
                         <Avatar 
                           src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
-                          alt={getDisplayName(update.created_by)}
+                          alt={userName}
                           size="small"
                         />
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {getDisplayName(update.created_by)}
+                              {userName}
                             </span>
                             <Badge
                               variant="light"
@@ -428,7 +460,7 @@ export default function AlarmDetails() {
                             <div 
                               key={image.id} 
                               className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                              onClick={() => handleImageClick(image, matchingImages)}
+                              onClick={() => handleImageClick(image, alarm.images || [])}
                             >
                               <img
                                 src={image.image_url}
@@ -437,27 +469,10 @@ export default function AlarmDetails() {
                                 loading="lazy"
                                 onError={(e) => {
                                   const imgElement = e.currentTarget;
-                                  console.log('Image load error:', {
-                                    url: imgElement.src,
-                                    naturalWidth: imgElement.naturalWidth,
-                                    naturalHeight: imgElement.naturalHeight,
-                                    error: e
-                                  });
-                                  
-                                  // Try loading through proxy if direct load fails
                                   if (!imgElement.src.includes('/api/proxy/')) {
                                     const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
-                                    console.log('Trying proxy URL:', proxyUrl);
                                     imgElement.src = proxyUrl;
                                   }
-                                }}
-                                onLoad={(e) => {
-                                  const imgElement = e.currentTarget;
-                                  console.log('Image loaded successfully:', {
-                                    url: imgElement.src,
-                                    naturalWidth: imgElement.naturalWidth,
-                                    naturalHeight: imgElement.naturalHeight
-                                  });
                                 }}
                               />
                             </div>

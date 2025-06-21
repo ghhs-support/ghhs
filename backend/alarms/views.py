@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from .models import Alarm, Tenant, AlarmUpdate, AlarmImage
-from .serializers import AlarmSerializer, TenantSerializer, AlarmUpdateSerializer, AlarmImageSerializer
+from .serializers import AlarmSerializer, TenantSerializer, AlarmUpdateSerializer, AlarmImageSerializer, UserBasicSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -11,6 +11,9 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db.models import CharField, Value
 from django.db.models.functions import Concat
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -401,3 +404,15 @@ class AlarmImageViewSet(viewsets.ModelViewSet):
                 {'error': f'Unexpected error: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserBasicSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_ids = self.request.query_params.getlist('ids[]', [])
+        if user_ids:
+            queryset = queryset.filter(id__in=user_ids)
+        return queryset
