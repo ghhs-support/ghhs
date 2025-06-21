@@ -19,6 +19,14 @@ interface Tenant {
   phone: string;
 }
 
+interface AlarmImage {
+  id: number;
+  image: string;
+  image_url: string;
+  uploaded_at: string;
+  description: string;
+}
+
 interface AlarmUpdate {
   id: number;
   update_type: 'call_attempt' | 'customer_contact' | 'status_change' | 'general_note';
@@ -61,6 +69,7 @@ interface Alarm {
   tenants: Tenant[];
   created_at: string;
   updated_at: string;
+  images?: AlarmImage[];
 }
 
 export default function AlarmDetails() {
@@ -77,11 +86,16 @@ export default function AlarmDetails() {
   const [updateType, setUpdateType] = useState<AlarmUpdate['update_type']>('general_note');
   const [updateNote, setUpdateNote] = useState('');
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const fetchAlarmDetails = async () => {
     try {
       setLoading(true);
       const response = await api.get(`/api/alarms/${id}/`);
+      console.log('Alarm details response:', response.data);
+      console.log('Images in response:', response.data.images);
       setAlarm(response.data);
       setError(null);
     } catch (err) {
@@ -189,25 +203,64 @@ export default function AlarmDetails() {
 
     try {
       setIsSubmittingUpdate(true);
-      await api.post('/api/alarm-updates/', {
+      
+      // First create the update
+      const updateResponse = await api.post('/api/alarm-updates/', {
         alarm: id,
         update_type: updateType,
         note: updateNote.trim()
       });
+      console.log('Update response:', updateResponse.data);
 
-      // Refresh updates list
-      await fetchUpdates();
+      // If there are images, upload them
+      if (selectedImages.length > 0) {
+        console.log('Selected images to upload:', selectedImages);
+        const formData = new FormData();
+        formData.append('alarm', id!);
+        selectedImages.forEach(image => {
+          formData.append('images', image);
+        });
+
+        const imageResponse = await api.post('/api/alarm-images/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            const progress = progressEvent.total
+              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              : 0;
+            setUploadProgress(progress);
+          },
+        });
+        console.log('Image upload response:', imageResponse.data);
+      }
+
+      // Refresh updates list and alarm details to get new images
+      await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
 
       // Reset form and close modal
       setUpdateType('general_note');
       setUpdateNote('');
+      setSelectedImages([]);
+      setUploadProgress(0);
       setIsUpdateModalOpen(false);
     } catch (err) {
       console.error('Error submitting update:', err);
-      // You might want to show an error message to the user here
     } finally {
       setIsSubmittingUpdate(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setSelectedImages(files);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
   };
 
   if (loading) {
@@ -279,43 +332,88 @@ export default function AlarmDetails() {
             </div>
           ) : updates.length > 0 ? (
             <div className="space-y-4">
-              {updates.map((update) => (
-                <div 
-                  key={update.id} 
-                  className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar 
-                        src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
-                        alt={getDisplayName(update.created_by)}
-                        size="small"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {getDisplayName(update.created_by)}
+              {updates.map((update) => {
+                console.log('Rendering update:', update);
+                const matchingImages = alarm.images?.filter(image => {
+                  const imageTime = new Date(image.uploaded_at).getTime();
+                  const updateTime = new Date(update.created_at).getTime();
+                  const timeDiff = Math.abs(imageTime - updateTime);
+                  console.log('Image matching debug:', {
+                    imageId: image.id,
+                    imageTime,
+                    updateTime,
+                    timeDiff,
+                    imageUrl: image.image_url,
+                    matches: timeDiff < 60000
+                  });
+                  return timeDiff < 60000;
+                }) || [];
+                console.log('Matching images for update:', matchingImages);
+                
+                return (
+                  <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar 
+                          src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
+                          alt={getDisplayName(update.created_by)}
+                          size="small"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {getDisplayName(update.created_by)}
+                            </span>
+                            <Badge
+                              variant="light"
+                              color={getUpdateTypeColor(update.update_type)}
+                            >
+                              {formatUpdateType(update.update_type)}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
                           </span>
-                          <Badge
-                            variant="light"
-                            color={getUpdateTypeColor(update.update_type)}
-                          >
-                            {formatUpdateType(update.update_type)}
-                          </Badge>
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
-                        </span>
                       </div>
                     </div>
+                    <div className="pl-11">
+                      <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
+                        {update.note}
+                      </p>
+                      {matchingImages.length > 0 && (
+                        <div className="mt-4 grid grid-cols-4 gap-2">
+                          {matchingImages.map((image) => {
+                            console.log('Rendering image:', image);
+                            return (
+                              <div 
+                                key={image.id} 
+                                className="relative cursor-pointer group"
+                                onClick={() => {
+                                  console.log('Opening image in modal:', image.image_url);
+                                  setSelectedImage(image.image_url);
+                                }}
+                              >
+                                <img
+                                  src={image.image_url}
+                                  alt="Update attachment"
+                                  className="h-20 w-20 object-cover rounded-lg transition-transform group-hover:scale-105"
+                                  onError={(e) => {
+                                    console.error('Error loading image:', image.image_url);
+                                    e.currentTarget.src = '/images/error-placeholder.jpg';
+                                  }}
+                                  onLoad={() => console.log('Image loaded successfully:', image.image_url)}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity rounded-lg" />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="pl-11">
-                    <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
-                      {update.note}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -544,7 +642,11 @@ export default function AlarmDetails() {
       {/* Update Modal */}
       <Modal
         isOpen={isUpdateModalOpen}
-        onClose={() => setIsUpdateModalOpen(false)}
+        onClose={() => {
+          setIsUpdateModalOpen(false);
+          setSelectedImages([]);
+          setUploadProgress(0);
+        }}
         className="max-w-2xl"
       >
         <div className="p-6">
@@ -579,10 +681,73 @@ export default function AlarmDetails() {
                 placeholder="Enter update details..."
               />
             </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Images
+              </label>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                      </svg>
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG or JPEG</p>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      multiple 
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      disabled={isSubmittingUpdate}
+                    />
+                  </label>
+                </div>
+                {selectedImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                    {selectedImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(image)}
+                          alt={`Selected ${index + 1}`}
+                          className="h-24 w-full object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          disabled={isSubmittingUpdate}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-4">
+                    <div 
+                      className="bg-brand-500 h-2.5 rounded-full" 
+                      style={{ width: `${uploadProgress}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex justify-end gap-3 mt-6">
               <Button
                 variant="outline"
-                onClick={() => setIsUpdateModalOpen(false)}
+                onClick={() => {
+                  setIsUpdateModalOpen(false);
+                  setSelectedImages([]);
+                  setUploadProgress(0);
+                }}
                 disabled={isSubmittingUpdate}
               >
                 Cancel
@@ -590,11 +755,37 @@ export default function AlarmDetails() {
               <Button
                 variant="primary"
                 onClick={handleUpdateSubmit}
+                disabled={isSubmittingUpdate}
               >
-                Save Update
+                {isSubmittingUpdate ? 'Saving...' : 'Save Update'}
               </Button>
             </div>
           </div>
+        </div>
+      </Modal>
+
+      {/* Image Viewer Modal */}
+      <Modal
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        className="max-w-4xl"
+      >
+        <div className="relative">
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-2 right-2 bg-gray-900/50 hover:bg-gray-900/70 text-white rounded-full p-2 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          {selectedImage && (
+            <img
+              src={selectedImage}
+              alt="Full size"
+              className="w-full h-auto rounded-lg"
+            />
+          )}
         </div>
       </Modal>
     </>

@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .models import Alarm, Tenant, AlarmUpdate
-from .serializers import AlarmSerializer, TenantSerializer, AlarmUpdateSerializer
+from .models import Alarm, Tenant, AlarmUpdate, AlarmImage
+from .serializers import AlarmSerializer, TenantSerializer, AlarmUpdateSerializer, AlarmImageSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -10,6 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import CharField, Value
 from django.db.models.functions import Concat
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -295,3 +296,108 @@ class AlarmUpdateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         return super().list(request, *args, **kwargs)
+
+class AlarmImageViewSet(viewsets.ModelViewSet):
+    queryset = AlarmImage.objects.all()
+    serializer_class = AlarmImageSerializer
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        print("\nDEBUG: Starting image upload")
+        print(f"DEBUG: Request data: {request.data}")
+        print(f"DEBUG: Files: {request.FILES}")
+        
+        try:
+            # Validate input
+            alarm_id = request.data.get('alarm')
+            images = request.FILES.getlist('images')
+            
+            print(f"DEBUG: Alarm ID: {alarm_id}")
+            print(f"DEBUG: Number of images: {len(images)}")
+            
+            if not alarm_id or not images:
+                return Response(
+                    {'error': 'Both alarm ID and images are required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                alarm = Alarm.objects.get(id=alarm_id)
+                print(f"DEBUG: Found alarm: {alarm}")
+            except Alarm.DoesNotExist:
+                return Response(
+                    {'error': 'Alarm not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check S3 configuration
+            from django.conf import settings
+            print(f"DEBUG: S3 Settings:")
+            print(f"DEBUG: AWS_ACCESS_KEY_ID exists: {bool(settings.AWS_ACCESS_KEY_ID)}")
+            print(f"DEBUG: AWS_SECRET_ACCESS_KEY exists: {bool(settings.AWS_SECRET_ACCESS_KEY)}")
+            print(f"DEBUG: AWS_STORAGE_BUCKET_NAME: {settings.AWS_STORAGE_BUCKET_NAME}")
+            print(f"DEBUG: AWS_S3_ENDPOINT_URL: {settings.AWS_S3_ENDPOINT_URL}")
+            
+            created_images = []
+            for image in images:
+                print(f"\nDEBUG: Processing image: {image.name}")
+                print(f"DEBUG: Image content type: {image.content_type}")
+                print(f"DEBUG: Image size: {image.size} bytes")
+                
+                try:
+                    # Create the image object
+                    alarm_image = AlarmImage(
+                        alarm=alarm,
+                        uploaded_by=request.user
+                    )
+                    
+                    # Assign the image file
+                    alarm_image.image = image
+                    
+                    # Save the object (this will trigger the save method with image processing)
+                    alarm_image.save()
+                    print(f"DEBUG: Successfully created AlarmImage object: {alarm_image.id}")
+                    
+                    # Try to get the URL
+                    try:
+                        url = alarm_image.image.url
+                        print(f"DEBUG: Generated URL: {url}")
+                    except Exception as url_err:
+                        print(f"DEBUG: Error generating URL: {str(url_err)}")
+                        print(f"DEBUG: URL error traceback:")
+                        import traceback
+                        print(traceback.format_exc())
+                        # Don't raise here, just log the error
+                    
+                    created_images.append(alarm_image)
+                    
+                except Exception as img_err:
+                    print(f"DEBUG: Error processing individual image: {str(img_err)}")
+                    print(f"DEBUG: Image processing error traceback:")
+                    import traceback
+                    print(traceback.format_exc())
+                    # If this image fails, try to clean up
+                    try:
+                        if alarm_image.id:
+                            alarm_image.delete()
+                    except:
+                        pass
+                    # Return error for this specific image
+                    return Response(
+                        {'error': f'Error processing image {image.name}: {str(img_err)}'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+            serializer = self.get_serializer(created_images, many=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            print(f"DEBUG: Unexpected error in create view: {str(e)}")
+            print(f"DEBUG: Full error traceback:")
+            import traceback
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Unexpected error: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'storages',
     'alarms',
 ]
 
@@ -131,6 +132,50 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files configuration
+MEDIA_URL = '/media/'
+
+# S3 Storage Configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# Tigris S3 Settings
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = "https://ghhs.fly.storage.tigris.dev"  # Your bucket's Tigris endpoint with protocol
+AWS_S3_REGION_NAME = 'auto'  # Global setting
+AWS_S3_USE_SSL = True
+AWS_S3_VERIFY = True
+
+# Public bucket settings
+AWS_DEFAULT_ACL = 'public-read'  # Make objects publicly readable
+AWS_QUERYSTRING_AUTH = False  # Disable query string auth for public objects
+AWS_S3_FILE_OVERWRITE = False
+
+# Allow object ACL
+AWS_S3_OBJECT_PARAMETERS = {
+    'ACL': 'public-read',  # Default ACL for new objects
+    'CacheControl': 'max-age=86400',  # 24 hours cache control
+}
+
+# CORS settings
+AWS_S3_CORS_ENABLED = True
+
+# Use path-style URLs
+AWS_S3_ADDRESSING_STYLE = 'path'
+
+# Headers from your settings
+AWS_S3_CUSTOM_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -208,21 +253,14 @@ AUTHENTICATION_BACKENDS = [
 # Debug logging configuration
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,  # Disable loggers for better performance
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+        'null': {
+            'class': 'logging.NullHandler',
         },
     },
     'root': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        'handlers': ['null'],
+        'level': 'WARNING',
     },
 }
