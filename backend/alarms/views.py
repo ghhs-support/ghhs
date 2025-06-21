@@ -7,6 +7,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import api_view, permission_classes
+from django.db.models import CharField, Value
+from django.db.models.functions import Concat
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -45,13 +48,43 @@ class AlarmViewSet(viewsets.ModelViewSet):
         stage = self.request.query_params.get('stage', None)
         completed = self.request.query_params.get('completed', None)
         search = self.request.query_params.get('search', '').strip()
+        address_filter = self.request.query_params.get('address', '').strip()
         
         # Apply filters
         if stage:
             queryset = queryset.filter(stage=stage)
         if completed is not None:
             queryset = queryset.filter(completed=completed == 'true')
-        if search:
+        
+        # Handle address filtering separately
+        if address_filter:
+            # Simple approach: create the same concatenated address for each alarm
+            # and match it exactly against the selected address
+            queryset_with_addresses = queryset.annotate(
+                full_address=Concat(
+                    'street_number',
+                    Value(' '),
+                    'street_name',
+                    Value(', '),
+                    'suburb',
+                    Value(', '),
+                    'state',
+                    Value(' '),
+                    'postal_code',
+                    output_field=CharField()
+                )
+            )
+            
+            # Clean up the address filter for comparison
+            cleaned_address_filter = ' '.join(address_filter.split())  # Remove extra spaces
+            
+            # Filter for exact address match
+            queryset = queryset_with_addresses.filter(
+                full_address__iexact=cleaned_address_filter
+            ).distinct().prefetch_related('tenants')
+        
+        # Handle general search (excluding address if address filter is used)
+        if search and not address_filter:
             search_terms = search.split()
             q_objects = Q()
             
@@ -127,3 +160,52 @@ class AlarmViewSet(viewsets.ModelViewSet):
 class TenantViewSet(viewsets.ModelViewSet):
     queryset = Tenant.objects.all().select_related('alarm')
     serializer_class = TenantSerializer
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_address_suggestions(request):
+    """
+    Get unique address suggestions based on search query
+    """
+    search_query = request.GET.get('q', '').strip()
+    
+    if len(search_query) < 2:
+        return Response([])
+    
+    # Build address concatenation with proper formatting
+    addresses = Alarm.objects.annotate(
+        full_address=Concat(
+            'street_number',
+            Value(' '),
+            'street_name',
+            Value(', '),
+            'suburb',
+            Value(', '),
+            'state',
+            Value(' '),
+            'postal_code',
+            output_field=CharField()
+        )
+    ).filter(
+        Q(street_number__icontains=search_query) |
+        Q(street_name__icontains=search_query) |
+        Q(suburb__icontains=search_query) |
+        Q(city__icontains=search_query) |
+        Q(state__icontains=search_query) |
+        Q(postal_code__icontains=search_query)
+    ).values('full_address').distinct().order_by('full_address')[:20]  # Limit to 20 results
+    
+    # Format the response
+    suggestions = []
+    for addr in addresses:
+        full_addr = addr['full_address']
+        # Clean up the address (remove extra spaces, commas)
+        full_addr = ' '.join(full_addr.split())  # Remove extra spaces
+        full_addr = full_addr.replace(' ,', ',')  # Fix spacing around commas
+        if full_addr and full_addr != ', ,':  # Only include valid addresses
+            suggestions.append({
+                'value': full_addr,
+                'label': full_addr
+            })
+    
+    return Response(suggestions)

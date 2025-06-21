@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import AlarmBasicTable from "../../components/alarms/AlarmBasictable";
@@ -6,6 +6,7 @@ import ComponentCard from "../../components/common/ComponentCard";
 import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
+import SearchableDropdown from "../../components/alarms/SearchableDropdown";
 
 import api from "../../services/api";
 
@@ -53,6 +54,11 @@ interface PaginatedResponse {
   results: Alarm[];
 }
 
+interface AddressOption {
+  value: string;
+  label: string;
+}
+
 export default function AlarmListPage() {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,9 +67,14 @@ export default function AlarmListPage() {
   const [currentPageSize, setCurrentPageSize] = useState(10);
   const [currentSearch, setCurrentSearch] = useState("");
   const [currentStageFilter, setCurrentStageFilter] = useState("");
+  const [currentAddressFilter, setCurrentAddressFilter] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
+  const [addressLoading, setAddressLoading] = useState(false);
   const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stageOptions = [
     { value: '', label: 'All Stages' },
@@ -73,7 +84,7 @@ export default function AlarmListPage() {
     { value: 'to_be_called', label: 'To Be Called' },
   ];
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string) => {
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string) => {
     try {
       setLoading(true);
       setError("");
@@ -91,19 +102,38 @@ export default function AlarmListPage() {
         params.append('stage', stage.trim());
       }
 
+      if (address?.trim()) {
+        params.append('address', address.trim());
+      }
+
       const response = await api.get(`/api/alarms/?${params.toString()}`);
+      
       setAlarms(response.data.results);
       setTotalCount(response.data.count);
       setCurrentPage(page);
       setCurrentPageSize(pageSize);
       setCurrentSearch(search || "");
       setCurrentStageFilter(stage || "");
+      setCurrentAddressFilter(address || "");
     } catch (error) {
       console.error('Error fetching alarms:', error);
       setError('Failed to fetch alarms. Please try again.');
       // Keep the previous data on error
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchAddressSuggestions = useCallback(async (query: string) => {
+    try {
+      setAddressLoading(true);
+      const response = await api.get(`/api/address-suggestions/?q=${encodeURIComponent(query)}`);
+      setAddressOptions(response.data);
+    } catch (error) {
+      console.error('Error fetching address suggestions:', error);
+      setAddressOptions([]);
+    } finally {
+      setAddressLoading(false);
     }
   }, []);
 
@@ -116,28 +146,62 @@ export default function AlarmListPage() {
   };
 
   const handleAlarmCreated = () => {
-    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter);
+    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter);
   };
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize, currentSearch, currentStageFilter);
-  }, [fetchAlarms, currentSearch, currentStageFilter]);
+    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter);
+  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter]);
 
   const handleSearchChange = useCallback((search: string) => {
-    fetchAlarms(1, currentPageSize, search, currentStageFilter);
-  }, [fetchAlarms, currentPageSize, currentStageFilter]);
-
-  const handleStageFilterApply = useCallback(() => {
-    fetchAlarms(1, currentPageSize, currentSearch, selectedStage);
-  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage]);
+    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter);
+  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter]);
 
   const handleStageFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStage(e.target.value);
   };
 
+  const handleAddressSearch = useCallback((query: string) => {
+    // Clear existing timeout
+    if (addressSearchTimeoutRef.current) {
+      clearTimeout(addressSearchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    addressSearchTimeoutRef.current = setTimeout(() => {
+      fetchAddressSuggestions(query);
+    }, 300); // 300ms delay
+  }, [fetchAddressSuggestions]);
+
+  const handleAddressSelect = useCallback((option: AddressOption | null) => {
+    setSelectedAddress(option?.value || "");
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress);
+  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress]);
+
+  const handleClearAllFilters = useCallback(() => {
+    setSelectedStage("");
+    setSelectedAddress("");
+    setCurrentStageFilter("");
+    setCurrentAddressFilter("");
+    fetchAlarms(1, currentPageSize, currentSearch, "", "");
+  }, [fetchAlarms, currentPageSize, currentSearch]);
+
+  const handleClearStageFilter = useCallback(() => {
+    setSelectedStage("");
+    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter]);
+
+  const handleClearAddressFilter = useCallback(() => {
+    setSelectedAddress("");
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "");
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter]);
+
   // Initial load
   useEffect(() => {
-    fetchAlarms(1, 10, "", "");
+    fetchAlarms(1, 10, "", "", "");
   }, [fetchAlarms]);
 
   // Reset when component unmounts
@@ -150,7 +214,16 @@ export default function AlarmListPage() {
       setCurrentPageSize(10);
       setCurrentSearch("");
       setCurrentStageFilter("");
+      setCurrentAddressFilter("");
+      setSelectedStage("");
+      setSelectedAddress("");
+      setAddressOptions([]);
       setError("");
+      
+      // Clear timeout
+      if (addressSearchTimeoutRef.current) {
+        clearTimeout(addressSearchTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -174,49 +247,97 @@ export default function AlarmListPage() {
 
         {/* Filter Section */}
         <ComponentCard title="Filters">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400">Stage:</span>
-              <div className="relative">
-                <select
-                  value={selectedStage}
-                  onChange={handleStageFilterChange}
-                  className="py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                >
-                  {stageOptions.map(option => (
-                    <option key={option.value} value={option.value} className="dark:bg-gray-900">
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
-                  <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
-                  </svg>
-                </span>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Stage Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage</label>
+                <div className="relative">
+                  <select
+                    value={selectedStage}
+                    onChange={handleStageFilterChange}
+                    className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                  >
+                    {stageOptions.map(option => (
+                      <option key={option.value} value={option.value} className="dark:bg-gray-900">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
+                    <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Address Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</label>
+                <SearchableDropdown
+                  placeholder="Type to search addresses..."
+                  onSearch={handleAddressSearch}
+                  onSelect={handleAddressSelect}
+                  options={addressOptions}
+                  loading={addressLoading}
+                  selectedValue={selectedAddress}
+                  emptyMessage="No addresses found"
+                  minSearchLength={2}
+                />
               </div>
             </div>
-            <Button
-              variant="primary"
-              onClick={handleStageFilterApply}
-              className="px-4 py-2"
-            >
-              Apply Filter
-            </Button>
-            {currentStageFilter && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Active filter: <strong>{stageOptions.find(opt => opt.value === currentStageFilter)?.label}</strong>
-                </span>
-                <button
-                  onClick={() => {
-                    setSelectedStage("");
-                    fetchAlarms(1, currentPageSize, currentSearch, "");
-                  }}
-                  className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="primary"
+                onClick={handleApplyFilters}
+                className="px-6 py-2"
+              >
+                Apply Filters
+              </Button>
+              
+              {(currentStageFilter || currentAddressFilter) && (
+                <Button
+                  variant="outline"
+                  onClick={handleClearAllFilters}
+                  className="px-4 py-2"
                 >
-                  Clear
-                </button>
+                  Clear All Filters
+                </Button>
+              )}
+            </div>
+
+            {/* Active Filters Display */}
+            {(currentStageFilter || currentAddressFilter) && (
+              <div className="border-t pt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Filters:</p>
+                <div className="flex flex-wrap gap-2">
+                  {currentStageFilter && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm dark:bg-blue-900 dark:text-blue-200">
+                      <span>Stage: {stageOptions.find(opt => opt.value === currentStageFilter)?.label}</span>
+                      <button
+                        onClick={handleClearStageFilter}
+                        className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
+                  {currentAddressFilter && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm dark:bg-green-900 dark:text-green-200">
+                      <span>Address: {currentAddressFilter.length > 30 ? `${currentAddressFilter.substring(0, 30)}...` : currentAddressFilter}</span>
+                      <button
+                        onClick={handleClearAddressFilter}
+                        className="ml-1 text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
