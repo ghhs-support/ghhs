@@ -381,24 +381,15 @@ export default function AlarmDetails() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
             </div>
           ) : updates.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
               {updates.map((update) => {
                 console.log('Rendering update:', update);
                 const matchingImages = alarm.images?.filter(image => {
                   const imageTime = new Date(image.uploaded_at).getTime();
                   const updateTime = new Date(update.created_at).getTime();
                   const timeDiff = Math.abs(imageTime - updateTime);
-                  console.log('Image matching debug:', {
-                    imageId: image.id,
-                    imageTime,
-                    updateTime,
-                    timeDiff,
-                    imageUrl: image.image_url,
-                    matches: timeDiff < 60000
-                  });
                   return timeDiff < 60000;
                 }) || [];
-                console.log('Matching images for update:', matchingImages);
                 
                 return (
                   <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
@@ -672,6 +663,47 @@ export default function AlarmDetails() {
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center py-4">
                 No tenant information available
+              </p>
+            )}
+          </ComponentCard>
+
+          {/* All Images Gallery */}
+          <ComponentCard title="Image Gallery">
+            {alarm.images && alarm.images.length > 0 ? (
+              <div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  All images uploaded for this alarm ({alarm.images.length} total)
+                </p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                  {alarm.images.map((image) => (
+                    <div 
+                      key={image.id} 
+                      className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                      onClick={() => handleImageClick(image, alarm.images || [])}
+                    >
+                      <img
+                        src={image.image_url}
+                        alt={`Image ${image.id}`}
+                        className="h-full w-full object-cover transition-transform hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          const imgElement = e.currentTarget;
+                          if (!imgElement.src.includes('/api/proxy/')) {
+                            const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
+                            imgElement.src = proxyUrl;
+                          }
+                        }}
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5 text-[10px] text-white text-center">
+                        {format(new Date(image.uploaded_at), 'dd/MM/yy')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                No images uploaded yet
               </p>
             )}
           </ComponentCard>
