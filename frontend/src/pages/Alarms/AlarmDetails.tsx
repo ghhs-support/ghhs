@@ -72,6 +72,11 @@ interface Alarm {
   images?: AlarmImage[];
 }
 
+interface ImageModalState {
+  images: AlarmImage[];
+  currentIndex: number;
+}
+
 export default function AlarmDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -88,7 +93,7 @@ export default function AlarmDetails() {
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [modalState, setModalState] = useState<ImageModalState | null>(null);
 
   const fetchAlarmDetails = async () => {
     try {
@@ -263,6 +268,51 @@ export default function AlarmDetails() {
     setSelectedImages(newImages);
   };
 
+  const handleImageClick = (clickedImage: AlarmImage, allImages: AlarmImage[]) => {
+    const currentIndex = allImages.findIndex(img => img.id === clickedImage.id);
+    setModalState({
+      images: allImages,
+      currentIndex
+    });
+  };
+
+  const handlePrevImage = () => {
+    if (modalState) {
+      setModalState({
+        ...modalState,
+        currentIndex: (modalState.currentIndex - 1 + modalState.images.length) % modalState.images.length
+      });
+    }
+  };
+
+  const handleNextImage = () => {
+    if (modalState) {
+      setModalState({
+        ...modalState,
+        currentIndex: (modalState.currentIndex + 1) % modalState.images.length
+      });
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (modalState) {
+      if (e.key === 'ArrowLeft') {
+        handlePrevImage();
+      } else if (e.key === 'ArrowRight') {
+        handleNextImage();
+      } else if (e.key === 'Escape') {
+        setModalState(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [modalState]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -382,32 +432,45 @@ export default function AlarmDetails() {
                         {update.note}
                       </p>
                       {matchingImages.length > 0 && (
-                        <div className="mt-4 grid grid-cols-4 gap-2">
-                          {matchingImages.map((image) => {
-                            console.log('Rendering image:', image);
-                            return (
-                              <div 
-                                key={image.id} 
-                                className="relative cursor-pointer group"
-                                onClick={() => {
-                                  console.log('Opening image in modal:', image.image_url);
-                                  setSelectedImage(image.image_url);
+                        <div className="mt-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                          {matchingImages.map((image) => (
+                            <div 
+                              key={image.id} 
+                              className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                              onClick={() => handleImageClick(image, matchingImages)}
+                            >
+                              <img
+                                src={image.image_url}
+                                alt="Update attachment"
+                                className="h-full w-full object-cover transition-transform hover:scale-105"
+                                loading="lazy"
+                                onError={(e) => {
+                                  const imgElement = e.currentTarget;
+                                  console.log('Image load error:', {
+                                    url: imgElement.src,
+                                    naturalWidth: imgElement.naturalWidth,
+                                    naturalHeight: imgElement.naturalHeight,
+                                    error: e
+                                  });
+                                  
+                                  // Try loading through proxy if direct load fails
+                                  if (!imgElement.src.includes('/api/proxy/')) {
+                                    const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
+                                    console.log('Trying proxy URL:', proxyUrl);
+                                    imgElement.src = proxyUrl;
+                                  }
                                 }}
-                              >
-                                <img
-                                  src={image.image_url}
-                                  alt="Update attachment"
-                                  className="h-20 w-20 object-cover rounded-lg transition-transform group-hover:scale-105"
-                                  onError={(e) => {
-                                    console.error('Error loading image:', image.image_url);
-                                    e.currentTarget.src = '/images/error-placeholder.jpg';
-                                  }}
-                                  onLoad={() => console.log('Image loaded successfully:', image.image_url)}
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity rounded-lg" />
-                              </div>
-                            );
-                          })}
+                                onLoad={(e) => {
+                                  const imgElement = e.currentTarget;
+                                  console.log('Image loaded successfully:', {
+                                    url: imgElement.src,
+                                    naturalWidth: imgElement.naturalWidth,
+                                    naturalHeight: imgElement.naturalHeight
+                                  });
+                                }}
+                              />
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -766,27 +829,47 @@ export default function AlarmDetails() {
 
       {/* Image Viewer Modal */}
       <Modal
-        isOpen={!!selectedImage}
-        onClose={() => setSelectedImage(null)}
+        isOpen={!!modalState}
+        onClose={() => setModalState(null)}
         className="max-w-4xl"
       >
-        <div className="relative">
-          <button
-            onClick={() => setSelectedImage(null)}
-            className="absolute top-2 right-2 bg-gray-900/50 hover:bg-gray-900/70 text-white rounded-full p-2 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          {selectedImage && (
+        {modalState && modalState.images.length > 0 && (
+          <div className="relative">
             <img
-              src={selectedImage}
+              src={modalState.images[modalState.currentIndex].image_url}
               alt="Full size"
               className="w-full h-auto rounded-lg"
             />
-          )}
-        </div>
+            {modalState.images.length > 1 && (
+              <>
+                {/* Left Arrow */}
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                  aria-label="Previous image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                {/* Right Arrow */}
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+                  aria-label="Next image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                {/* Image Counter */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                  {modalState.currentIndex + 1} / {modalState.images.length}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </>
   );
