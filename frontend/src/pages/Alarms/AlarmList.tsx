@@ -74,15 +74,20 @@ export default function AlarmListPage() {
   const [currentExactDate, setCurrentExactDate] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedTenant, setSelectedTenant] = useState("");
+  const [currentTenantFilter, setCurrentTenantFilter] = useState("");
   const [selectedDateFrom, setSelectedDateFrom] = useState("");
   const [selectedDateTo, setSelectedDateTo] = useState("");
   const [selectedExactDate, setSelectedExactDate] = useState("");
   const [isDateRangeMode, setIsDateRangeMode] = useState(true);
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [tenantOptions, setTenantOptions] = useState<AddressOption[]>([]);
+  const [tenantLoading, setTenantLoading] = useState(false);
   const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tenantSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stageOptions = [
     { value: '', label: 'All Stages' },
@@ -92,7 +97,7 @@ export default function AlarmListPage() {
     { value: 'to_be_called', label: 'To Be Called' },
   ];
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string, dateExact?: string) => {
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string, dateExact?: string, tenant?: string) => {
     try {
       setLoading(true);
       setError("");
@@ -126,6 +131,10 @@ export default function AlarmListPage() {
         params.append('date_exact', dateExact.trim());
       }
 
+      if (tenant?.trim()) {
+        params.append('tenant', tenant.trim());
+      }
+
       const response = await api.get(`/api/alarms/?${params.toString()}`);
       
       setAlarms(response.data.results);
@@ -138,6 +147,7 @@ export default function AlarmListPage() {
       setCurrentDateFrom(dateFrom || "");
       setCurrentDateTo(dateTo || "");
       setCurrentExactDate(dateExact || "");
+      setCurrentTenantFilter(tenant || "");
     } catch (error) {
       console.error('Error fetching alarms:', error);
       setError('Failed to fetch alarms. Please try again.');
@@ -160,6 +170,19 @@ export default function AlarmListPage() {
     }
   }, []);
 
+  const fetchTenantSuggestions = useCallback(async (query: string) => {
+    try {
+      setTenantLoading(true);
+      const response = await api.get(`/api/tenant-suggestions/?q=${encodeURIComponent(query)}`);
+      setTenantOptions(response.data);
+    } catch (error) {
+      console.error('Error fetching tenant suggestions:', error);
+      setTenantOptions([]);
+    } finally {
+      setTenantLoading(false);
+    }
+  }, []);
+
   const handleAddClick = () => {
     setIsModalOpen(true);
   };
@@ -169,16 +192,16 @@ export default function AlarmListPage() {
   };
 
   const handleAlarmCreated = () => {
-    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
+    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
   };
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
-  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
+    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
+  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
 
   const handleSearchChange = useCallback((search: string) => {
-    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate);
-  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
+    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
+  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
 
   const handleStageFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStage(e.target.value);
@@ -198,6 +221,22 @@ export default function AlarmListPage() {
 
   const handleAddressSelect = useCallback((option: AddressOption | null) => {
     setSelectedAddress(option?.value || "");
+  }, []);
+
+  const handleTenantSearch = useCallback((query: string) => {
+    // Clear existing timeout
+    if (tenantSearchTimeoutRef.current) {
+      clearTimeout(tenantSearchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    tenantSearchTimeoutRef.current = setTimeout(() => {
+      fetchTenantSuggestions(query);
+    }, 300); // 300ms delay
+  }, [fetchTenantSuggestions]);
+
+  const handleTenantSelect = useCallback((option: AddressOption | null) => {
+    setSelectedTenant(option?.value || "");
   }, []);
 
   const formatDateForDisplay = (dateStr: string): string => {
@@ -282,9 +321,10 @@ export default function AlarmListPage() {
     setCurrentDateFrom(dateFrom);
     setCurrentDateTo(dateTo);
     setCurrentExactDate(dateExact);
+    setCurrentTenantFilter(selectedTenant);
     
-    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo, dateExact);
-  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo, selectedExactDate, isDateRangeMode]);
+    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo, dateExact, selectedTenant);
+  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo, selectedExactDate, isDateRangeMode, selectedTenant]);
 
   const handleClearAllFilters = useCallback(() => {
     setSelectedStage("");
@@ -292,23 +332,25 @@ export default function AlarmListPage() {
     setSelectedDateFrom("");
     setSelectedDateTo("");
     setSelectedExactDate("");
+    setSelectedTenant("");
     setCurrentStageFilter("");
     setCurrentAddressFilter("");
     setCurrentDateFrom("");
     setCurrentDateTo("");
     setCurrentExactDate("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "", "");
+    setCurrentTenantFilter("");
+    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "", "", "");
   }, [fetchAlarms, currentPageSize, currentSearch]);
 
   const handleClearStageFilter = useCallback(() => {
     setSelectedStage("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter, currentDateFrom, currentDateTo);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter, currentDateFrom, currentDateTo]);
+    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
 
   const handleClearAddressFilter = useCallback(() => {
     setSelectedAddress("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "", currentDateFrom, currentDateTo);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentDateFrom, currentDateTo]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "", currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
 
   const handleClearDateFilter = useCallback(() => {
     setSelectedDateFrom("");
@@ -317,12 +359,18 @@ export default function AlarmListPage() {
     setCurrentDateFrom("");
     setCurrentDateTo("");
     setCurrentExactDate("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "", "");
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "", "", currentTenantFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentTenantFilter]);
+
+  const handleClearTenantFilter = useCallback(() => {
+    setSelectedTenant("");
+    setCurrentTenantFilter("");
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, "");
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
 
   // Initial load
   useEffect(() => {
-    fetchAlarms(1, 10, "", "", "", "", "", "");
+    fetchAlarms(1, 10, "", "", "", "", "", "", "");
   }, [fetchAlarms]);
 
   // Reset when component unmounts
@@ -346,11 +394,15 @@ export default function AlarmListPage() {
       setCurrentExactDate("");
       setIsDateRangeMode(true);
       setAddressOptions([]);
+      setTenantOptions([]);
       setError("");
       
       // Clear timeout
       if (addressSearchTimeoutRef.current) {
         clearTimeout(addressSearchTimeoutRef.current);
+      }
+      if (tenantSearchTimeoutRef.current) {
+        clearTimeout(tenantSearchTimeoutRef.current);
       }
     };
   }, []);
@@ -411,6 +463,21 @@ export default function AlarmListPage() {
                   loading={addressLoading}
                   selectedValue={selectedAddress}
                   emptyMessage="No addresses found"
+                  minSearchLength={2}
+                />
+              </div>
+
+              {/* Tenant Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tenant or Mobile</label>
+                <SearchableDropdown
+                  placeholder="Search by tenant name or mobile..."
+                  onSearch={handleTenantSearch}
+                  onSelect={handleTenantSelect}
+                  options={tenantOptions}
+                  loading={tenantLoading}
+                  selectedValue={selectedTenant}
+                  emptyMessage="No tenants found"
                   minSearchLength={2}
                 />
               </div>
@@ -484,7 +551,7 @@ export default function AlarmListPage() {
                   Apply Filters
                 </Button>
                 
-                {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo) && (
+                {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
                   <Button
                     variant="outline"
                     onClick={handleClearAllFilters}
@@ -503,7 +570,7 @@ export default function AlarmListPage() {
             </div>
 
             {/* Active Filters Display */}
-            {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo) && (
+            {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
               <div className="border-t pt-3 space-y-2">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Filters:</p>
                 <div className="flex flex-wrap gap-2">
@@ -546,6 +613,18 @@ export default function AlarmListPage() {
                       <button
                         onClick={handleClearDateFilter}
                         className="ml-1 text-purple-600 hover:text-purple-800 dark:text-purple-300 dark:hover:text-purple-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+
+                  {currentTenantFilter && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm dark:bg-yellow-900 dark:text-yellow-200">
+                      <span>Tenant or Mobile: {currentTenantFilter}</span>
+                      <button
+                        onClick={handleClearTenantFilter}
+                        className="ml-1 text-yellow-600 hover:text-yellow-800 dark:text-yellow-300 dark:hover:text-yellow-100"
                       >
                         ×
                       </button>

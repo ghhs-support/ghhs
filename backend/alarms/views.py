@@ -52,6 +52,7 @@ class AlarmViewSet(viewsets.ModelViewSet):
         date_from = self.request.query_params.get('date_from', None)
         date_to = self.request.query_params.get('date_to', None)
         date_exact = self.request.query_params.get('date_exact', None)
+        tenant_filter = self.request.query_params.get('tenant', '').strip()
         
         # Apply filters
         if stage:
@@ -76,6 +77,12 @@ class AlarmViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(date__lte=date_to)
                 except ValueError:
                     pass  # Invalid date format, ignore
+        
+        # Handle tenant filtering
+        if tenant_filter:
+            queryset = queryset.filter(
+                Q(tenants__name__iexact=tenant_filter)
+            ).distinct()
         
         # Handle address filtering separately
         if address_filter:
@@ -228,5 +235,33 @@ def get_address_suggestions(request):
                 'value': full_addr,
                 'label': full_addr
             })
+    
+    return Response(suggestions)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_tenant_suggestions(request):
+    """
+    Get unique tenant suggestions based on search query
+    """
+    search_query = request.GET.get('q', '').strip()
+    
+    if len(search_query) < 2:
+        return Response([])
+    
+    # Search for tenants
+    tenants = Tenant.objects.filter(
+        Q(name__icontains=search_query) |
+        Q(phone__icontains=search_query)
+    ).values('name', 'phone').distinct().order_by('name')[:20]  # Limit to 20 results
+    
+    # Format the response
+    suggestions = []
+    for tenant in tenants:
+        label = f"{tenant['name']} ({tenant['phone']})"
+        suggestions.append({
+            'value': tenant['name'],
+            'label': label
+        })
     
     return Response(suggestions)
