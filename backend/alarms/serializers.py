@@ -36,7 +36,7 @@ class AlarmSerializer(serializers.ModelSerializer):
             'who_contacted', 'contact_method', 'work_order_number',
             'sound_type', 'install_date', 'brand', 'hardwire_alarm',
             'wireless_alarm', 'is_wall_control', 'completed', 'stage',
-            'tenants', 'created_at', 'updated_at', 'images'
+            'tenants', 'created_at', 'updated_at', 'images', 'notes'
         ]
         read_only_fields = ('created_at', 'updated_at')
 

@@ -46,6 +46,7 @@ interface Alarm {
   tenants: Tenant[];
   created_at: string;
   updated_at: string;
+  notes: string | null;
 }
 
 interface AlarmBasicTableProps {

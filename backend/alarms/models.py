@@ -63,6 +63,7 @@ class Alarm(models.Model):
     is_wall_control = models.BooleanField(default=False)
     completed = models.BooleanField(default=False)
     stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default='to_be_booked')
+    notes = models.TextField(blank=True, null=True, help_text="Initial notes for the alarm")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

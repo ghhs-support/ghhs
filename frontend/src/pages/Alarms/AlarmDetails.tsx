@@ -6,9 +6,11 @@ import ComponentCard from "../../components/common/ComponentCard";
 import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
 import Avatar from "../../components/ui/avatar/Avatar";
+import { Modal } from "../../components/ui/modal";
+import { Dropdown } from "../../components/ui/dropdown/Dropdown";
+import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
 import api from "../../services/api";
 import { format } from "date-fns";
-import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
 import SmallMap from "../../components/alarms/maps/SmallMap";
 import MapViewerModal from "../../components/alarms/maps/MapViewerModal";
@@ -101,6 +103,8 @@ export default function AlarmDetails() {
   const [modalState, setModalState] = useState<ImageModalState | null>(null);
   const [selectedUpdateId, setSelectedUpdateId] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isSubmittingStageChange, setIsSubmittingStageChange] = useState(false);
+  const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
 
   const fetchAlarmDetails = async () => {
     try {
@@ -144,6 +148,9 @@ export default function AlarmDetails() {
   const fetchUpdates = async () => {
     try {
       setUpdatesLoading(true);
+      // Store current scroll position
+      const scrollPosition = window.scrollY;
+      
       const response = await api.get(`/api/alarm-updates/?alarm=${id}`);
       console.log('Raw updates response:', response.data);
       const updatesData: AlarmUpdate[] = response.data.results;
@@ -152,6 +159,11 @@ export default function AlarmDetails() {
       // Fetch user details for each unique user
       const userIds = [...new Set(updatesData.map(update => update.created_by))];
       await Promise.all(userIds.map(userId => fetchUserDetails(userId)));
+
+      // Restore scroll position after a short delay to ensure content has rendered
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 100);
     } catch (err) {
       console.error('Error fetching updates:', err);
     } finally {
@@ -435,6 +447,54 @@ export default function AlarmDetails() {
     }
   };
 
+  const handleStageChange = async (newStage: 'to_be_booked' | 'quote_sent' | 'completed' | 'to_be_called') => {
+    try {
+      setIsSubmittingStageChange(true);
+      // Store current scroll position
+      const scrollPosition = window.scrollY;
+      
+      // Update both stage and completed status
+      await api.patch(`/api/alarms/${id}/`, { 
+        stage: newStage,
+        completed: newStage === 'completed'
+      });
+      
+      // Create a status change update
+      await api.post('/api/alarm-updates/', {
+        alarm: id,
+        update_type: 'status_change',
+        note: `Stage changed to ${newStage.replace(/_/g, ' ').toUpperCase()}`
+      });
+      
+      // Update local state instead of refreshing
+      setAlarm(prev => prev ? {
+        ...prev,
+        stage: newStage,
+        completed: newStage === 'completed'
+      } : null);
+      
+      // Still fetch updates since we added a new one
+      await fetchUpdates();
+
+      // Restore scroll position after a short delay to ensure content has rendered
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 100);
+    } catch (err) {
+      console.error('Error updating stage:', err);
+    } finally {
+      setIsSubmittingStageChange(false);
+    }
+  };
+
+  const toggleStageDropdown = () => {
+    setIsStageDropdownOpen(!isStageDropdownOpen);
+  };
+
+  const closeStageDropdown = () => {
+    setIsStageDropdownOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -498,115 +558,123 @@ export default function AlarmDetails() {
             </Button>
           </div>
 
-          {updatesLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-            </div>
-          ) : updates.length > 0 ? (
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
-              {updates.map((update) => {
-                const user = users[update.created_by];
-                const isOwnUpdate = currentUser?.id === update.created_by;
-                
-                console.log('User data for update:', {
-                  updateId: update.id,
-                  userId: update.created_by,
-                  userDetails: user,
-                  isOwnUpdate
-                });
-                
-                const userName = user
-                  ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
-                  : `User ${update.created_by}`;
+          <div className="min-h-[400px] relative">
+            <div className={`transition-all duration-300 ${updatesLoading ? 'blur-sm' : ''}`}>
+              {updates.length > 0 ? (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
+                  {updates.map((update) => {
+                    const user = users[update.created_by];
+                    const isOwnUpdate = currentUser?.id === update.created_by;
+                    
+                    console.log('User data for update:', {
+                      updateId: update.id,
+                      userId: update.created_by,
+                      userDetails: user,
+                      isOwnUpdate
+                    });
+                    
+                    const userName = user
+                      ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
+                      : `User ${update.created_by}`;
 
-                const matchingImages = alarm.images?.filter(image => {
-                  const imageTime = new Date(image.uploaded_at).getTime();
-                  const updateTime = new Date(update.created_at).getTime();
-                  const timeDiff = Math.abs(imageTime - updateTime);
-                  return timeDiff < 60000;
-                }) || [];
-                
-                return (
-                  <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar 
-                          src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
-                          alt={userName}
-                          size="small"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {userName}
-                            </span>
-                            <Badge
-                              variant="light"
-                              color={getUpdateTypeColor(update.update_type)}
-                            >
-                              {formatUpdateType(update.update_type)}
-                            </Badge>
+                    const matchingImages = alarm.images?.filter(image => {
+                      const imageTime = new Date(image.uploaded_at).getTime();
+                      const updateTime = new Date(update.created_at).getTime();
+                      const timeDiff = Math.abs(imageTime - updateTime);
+                      return timeDiff < 60000;
+                    }) || [];
+                    
+                    return (
+                      <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar 
+                              src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
+                              alt={userName}
+                              size="small"
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {userName}
+                                </span>
+                                <Badge
+                                  variant="light"
+                                  color={getUpdateTypeColor(update.update_type)}
+                                >
+                                  {formatUpdateType(update.update_type)}
+                                </Badge>
+                              </div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
-                          </span>
+                          {isOwnUpdate && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setIsUpdateModalOpen(true);
+                                setUpdateType('general_note');
+                                setUpdateNote('');
+                                // Set the update we're adding images to
+                                setSelectedUpdateId(update.id);
+                              }}
+                            >
+                              Add Images
+                            </Button>
+                          )}
+                        </div>
+                        <div className="pl-11">
+                          <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
+                            {update.note}
+                          </p>
+                          {matchingImages.length > 0 && (
+                            <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                              {matchingImages.map((image) => (
+                                <div 
+                                  key={image.id} 
+                                  className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                                  onClick={() => handleImageClick(image, matchingImages)}
+                                >
+                                  <img
+                                    src={image.image_url}
+                                    alt="Update attachment"
+                                    className="h-full w-full object-cover transition-transform hover:scale-105"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      const imgElement = e.currentTarget;
+                                      if (!imgElement.src.includes('/api/proxy/')) {
+                                        const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
+                                        imgElement.src = proxyUrl;
+                                      }
+                                    }}
+                                  />
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-xs text-white text-center">
+                                    {format(new Date(image.uploaded_at), 'dd/MM/yy')}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {isOwnUpdate && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setIsUpdateModalOpen(true);
-                            setUpdateType('general_note');
-                            setUpdateNote('');
-                            // Set the update we're adding images to
-                            setSelectedUpdateId(update.id);
-                          }}
-                        >
-                          Add Images
-                        </Button>
-                      )}
-                    </div>
-                    <div className="pl-11">
-                      <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
-                        {update.note}
-                      </p>
-                      {matchingImages.length > 0 && (
-                        <div className="mt-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                          {matchingImages.map((image) => (
-                            <div 
-                              key={image.id} 
-                              className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                              onClick={() => handleImageClick(image, matchingImages)}
-                            >
-                              <img
-                                src={image.image_url}
-                                alt="Update attachment"
-                                className="h-full w-full object-cover transition-transform hover:scale-105"
-                                loading="lazy"
-                                onError={(e) => {
-                                  const imgElement = e.currentTarget;
-                                  if (!imgElement.src.includes('/api/proxy/')) {
-                                    const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
-                                    imgElement.src = proxyUrl;
-                                  }
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No updates yet. Click "Add Update" to create the first update.
+                </p>
+              )}
             </div>
-          ) : (
-            <p className="text-center py-8 text-gray-500 dark:text-gray-400">
-              No updates yet. Click "Add Update" to create the first update.
-            </p>
-          )}
+            {updatesLoading && (
+              <div className="absolute inset-0 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+              </div>
+            )}
+          </div>
         </ComponentCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -666,12 +734,93 @@ export default function AlarmDetails() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Current Stage</span>
-                <Badge
-                  variant="light"
-                  color={getStatusColor(alarm.stage)}
-                >
-                  {alarm.stage.replace(/_/g, ' ').toUpperCase()}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="light"
+                    color={getStatusColor(alarm.stage)}
+                  >
+                    {alarm.stage.replace(/_/g, ' ').toUpperCase()}
+                  </Badge>
+                  <div className="relative" style={{ width: '24px', height: '24px' }}>
+                    {isSubmittingStageChange ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-brand-500 border-t-transparent"></div>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={toggleStageDropdown}
+                          className="dropdown-toggle absolute inset-0 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition duration-200 hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300"
+                        >
+                          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2.5 4L6 7.5L9.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                        {isStageDropdownOpen && (
+                          <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-gray-200 bg-white p-1.5 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                            <button
+                              onClick={() => {
+                                handleStageChange('to_be_booked');
+                                closeStageDropdown();
+                              }}
+                              disabled={alarm.stage === 'to_be_booked'}
+                              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
+                                alarm.stage === 'to_be_booked' 
+                                  ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-60' 
+                                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              TO BE BOOKED
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleStageChange('quote_sent');
+                                closeStageDropdown();
+                              }}
+                              disabled={alarm.stage === 'quote_sent'}
+                              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
+                                alarm.stage === 'quote_sent' 
+                                  ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-60' 
+                                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              QUOTE SENT
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleStageChange('completed');
+                                closeStageDropdown();
+                              }}
+                              disabled={alarm.stage === 'completed'}
+                              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
+                                alarm.stage === 'completed' 
+                                  ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-60' 
+                                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              COMPLETED
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleStageChange('to_be_called');
+                                closeStageDropdown();
+                              }}
+                              disabled={alarm.stage === 'to_be_called'}
+                              className={`w-full rounded-md px-3 py-1.5 text-left text-sm ${
+                                alarm.stage === 'to_be_called' 
+                                  ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-60' 
+                                  : 'text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              TO BE CALLED
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">Completed</span>
@@ -817,11 +966,11 @@ export default function AlarmDetails() {
               </Button>
             </div>
             {alarm.images && alarm.images.length > 0 ? (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                 {alarm.images.map((image) => (
                   <div 
                     key={image.id} 
-                    className="relative aspect-square w-12 cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                    className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
                     onClick={() => handleImageClick(image, alarm.images || [])}
                   >
                     <img
@@ -837,7 +986,7 @@ export default function AlarmDetails() {
                         }
                       }}
                     />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5 text-[10px] text-white text-center">
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-xs text-white text-center">
                       {format(new Date(image.uploaded_at), 'dd/MM/yy')}
                     </div>
                   </div>

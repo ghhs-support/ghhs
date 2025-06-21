@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import { CalenderIcon } from "../../../icons";
@@ -24,33 +24,38 @@ export default function DatePicker({
   placeholder,
   value,
 }: PropsType) {
+  const flatpickrInstance = useRef<any>(null);
+
   useEffect(() => {
-    const flatPickr = flatpickr(`#${id}`, {
-      mode: mode || "single",
-      static: true,
-      monthSelectorType: "static",
-      dateFormat: "Y-m-d", // Internal format
-      altInput: true,
-      altFormat: "d-m-Y", // Display format
-      defaultDate: value || defaultDate,
-      onChange,
-      allowInput: true,
-      clickOpens: true,
-      disableMobile: false,
-    });
+    if (!flatpickrInstance.current) {
+      flatpickrInstance.current = flatpickr(`#${id}`, {
+        mode: mode || "single",
+        static: true,
+        monthSelectorType: "static",
+        dateFormat: "Y-m-d", // Internal format
+        altInput: true,
+        altFormat: "d-m-Y", // Display format
+        defaultDate: value || defaultDate,
+        onChange,
+        allowInput: true,
+        clickOpens: true,
+        disableMobile: false,
+      });
+    }
 
     // Update the instance when value changes
-    if (!Array.isArray(flatPickr)) {
+    if (flatpickrInstance.current && !Array.isArray(flatpickrInstance.current)) {
       if (!value) {
-        flatPickr.clear();
-      } else {
-        flatPickr.setDate(value, false);
+        flatpickrInstance.current.clear();
+      } else if (value !== flatpickrInstance.current.selectedDates[0]?.toISOString().split('T')[0]) {
+        flatpickrInstance.current.setDate(value, false);
       }
     }
 
     return () => {
-      if (!Array.isArray(flatPickr)) {
-        flatPickr.destroy();
+      if (flatpickrInstance.current && !Array.isArray(flatpickrInstance.current)) {
+        flatpickrInstance.current.destroy();
+        flatpickrInstance.current = null;
       }
     };
   }, [mode, onChange, id, value, defaultDate]);
