@@ -7,6 +7,7 @@ import Button from "../../components/ui/button/Button";
 import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
 import SearchableDropdown from "../../components/alarms/SearchableDropdown";
+import DatePicker from "../../components/form/date-picker";
 
 import api from "../../services/api";
 
@@ -68,8 +69,12 @@ export default function AlarmListPage() {
   const [currentSearch, setCurrentSearch] = useState("");
   const [currentStageFilter, setCurrentStageFilter] = useState("");
   const [currentAddressFilter, setCurrentAddressFilter] = useState("");
+  const [currentDateFrom, setCurrentDateFrom] = useState("");
+  const [currentDateTo, setCurrentDateTo] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
+  const [selectedDateFrom, setSelectedDateFrom] = useState("");
+  const [selectedDateTo, setSelectedDateTo] = useState("");
   const [addressOptions, setAddressOptions] = useState<AddressOption[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
   const [error, setError] = useState("");
@@ -84,7 +89,7 @@ export default function AlarmListPage() {
     { value: 'to_be_called', label: 'To Be Called' },
   ];
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string) => {
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string) => {
     try {
       setLoading(true);
       setError("");
@@ -106,6 +111,14 @@ export default function AlarmListPage() {
         params.append('address', address.trim());
       }
 
+      if (dateFrom?.trim()) {
+        params.append('date_from', dateFrom.trim());
+      }
+
+      if (dateTo?.trim()) {
+        params.append('date_to', dateTo.trim());
+      }
+
       const response = await api.get(`/api/alarms/?${params.toString()}`);
       
       setAlarms(response.data.results);
@@ -115,6 +128,8 @@ export default function AlarmListPage() {
       setCurrentSearch(search || "");
       setCurrentStageFilter(stage || "");
       setCurrentAddressFilter(address || "");
+      setCurrentDateFrom(dateFrom || "");
+      setCurrentDateTo(dateTo || "");
     } catch (error) {
       console.error('Error fetching alarms:', error);
       setError('Failed to fetch alarms. Please try again.');
@@ -150,12 +165,12 @@ export default function AlarmListPage() {
   };
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter);
-  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter]);
+    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo);
+  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo]);
 
   const handleSearchChange = useCallback((search: string) => {
-    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter);
-  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter]);
+    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo);
+  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo]);
 
   const handleStageFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStage(e.target.value);
@@ -177,31 +192,88 @@ export default function AlarmListPage() {
     setSelectedAddress(option?.value || "");
   }, []);
 
+  const formatDateForDisplay = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatDateToBackend = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleDateFromChange = (selectedDates: Date[]) => {
+    if (selectedDates.length > 0) {
+      const date = selectedDates[0];
+      const backendDateStr = formatDateToBackend(date);
+      setSelectedDateFrom(backendDateStr);
+    } else {
+      setSelectedDateFrom('');
+    }
+  };
+
+  const handleDateToChange = (selectedDates: Date[]) => {
+    if (selectedDates.length > 0) {
+      const date = selectedDates[0];
+      const backendDateStr = formatDateToBackend(date);
+      setSelectedDateTo(backendDateStr);
+    } else {
+      setSelectedDateTo('');
+    }
+  };
+
   const handleApplyFilters = useCallback(() => {
-    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress);
-  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress]);
+    // Only apply date filters if both dates are selected
+    const dateFrom = (selectedDateFrom && selectedDateTo) ? selectedDateFrom : '';
+    const dateTo = (selectedDateFrom && selectedDateTo) ? selectedDateTo : '';
+    
+    // Show error if only one date is selected
+    if ((selectedDateFrom && !selectedDateTo) || (!selectedDateFrom && selectedDateTo)) {
+      setError("Please select both From and To dates for date range filtering");
+      return;
+    }
+    
+    setError(""); // Clear any existing error
+    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo);
+  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo]);
 
   const handleClearAllFilters = useCallback(() => {
     setSelectedStage("");
     setSelectedAddress("");
+    setSelectedDateFrom("");
+    setSelectedDateTo("");
     setCurrentStageFilter("");
     setCurrentAddressFilter("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", "");
+    setCurrentDateFrom("");
+    setCurrentDateTo("");
+    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "");
   }, [fetchAlarms, currentPageSize, currentSearch]);
 
   const handleClearStageFilter = useCallback(() => {
     setSelectedStage("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter, currentDateFrom, currentDateTo);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter, currentDateFrom, currentDateTo]);
 
   const handleClearAddressFilter = useCallback(() => {
     setSelectedAddress("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "");
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "", currentDateFrom, currentDateTo);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentDateFrom, currentDateTo]);
+
+  const handleClearDateFilter = useCallback(() => {
+    setSelectedDateFrom("");
+    setSelectedDateTo("");
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "");
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter]);
 
   // Initial load
   useEffect(() => {
-    fetchAlarms(1, 10, "", "", "");
+    fetchAlarms(1, 10, "", "", "", "", "");
   }, [fetchAlarms]);
 
   // Reset when component unmounts
@@ -215,8 +287,12 @@ export default function AlarmListPage() {
       setCurrentSearch("");
       setCurrentStageFilter("");
       setCurrentAddressFilter("");
+      setCurrentDateFrom("");
+      setCurrentDateTo("");
       setSelectedStage("");
       setSelectedAddress("");
+      setSelectedDateFrom("");
+      setSelectedDateTo("");
       setAddressOptions([]);
       setError("");
       
@@ -248,7 +324,7 @@ export default function AlarmListPage() {
         {/* Filter Section */}
         <ComponentCard title="Filters">
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Stage Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage</label>
@@ -286,31 +362,61 @@ export default function AlarmListPage() {
                   minSearchLength={2}
                 />
               </div>
+
+              {/* Date From Filter */}
+              <div className="space-y-2">
+                <DatePicker
+                  id="date-from-filter"
+                  label="Date From"
+                  placeholder="Select start date"
+                  onChange={handleDateFromChange}
+                  value={selectedDateFrom}
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div className="space-y-2">
+                <DatePicker
+                  id="date-to-filter"
+                  label="Date To"
+                  placeholder="Select end date"
+                  onChange={handleDateToChange}
+                  value={selectedDateTo}
+                />
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="primary"
-                onClick={handleApplyFilters}
-                className="px-6 py-2"
-              >
-                Apply Filters
-              </Button>
-              
-              {(currentStageFilter || currentAddressFilter) && (
+            {/* Action Buttons and Error Display */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
                 <Button
-                  variant="outline"
-                  onClick={handleClearAllFilters}
-                  className="px-4 py-2"
+                  variant="primary"
+                  onClick={handleApplyFilters}
+                  className="px-6 py-2"
                 >
-                  Clear All Filters
+                  Apply Filters
                 </Button>
+                
+                {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo) && (
+                  <Button
+                    variant="outline"
+                    onClick={handleClearAllFilters}
+                    className="px-4 py-2"
+                  >
+                    Clear All Filters
+                  </Button>
+                )}
+              </div>
+              
+              {error && (
+                <div className="text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </div>
               )}
             </div>
 
             {/* Active Filters Display */}
-            {(currentStageFilter || currentAddressFilter) && (
+            {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo) && (
               <div className="border-t pt-3 space-y-2">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Filters:</p>
                 <div className="flex flex-wrap gap-2">
@@ -337,6 +443,25 @@ export default function AlarmListPage() {
                       </button>
                     </div>
                   )}
+
+                  {(currentDateFrom || currentDateTo) && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm dark:bg-purple-900 dark:text-purple-200">
+                      <span>
+                        Date: {currentDateFrom && currentDateTo 
+                          ? `${formatDateForDisplay(currentDateFrom)} to ${formatDateForDisplay(currentDateTo)}` 
+                          : currentDateFrom 
+                            ? `From ${formatDateForDisplay(currentDateFrom)}` 
+                            : `To ${formatDateForDisplay(currentDateTo)}`
+                        }
+                      </span>
+                      <button
+                        onClick={handleClearDateFilter}
+                        className="ml-1 text-purple-600 hover:text-purple-800 dark:text-purple-300 dark:hover:text-purple-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -344,18 +469,14 @@ export default function AlarmListPage() {
         </ComponentCard>
 
         <ComponentCard title="Alarm List">
-          {error ? (
-            <div className="flex justify-center items-center min-h-[400px] text-red-500">{error}</div>
-          ) : (
-            <AlarmBasicTable 
-              alarms={alarms} 
-              loading={loading}
-              totalCount={totalCount}
-              onPageChange={handlePageChange}
-              currentPage={currentPage}
-              onSearchChange={handleSearchChange}
-            />
-          )}
+          <AlarmBasicTable 
+            alarms={alarms} 
+            loading={loading}
+            totalCount={totalCount}
+            onPageChange={handlePageChange}
+            currentPage={currentPage}
+            onSearchChange={handleSearchChange}
+          />
         </ComponentCard>
       </div>
 

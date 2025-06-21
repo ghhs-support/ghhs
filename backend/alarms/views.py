@@ -49,12 +49,33 @@ class AlarmViewSet(viewsets.ModelViewSet):
         completed = self.request.query_params.get('completed', None)
         search = self.request.query_params.get('search', '').strip()
         address_filter = self.request.query_params.get('address', '').strip()
+        date_from = self.request.query_params.get('date_from', None)
+        date_to = self.request.query_params.get('date_to', None)
+        date_exact = self.request.query_params.get('date_exact', None)
         
         # Apply filters
         if stage:
             queryset = queryset.filter(stage=stage)
         if completed is not None:
             queryset = queryset.filter(completed=completed == 'true')
+            
+        # Apply date filters
+        if date_exact:
+            try:
+                queryset = queryset.filter(date=date_exact)
+            except ValueError:
+                pass  # Invalid date format, ignore
+        else:
+            if date_from:
+                try:
+                    queryset = queryset.filter(date__gte=date_from)
+                except ValueError:
+                    pass  # Invalid date format, ignore
+            if date_to:
+                try:
+                    queryset = queryset.filter(date__lte=date_to)
+                except ValueError:
+                    pass  # Invalid date format, ignore
         
         # Handle address filtering separately
         if address_filter:
