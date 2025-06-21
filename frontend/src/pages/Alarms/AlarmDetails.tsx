@@ -558,116 +558,120 @@ export default function AlarmDetails() {
             </Button>
           </div>
 
-          <div className="min-h-[400px] relative">
-            <div className={`transition-all duration-300 ${updatesLoading ? 'blur-sm' : ''}`}>
-              {updates.length > 0 ? (
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
-                  {updates.map((update) => {
-                    const user = users[update.created_by];
-                    const isOwnUpdate = currentUser?.id === update.created_by;
-                    
-                    console.log('User data for update:', {
-                      updateId: update.id,
-                      userId: update.created_by,
-                      userDetails: user,
-                      isOwnUpdate
-                    });
-                    
-                    const userName = user
-                      ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
-                      : `User ${update.created_by}`;
+          <div className="h-[600px] relative bg-white dark:bg-gray-800 rounded-lg">
+            <div className={`h-full transition-all duration-300 ${updatesLoading ? 'blur-[2px]' : ''}`}>
+              <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
+                {updates.length > 0 ? (
+                  <div className="space-y-4 py-4">
+                    {updates.map((update) => {
+                      const user = users[update.created_by];
+                      const isOwnUpdate = currentUser?.id === update.created_by;
+                      
+                      console.log('User data for update:', {
+                        updateId: update.id,
+                        userId: update.created_by,
+                        userDetails: user,
+                        isOwnUpdate
+                      });
+                      
+                      const userName = user
+                        ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
+                        : `User ${update.created_by}`;
 
-                    const matchingImages = alarm.images?.filter(image => {
-                      const imageTime = new Date(image.uploaded_at).getTime();
-                      const updateTime = new Date(update.created_at).getTime();
-                      const timeDiff = Math.abs(imageTime - updateTime);
-                      return timeDiff < 60000;
-                    }) || [];
-                    
-                    return (
-                      <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar 
-                              src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
-                              alt={userName}
-                              size="small"
-                            />
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {userName}
-                                </span>
-                                <Badge
-                                  variant="light"
-                                  color={getUpdateTypeColor(update.update_type)}
-                                >
-                                  {formatUpdateType(update.update_type)}
-                                </Badge>
-                              </div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
-                              </span>
-                            </div>
-                          </div>
-                          {isOwnUpdate && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setIsUpdateModalOpen(true);
-                                setUpdateType('general_note');
-                                setUpdateNote('');
-                                // Set the update we're adding images to
-                                setSelectedUpdateId(update.id);
-                              }}
-                            >
-                              Add Images
-                            </Button>
-                          )}
-                        </div>
-                        <div className="pl-11">
-                          <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
-                            {update.note}
-                          </p>
-                          {matchingImages.length > 0 && (
-                            <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                              {matchingImages.map((image) => (
-                                <div 
-                                  key={image.id} 
-                                  className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                                  onClick={() => handleImageClick(image, matchingImages)}
-                                >
-                                  <img
-                                    src={image.image_url}
-                                    alt="Update attachment"
-                                    className="h-full w-full object-cover transition-transform hover:scale-105"
-                                    loading="lazy"
-                                    onError={(e) => {
-                                      const imgElement = e.currentTarget;
-                                      if (!imgElement.src.includes('/api/proxy/')) {
-                                        const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
-                                        imgElement.src = proxyUrl;
-                                      }
-                                    }}
-                                  />
-                                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-xs text-white text-center">
-                                    {format(new Date(image.uploaded_at), 'dd/MM/yy')}
-                                  </div>
+                      const matchingImages = alarm.images?.filter(image => {
+                        const imageTime = new Date(image.uploaded_at).getTime();
+                        const updateTime = new Date(update.created_at).getTime();
+                        const timeDiff = Math.abs(imageTime - updateTime);
+                        return timeDiff < 60000;
+                      }) || [];
+                      
+                      return (
+                        <div key={update.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar 
+                                src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
+                                alt={userName}
+                                size="small"
+                              />
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {userName}
+                                  </span>
+                                  <Badge
+                                    variant="light"
+                                    color={getUpdateTypeColor(update.update_type)}
+                                  >
+                                    {formatUpdateType(update.update_type)}
+                                  </Badge>
                                 </div>
-                              ))}
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
+                                </span>
+                              </div>
                             </div>
-                          )}
+                            {isOwnUpdate && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsUpdateModalOpen(true);
+                                  setUpdateType('general_note');
+                                  setUpdateNote('');
+                                  // Set the update we're adding images to
+                                  setSelectedUpdateId(update.id);
+                                }}
+                              >
+                                Add Images
+                              </Button>
+                            )}
+                          </div>
+                          <div className="pl-11">
+                            <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
+                              {update.note}
+                            </p>
+                            {matchingImages.length > 0 && (
+                              <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                                {matchingImages.map((image) => (
+                                  <div 
+                                    key={image.id} 
+                                    className="relative aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
+                                    onClick={() => handleImageClick(image, matchingImages)}
+                                  >
+                                    <img
+                                      src={image.image_url}
+                                      alt="Update attachment"
+                                      className="h-full w-full object-cover transition-transform hover:scale-105"
+                                      loading="lazy"
+                                      onError={(e) => {
+                                        const imgElement = e.currentTarget;
+                                        if (!imgElement.src.includes('/api/proxy/')) {
+                                          const proxyUrl = `/api/proxy/images/?url=${encodeURIComponent(image.image_url)}`;
+                                          imgElement.src = proxyUrl;
+                                        }
+                                      }}
+                                    />
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-xs text-white text-center">
+                                      {format(new Date(image.uploaded_at), 'dd/MM/yy')}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No updates yet. Click "Add Update" to create the first update.
-                </p>
-              )}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-center text-gray-500 dark:text-gray-400">
+                      No updates yet. Click "Add Update" to create the first update.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             {updatesLoading && (
               <div className="absolute inset-0 flex justify-center items-center">
