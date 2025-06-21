@@ -68,11 +68,13 @@ export default function AlarmListPage() {
   const [currentPageSize, setCurrentPageSize] = useState(10);
   const [currentSearch, setCurrentSearch] = useState("");
   const [currentStageFilter, setCurrentStageFilter] = useState("");
+  const [currentBrandFilter, setCurrentBrandFilter] = useState("");
   const [currentAddressFilter, setCurrentAddressFilter] = useState("");
   const [currentDateFrom, setCurrentDateFrom] = useState("");
   const [currentDateTo, setCurrentDateTo] = useState("");
   const [currentExactDate, setCurrentExactDate] = useState("");
   const [selectedStage, setSelectedStage] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedTenant, setSelectedTenant] = useState("");
   const [currentTenantFilter, setCurrentTenantFilter] = useState("");
@@ -88,6 +90,8 @@ export default function AlarmListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tenantSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [currentSortField, setCurrentSortField] = useState("");
+  const [currentSortDirection, setCurrentSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const stageOptions = [
     { value: '', label: 'All Stages' },
@@ -97,7 +101,16 @@ export default function AlarmListPage() {
     { value: 'to_be_called', label: 'To Be Called' },
   ];
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string, dateExact?: string, tenant?: string) => {
+  const brandOptions = [
+    { value: '', label: 'All Brands' },
+    { value: 'red', label: 'Red' },
+    { value: 'firepro', label: 'FirePro' },
+    { value: 'emerald', label: 'Emerald' },
+    { value: 'cavius', label: 'Cavius' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  const fetchAlarms = useCallback(async (page: number, pageSize: number, search?: string, stage?: string, address?: string, dateFrom?: string, dateTo?: string, dateExact?: string, tenant?: string, brand?: string) => {
     try {
       setLoading(true);
       setError("");
@@ -135,6 +148,10 @@ export default function AlarmListPage() {
         params.append('tenant', tenant.trim());
       }
 
+      if (brand?.trim()) {
+        params.append('brand', brand.trim());
+      }
+
       const response = await api.get(`/api/alarms/?${params.toString()}`);
       
       setAlarms(response.data.results);
@@ -148,6 +165,7 @@ export default function AlarmListPage() {
       setCurrentDateTo(dateTo || "");
       setCurrentExactDate(dateExact || "");
       setCurrentTenantFilter(tenant || "");
+      setCurrentBrandFilter(brand || "");
     } catch (error) {
       console.error('Error fetching alarms:', error);
       setError('Failed to fetch alarms. Please try again.');
@@ -192,19 +210,23 @@ export default function AlarmListPage() {
   };
 
   const handleAlarmCreated = () => {
-    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
+    fetchAlarms(currentPage, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter);
   };
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
-    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
-  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
+    fetchAlarms(page, pageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter);
+  }, [fetchAlarms, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter]);
 
   const handleSearchChange = useCallback((search: string) => {
-    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
-  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
+    fetchAlarms(1, currentPageSize, search, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter);
+  }, [fetchAlarms, currentPageSize, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter]);
 
   const handleStageFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedStage(e.target.value);
+  };
+
+  const handleBrandFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedBrand(e.target.value);
   };
 
   const handleAddressSearch = useCallback((query: string) => {
@@ -303,54 +325,60 @@ export default function AlarmListPage() {
     let dateExact = '';
     
     if (isDateRangeMode) {
-      // Only apply date range filters if both dates are selected
       dateFrom = (selectedDateFrom && selectedDateTo) ? selectedDateFrom : '';
       dateTo = (selectedDateFrom && selectedDateTo) ? selectedDateTo : '';
       
-      // Show error if only one date is selected
       if ((selectedDateFrom && !selectedDateTo) || (!selectedDateFrom && selectedDateTo)) {
         setError("Please select both From and To dates for date range filtering");
         return;
       }
     } else {
-      // Apply exact date filter
       dateExact = selectedExactDate;
     }
     
-    setError(""); // Clear any existing error
+    setError("");
     setCurrentDateFrom(dateFrom);
     setCurrentDateTo(dateTo);
     setCurrentExactDate(dateExact);
     setCurrentTenantFilter(selectedTenant);
+    setCurrentBrandFilter(selectedBrand);
     
-    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo, dateExact, selectedTenant);
-  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo, selectedExactDate, isDateRangeMode, selectedTenant]);
+    fetchAlarms(1, currentPageSize, currentSearch, selectedStage, selectedAddress, dateFrom, dateTo, dateExact, selectedTenant, selectedBrand);
+  }, [fetchAlarms, currentPageSize, currentSearch, selectedStage, selectedAddress, selectedDateFrom, selectedDateTo, selectedExactDate, isDateRangeMode, selectedTenant, selectedBrand]);
 
   const handleClearAllFilters = useCallback(() => {
     setSelectedStage("");
+    setSelectedBrand("");
     setSelectedAddress("");
     setSelectedDateFrom("");
     setSelectedDateTo("");
     setSelectedExactDate("");
     setSelectedTenant("");
     setCurrentStageFilter("");
+    setCurrentBrandFilter("");
     setCurrentAddressFilter("");
     setCurrentDateFrom("");
     setCurrentDateTo("");
     setCurrentExactDate("");
     setCurrentTenantFilter("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "", "", "");
+    fetchAlarms(1, currentPageSize, currentSearch, "", "", "", "", "", "", "");
   }, [fetchAlarms, currentPageSize, currentSearch]);
 
   const handleClearStageFilter = useCallback(() => {
     setSelectedStage("");
-    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, "", currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter]);
+
+  const handleClearBrandFilter = useCallback(() => {
+    setSelectedBrand("");
+    setCurrentBrandFilter("");
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, "");
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
 
   const handleClearAddressFilter = useCallback(() => {
     setSelectedAddress("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "", currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, "", currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentDateFrom, currentDateTo, currentExactDate, currentTenantFilter, currentBrandFilter]);
 
   const handleClearDateFilter = useCallback(() => {
     setSelectedDateFrom("");
@@ -359,18 +387,18 @@ export default function AlarmListPage() {
     setCurrentDateFrom("");
     setCurrentDateTo("");
     setCurrentExactDate("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "", "", currentTenantFilter);
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentTenantFilter]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, "", "", "", currentTenantFilter, currentBrandFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentTenantFilter, currentBrandFilter]);
 
   const handleClearTenantFilter = useCallback(() => {
     setSelectedTenant("");
     setCurrentTenantFilter("");
-    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, "");
-  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate]);
+    fetchAlarms(1, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, "", currentBrandFilter);
+  }, [fetchAlarms, currentPageSize, currentSearch, currentStageFilter, currentAddressFilter, currentDateFrom, currentDateTo, currentExactDate, currentBrandFilter]);
 
   // Initial load
   useEffect(() => {
-    fetchAlarms(1, 10, "", "", "", "", "", "", "");
+    fetchAlarms(1, 10, "", "", "", "", "", "", "", "");
   }, [fetchAlarms]);
 
   // Reset when component unmounts
@@ -387,6 +415,7 @@ export default function AlarmListPage() {
       setCurrentDateFrom("");
       setCurrentDateTo("");
       setSelectedStage("");
+      setSelectedBrand("");
       setSelectedAddress("");
       setSelectedDateFrom("");
       setSelectedDateTo("");
@@ -439,6 +468,29 @@ export default function AlarmListPage() {
                     className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
                   >
                     {stageOptions.map(option => (
+                      <option key={option.value} value={option.value} className="dark:bg-gray-900">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
+                    <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+
+              {/* Brand Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</label>
+                <div className="relative">
+                  <select
+                    value={selectedBrand}
+                    onChange={handleBrandFilterChange}
+                    className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
+                  >
+                    {brandOptions.map(option => (
                       <option key={option.value} value={option.value} className="dark:bg-gray-900">
                         {option.label}
                       </option>
@@ -551,7 +603,7 @@ export default function AlarmListPage() {
                   Apply Filters
                 </Button>
                 
-                {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
+                {(currentStageFilter || currentBrandFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
                   <Button
                     variant="outline"
                     onClick={handleClearAllFilters}
@@ -570,7 +622,7 @@ export default function AlarmListPage() {
             </div>
 
             {/* Active Filters Display */}
-            {(currentStageFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
+            {(currentStageFilter || currentBrandFilter || currentAddressFilter || currentDateFrom || currentDateTo || currentExactDate || currentTenantFilter) && (
               <div className="border-t pt-3 space-y-2">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Filters:</p>
                 <div className="flex flex-wrap gap-2">
@@ -586,6 +638,18 @@ export default function AlarmListPage() {
                     </div>
                   )}
                   
+                  {currentBrandFilter && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm dark:bg-indigo-900 dark:text-indigo-200">
+                      <span>Brand: {brandOptions.find(opt => opt.value === currentBrandFilter)?.label}</span>
+                      <button
+                        onClick={handleClearBrandFilter}
+                        className="ml-1 text-indigo-600 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-100"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+
                   {currentAddressFilter && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm dark:bg-green-900 dark:text-green-200">
                       <span>Address: {currentAddressFilter.length > 30 ? `${currentAddressFilter.substring(0, 30)}...` : currentAddressFilter}</span>

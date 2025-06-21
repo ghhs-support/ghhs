@@ -54,6 +54,7 @@ interface AlarmBasicTableProps {
   loading?: boolean;
   currentPage?: number;
   onSearchChange?: (search: string) => void;
+  onSortChange?: (field: string, direction: 'asc' | 'desc') => void;
 }
 
 export default function AlarmBasicTable({ 
@@ -62,13 +63,16 @@ export default function AlarmBasicTable({
   totalCount = 0,
   loading = false,
   currentPage: externalPage = 1,
-  onSearchChange
+  onSearchChange,
+  onSortChange
 }: AlarmBasicTableProps) {
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(externalPage);
   const [searchTerm, setSearchTerm] = useState("");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Update current page when externalPage changes
   useEffect(() => {
@@ -124,6 +128,87 @@ export default function AlarmBasicTable({
       onPageChange?.(newPage, parseInt(entriesPerPage));
     }
   }, [currentPage, entriesPerPage, onPageChange, totalPages]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedAlarms = () => {
+    if (!sortField) return alarms;
+
+    return [...alarms].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'date':
+          aValue = new Date(a.date).getTime();
+          bValue = new Date(b.date).getTime();
+          break;
+        case 'address':
+          aValue = formatAddress(a).toLowerCase();
+          bValue = formatAddress(b).toLowerCase();
+          break;
+        case 'contact':
+          aValue = a.who_contacted.toLowerCase();
+          bValue = b.who_contacted.toLowerCase();
+          break;
+        case 'work_order':
+          aValue = (a.work_order_number || '').toLowerCase();
+          bValue = (b.work_order_number || '').toLowerCase();
+          break;
+        case 'stage':
+          aValue = a.stage.toLowerCase();
+          bValue = b.stage.toLowerCase();
+          break;
+        case 'brand':
+          aValue = a.brand.toLowerCase();
+          bValue = b.brand.toLowerCase();
+          break;
+        case 'tenant':
+          aValue = formatTenants(a.tenants).toLowerCase();
+          bValue = formatTenants(b.tenants).toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue === bValue) return 0;
+      
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const SortArrow = ({ field }: { field: string }) => {
+    if (sortField !== field) {
+      return (
+        <span className="text-gray-400 dark:text-gray-500">
+          <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 12l6-6 6 6M8 18l6-6 6 6"/>
+          </svg>
+        </span>
+      );
+    }
+    return sortDirection === 'asc' ? (
+      <span className="text-gray-700 dark:text-gray-200">
+        <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 12l6-6 6 6"/>
+        </svg>
+      </span>
+    ) : (
+      <span className="text-gray-700 dark:text-gray-200">
+        <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 18l6-6 6 6"/>
+        </svg>
+      </span>
+    );
+  };
 
   const getStatusColor = (stage: string) => {
     switch (stage.toLowerCase()) {
@@ -231,39 +316,73 @@ export default function AlarmBasicTable({
                 <TableRow>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-24 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('date')}
                   >
-                    Date
+                    <div className="flex items-center">
+                      Date
+                      <SortArrow field="date" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-64 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('address')}
                   >
-                    Address
+                    <div className="flex items-center">
+                      Address
+                      <SortArrow field="address" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-40 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('contact')}
                   >
-                    Contact
+                    <div className="flex items-center">
+                      Contact
+                      <SortArrow field="contact" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('work_order')}
                   >
-                    Work Order
+                    <div className="flex items-center">
+                      Work Order
+                      <SortArrow field="work_order" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('stage')}
                   >
-                    Stage
+                    <div className="flex items-center">
+                      Stage
+                      <SortArrow field="stage" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="w-24 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('brand')}
                   >
-                    Tenant
+                    <div className="flex items-center">
+                      Brand
+                      <SortArrow field="brand" />
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    isHeader
+                    className="w-48 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('tenant')}
+                  >
+                    <div className="flex items-center">
+                      Tenant
+                      <SortArrow field="tenant" />
+                    </div>
                   </TableCell>
                 </TableRow>
               </TableHeader>
@@ -290,19 +409,19 @@ export default function AlarmBasicTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  alarms.map((alarm) => (
+                  getSortedAlarms().map((alarm) => (
                     <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-24 px-3 py-2 text-start">
                         <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
                           {formatDate(alarm.date)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-64 px-3 py-2 text-start">
                         <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {formatAddress(alarm)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-40 px-3 py-2 text-start">
                         <div className="space-y-0.5">
                           <div className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
                             {alarm.who_contacted}
@@ -312,12 +431,12 @@ export default function AlarmBasicTable({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-32 px-3 py-2 text-start">
                         <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {alarm.work_order_number || '-'}
                         </span>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-32 px-3 py-2 text-start">
                         <div className="w-24 whitespace-nowrap">
                           <Badge
                             size="xs"
@@ -328,7 +447,12 @@ export default function AlarmBasicTable({
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-start">
+                      <TableCell className="w-24 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {alarm.brand.charAt(0).toUpperCase() + alarm.brand.slice(1)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="w-48 px-3 py-2 text-start">
                         <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {formatTenants(alarm.tenants)}
                         </span>

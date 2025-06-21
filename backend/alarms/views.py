@@ -53,12 +53,15 @@ class AlarmViewSet(viewsets.ModelViewSet):
         date_to = self.request.query_params.get('date_to', None)
         date_exact = self.request.query_params.get('date_exact', None)
         tenant_filter = self.request.query_params.get('tenant', '').strip()
+        brand_filter = self.request.query_params.get('brand', '').strip()
         
         # Apply filters
         if stage:
             queryset = queryset.filter(stage=stage)
         if completed is not None:
             queryset = queryset.filter(completed=completed == 'true')
+        if brand_filter:
+            queryset = queryset.filter(brand=brand_filter)
             
         # Apply date filters
         if date_exact:

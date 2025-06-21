@@ -30,6 +30,7 @@ interface TableCellProps {
   isHeader?: boolean; // If true, renders as <th>, otherwise <td>
   className?: string; // Optional className for styling
   colSpan?: number; // Number of columns this cell should span
+  onClick?: () => void;
 }
 
 // Table Component
@@ -69,11 +70,11 @@ export function TableRow({ children, className = "" }: TableRowProps) {
 }
 
 // TableCell Component
-export function TableCell({ children, className = "", colSpan, isHeader = false }: TableCellProps) {
-  const Component = isHeader ? "th" : "td";
+export function TableCell({ children, isHeader = false, className = "", colSpan, onClick }: TableCellProps) {
+  const Tag = isHeader ? "th" : "td";
   return (
-    <Component className={className} colSpan={colSpan}>
+    <Tag className={className} colSpan={colSpan} onClick={onClick}>
       {children}
-    </Component>
+    </Tag>
   );
 }
