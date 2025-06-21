@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import Button from '../ui/button/Button';
 import InputField from '../form/input/InputField';
@@ -14,9 +14,37 @@ interface Tenant {
 interface AlarmFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: {
+    id: number;
+    date: string;
+    is_rental: boolean;
+    is_private: boolean;
+    realestate_name: string | null;
+    street_number: string | null;
+    street_name: string | null;
+    suburb: string | null;
+    city: string | null;
+    state: string | null;
+    postal_code: string | null;
+    country: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    who_contacted: string;
+    contact_method: 'email' | 'phone' | 'work_order';
+    work_order_number: string;
+    sound_type: 'full_alarm' | 'chirping_alarm';
+    install_date: string | null;
+    brand: 'red' | 'firepro' | 'emerald' | 'cavius' | 'other';
+    hardwire_alarm: number | null;
+    wireless_alarm: number | null;
+    is_wall_control: boolean;
+    completed: boolean;
+    stage: 'to_be_booked' | 'quote_sent' | 'completed' | 'to_be_called';
+    tenants: Tenant[];
+  };
 }
 
-export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
+export default function AlarmForm({ onClose, onSuccess, initialData }: AlarmFormProps) {
   const [formData, setFormData] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     is_rental: true,
@@ -48,6 +76,39 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
   const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize form with initial data if provided
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        date: initialData.date,
+        is_rental: initialData.is_rental,
+        is_private: initialData.is_private,
+        realestate_name: initialData.realestate_name || '',
+        street_number: initialData.street_number || '',
+        street_name: initialData.street_name || '',
+        suburb: initialData.suburb || '',
+        city: initialData.city || '',
+        state: initialData.state || '',
+        postal_code: initialData.postal_code || '',
+        country: initialData.country || '',
+        latitude: initialData.latitude?.toString() || '',
+        longitude: initialData.longitude?.toString() || '',
+        who_contacted: initialData.who_contacted,
+        contact_method: initialData.contact_method,
+        work_order_number: initialData.work_order_number,
+        sound_type: initialData.sound_type,
+        install_date: initialData.install_date || '',
+        brand: initialData.brand,
+        hardwire_alarm: initialData.hardwire_alarm?.toString() || '',
+        wireless_alarm: initialData.wireless_alarm?.toString() || '',
+        is_wall_control: initialData.is_wall_control,
+        completed: initialData.completed,
+        stage: initialData.stage
+      });
+      setTenants(initialData.tenants);
+    }
+  }, [initialData]);
 
   const inputClasses = "dark:bg-gray-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 transition-colors duration-200";
 
@@ -90,7 +151,6 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
     setError(null);
 
     try {
-      // Include tenants data in the submission
       const submitData = {
         ...formData,
         tenants: tenants.map(tenant => ({
@@ -98,12 +158,20 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
           phone: tenant.phone
         }))
       };
-      await api.post('/api/alarms/', submitData);
+
+      if (initialData) {
+        // Update existing alarm
+        await api.put(`/api/alarms/${initialData.id}/`, submitData);
+      } else {
+        // Create new alarm
+        await api.post('/api/alarms/', submitData);
+      }
+      
       onSuccess();
       onClose();
     } catch (err) {
-      setError('Failed to create alarm. Please try again.');
-      console.error('Error creating alarm:', err);
+      setError(`Failed to ${initialData ? 'update' : 'create'} alarm. Please try again.`);
+      console.error(`Error ${initialData ? 'updating' : 'creating'} alarm:`, err);
     } finally {
       setLoading(false);
     }
@@ -114,10 +182,10 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <h4 className="mb-2 text-lg font-medium text-gray-800 dark:text-white/90">
-            Create New Alarm
+            {initialData ? 'Edit Alarm' : 'Create New Alarm'}
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Fill in the alarm details below
+            {initialData ? 'Update the alarm details below' : 'Fill in the alarm details below'}
           </p>
         </div>
 
@@ -462,14 +530,12 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
                 {tenants.map((tenant, index) => (
                   <div key={index} className="flex gap-4 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg">
                     <span>{tenant.name}</span>
-                    <span>{tenant.phone}</span>
+                    <span>({tenant.phone})</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                No tenants added yet. Click 'Manage Tenants' to add tenants.
-              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">No tenants added yet</p>
             )}
           </div>
 
@@ -513,10 +579,10 @@ export default function AlarmForm({ onClose, onSuccess }: AlarmFormProps) {
             {loading ? (
               <>
                 <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2"></span>
-                Creating...
+                {initialData ? 'Updating...' : 'Creating...'}
               </>
             ) : (
-              'Create Alarm'
+              initialData ? 'Update Alarm' : 'Create Alarm'
             )}
           </button>
         </div>

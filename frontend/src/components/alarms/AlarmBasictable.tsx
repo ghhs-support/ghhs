@@ -9,6 +9,7 @@ import {
 import Badge from "../ui/badge/Badge";
 import { format } from "date-fns";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Tenant {
   id: number;
@@ -66,6 +67,7 @@ export default function AlarmBasicTable({
   onSearchChange,
   onSortChange
 }: AlarmBasicTableProps) {
+  const navigate = useNavigate();
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(externalPage);
   const [searchTerm, setSearchTerm] = useState("");
@@ -244,6 +246,20 @@ export default function AlarmBasicTable({
     return format(new Date(date), 'dd/MM/yyyy');
   };
 
+  const handleRowClick = (alarmId: number) => {
+    // Open in new tab using window.open
+    window.open(`/alarms/${alarmId}`, '_blank');
+  };
+
+  // Add keyboard handler for accessibility
+  const handleKeyDown = (event: React.KeyboardEvent<Element>, alarmId: number) => {
+    // Open in new tab when pressing Enter or Space
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleRowClick(alarmId);
+    }
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="flex flex-col gap-4 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
@@ -410,7 +426,15 @@ export default function AlarmBasicTable({
                   </TableRow>
                 ) : (
                   getSortedAlarms().map((alarm) => (
-                    <TableRow key={alarm.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                    <TableRow 
+                      key={alarm.id} 
+                      className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
+                      onClick={() => handleRowClick(alarm.id)}
+                      onKeyDown={(e) => handleKeyDown(e, alarm.id)}
+                      tabIndex={0}
+                      role="link"
+                      aria-label={`View details for alarm at ${formatAddress(alarm)}`}
+                    >
                       <TableCell className="w-24 px-3 py-2 text-start">
                         <span className="text-theme-xs font-medium text-gray-800 dark:text-white/90">
                           {formatDate(alarm.date)}

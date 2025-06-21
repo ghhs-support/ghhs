@@ -50,4 +50,23 @@ class AlarmSerializer(serializers.ModelSerializer):
         for tenant_data in tenants_data:
             Tenant.objects.create(alarm=alarm, **tenant_data)
         
-        return alarm 
+        return alarm
+
+    def update(self, instance, validated_data):
+        tenants_data = validated_data.pop('tenants', None)
+        
+        # Update alarm fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update tenants if provided
+        if tenants_data is not None:
+            # Delete existing tenants
+            instance.tenants.all().delete()
+            
+            # Create new tenants
+            for tenant_data in tenants_data:
+                Tenant.objects.create(alarm=instance, **tenant_data)
+        
+        return instance 

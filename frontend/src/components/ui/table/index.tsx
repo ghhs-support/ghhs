@@ -1,32 +1,37 @@
-import React from "react";
+import React, { ReactNode } from "react";
 
 // Props for Table
 interface TableProps {
-  children: React.ReactNode; // Table content (thead, tbody, etc.)
+  children: ReactNode; // Table content (thead, tbody, etc.)
   className?: string; // Optional className for styling
 }
 
 // Props for TableHeader
 interface TableHeaderProps {
-  children: React.ReactNode; // Header row(s)
+  children: ReactNode; // Header row(s)
   className?: string; // Optional className for styling
 }
 
 // Props for TableBody
 interface TableBodyProps {
-  children: React.ReactNode; // Body row(s)
+  children: ReactNode; // Body row(s)
   className?: string; // Optional className for styling
 }
 
 // Props for TableRow
 interface TableRowProps {
-  children: React.ReactNode; // Cells (th or td)
+  children: ReactNode; // Cells (th or td)
   className?: string; // Optional className for styling
+  onClick?: () => void;
+  onKeyDown?: (event: React.KeyboardEvent) => void;
+  tabIndex?: number;
+  role?: string;
+  'aria-label'?: string;
 }
 
 // Props for TableCell
 interface TableCellProps {
-  children: React.ReactNode; // Cell content
+  children: ReactNode; // Cell content
   isHeader?: boolean; // If true, renders as <th>, otherwise <td>
   className?: string; // Optional className for styling
   colSpan?: number; // Number of columns this cell should span
@@ -36,7 +41,7 @@ interface TableCellProps {
 // Table Component
 export function Table({ children, className = "" }: TableProps) {
   return (
-    <table className={`w-full border-collapse ${className}`}>
+    <table className={`w-full table-auto ${className}`}>
       {children}
     </table>
   );
@@ -61,9 +66,24 @@ export function TableBody({ children, className = "" }: TableBodyProps) {
 }
 
 // TableRow Component
-export function TableRow({ children, className = "" }: TableRowProps) {
+export function TableRow({ 
+  children, 
+  className = "", 
+  onClick,
+  onKeyDown,
+  tabIndex,
+  role,
+  'aria-label': ariaLabel
+}: TableRowProps) {
   return (
-    <tr className={className}>
+    <tr 
+      className={className} 
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      tabIndex={tabIndex}
+      role={role}
+      aria-label={ariaLabel}
+    >
       {children}
     </tr>
   );

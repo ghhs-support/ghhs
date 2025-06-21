@@ -24,6 +24,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import AlarmListPage from "./pages/Alarms/AlarmList";
 import { useEffect } from 'react';
 import api from './services/api';
+import AlarmDetails from "./pages/Alarms/AlarmDetails";
 
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
             <Route path="/alarms" element={<AlarmListPage />} />
+            <Route path="/alarms/:id" element={<AlarmDetails />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />

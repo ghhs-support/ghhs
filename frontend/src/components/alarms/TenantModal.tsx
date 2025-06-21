@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../ui/modal';
 import Button from '../ui/button/Button';
 import InputField from '../form/input/InputField';
@@ -17,6 +17,11 @@ interface TenantModalProps {
 
 export default function TenantModal({ isOpen, onClose, onSave, initialTenants = [] }: TenantModalProps) {
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants.length > 0 ? initialTenants : [{ name: '', phone: '' }]);
+
+  // Reset tenants when initialTenants changes
+  useEffect(() => {
+    setTenants(initialTenants.length > 0 ? initialTenants : [{ name: '', phone: '' }]);
+  }, [initialTenants]);
 
   const handleAddTenant = () => {
     setTenants([...tenants, { name: '', phone: '' }]);
@@ -99,7 +104,7 @@ export default function TenantModal({ isOpen, onClose, onSave, initialTenants = 
           </button>
         </div>
 
-        <div className="flex items-center justify-end gap-3 mt-6">
+        <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
