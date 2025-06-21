@@ -241,7 +241,6 @@ export default function AlarmDetails() {
         {/* Header Section */}
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Alarm Details</h2>
             <p className="text-gray-600 dark:text-gray-400">
               {formatAddress(alarm)}
             </p>
