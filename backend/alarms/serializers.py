@@ -77,7 +77,7 @@ class AlarmSerializer(serializers.ModelSerializer):
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'first_name', 'last_name', 'email']
 
 class AlarmUpdateSerializer(serializers.ModelSerializer):
     created_by = UserBasicSerializer(read_only=True)

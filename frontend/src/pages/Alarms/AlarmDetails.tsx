@@ -5,6 +5,7 @@ import PageMeta from "../../components/common/PageMeta";
 import ComponentCard from "../../components/common/ComponentCard";
 import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
+import Avatar from "../../components/ui/avatar/Avatar";
 import api from "../../services/api";
 import { format } from "date-fns";
 import { Modal } from "../../components/ui/modal";
@@ -16,6 +17,19 @@ interface Tenant {
   id: number;
   name: string;
   phone: string;
+}
+
+interface AlarmUpdate {
+  id: number;
+  update_type: 'call_attempt' | 'customer_contact' | 'status_change' | 'general_note';
+  note: string;
+  created_by: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  created_at: string;
 }
 
 interface Alarm {
@@ -57,6 +71,12 @@ export default function AlarmDetails() {
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMapViewerOpen, setIsMapViewerOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updates, setUpdates] = useState<AlarmUpdate[]>([]);
+  const [updatesLoading, setUpdatesLoading] = useState(true);
+  const [updateType, setUpdateType] = useState<AlarmUpdate['update_type']>('general_note');
+  const [updateNote, setUpdateNote] = useState('');
+  const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
 
   const fetchAlarmDetails = async () => {
     try {
@@ -72,9 +92,22 @@ export default function AlarmDetails() {
     }
   };
 
+  const fetchUpdates = async () => {
+    try {
+      setUpdatesLoading(true);
+      const response = await api.get(`/api/alarm-updates/?alarm=${id}`);
+      setUpdates(response.data.results);
+    } catch (err) {
+      console.error('Error fetching updates:', err);
+    } finally {
+      setUpdatesLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchAlarmDetails();
+      fetchUpdates();
     }
   }, [id]);
 
@@ -119,6 +152,62 @@ export default function AlarmDetails() {
       alarm.country === 'Australia' ? null : alarm.country
     ].filter(Boolean);
     return parts.join(', ');
+  };
+
+  const getUpdateTypeColor = (type: string) => {
+    switch (type) {
+      case 'call_attempt':
+        return 'warning';
+      case 'customer_contact':
+        return 'success';
+      case 'status_change':
+        return 'info';
+      default:
+        return 'primary';
+    }
+  };
+
+  const formatUpdateType = (type: string) => {
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  const getDisplayName = (user: AlarmUpdate['created_by']) => {
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    } else if (user.first_name) {
+      return user.first_name;
+    } else if (user.last_name) {
+      return user.last_name;
+    }
+    return 'User';
+  };
+
+  const handleUpdateSubmit = async () => {
+    if (!updateNote.trim()) {
+      return; // Don't submit empty notes
+    }
+
+    try {
+      setIsSubmittingUpdate(true);
+      await api.post('/api/alarm-updates/', {
+        alarm: id,
+        update_type: updateType,
+        note: updateNote.trim()
+      });
+
+      // Refresh updates list
+      await fetchUpdates();
+
+      // Reset form and close modal
+      setUpdateType('general_note');
+      setUpdateNote('');
+      setIsUpdateModalOpen(false);
+    } catch (err) {
+      console.error('Error submitting update:', err);
+      // You might want to show an error message to the user here
+    } finally {
+      setIsSubmittingUpdate(false);
+    }
   };
 
   if (loading) {
@@ -172,6 +261,69 @@ export default function AlarmDetails() {
             </Button>
           </div>
         </div>
+
+        {/* Updates Section */}
+        <ComponentCard title="Updates & Communication History">
+          <div className="mb-4 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Recent Updates</h3>
+            <Button
+              variant="primary"
+              onClick={() => setIsUpdateModalOpen(true)}
+            >
+              Add Update
+            </Button>
+          </div>
+
+          {updatesLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+            </div>
+          ) : updates.length > 0 ? (
+            <div className="space-y-4">
+              {updates.map((update) => (
+                <div 
+                  key={update.id} 
+                  className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar 
+                        src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
+                        alt={getDisplayName(update.created_by)}
+                        size="small"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {getDisplayName(update.created_by)}
+                          </span>
+                          <Badge
+                            variant="light"
+                            color={getUpdateTypeColor(update.update_type)}
+                          >
+                            {formatUpdateType(update.update_type)}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(update.created_at), 'dd/MM/yyyy HH:mm')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pl-11">
+                    <p className="text-gray-800 dark:text-white/90 whitespace-pre-wrap">
+                      {update.note}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center py-8 text-gray-500 dark:text-gray-400">
+              No updates yet. Click "Add Update" to create the first update.
+            </p>
+          )}
+        </ComponentCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Address Information */}
@@ -389,6 +541,63 @@ export default function AlarmDetails() {
           title={`Map View - ${formatAddress(alarm)}`}
         />
       )}
+
+      {/* Update Modal */}
+      <Modal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        className="max-w-2xl"
+      >
+        <div className="p-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            Add Update
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Update Type
+              </label>
+              <select
+                value={updateType}
+                onChange={(e) => setUpdateType(e.target.value as AlarmUpdate['update_type'])}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="call_attempt">Call Attempt</option>
+                <option value="customer_contact">Customer Contact</option>
+                <option value="status_change">Status Change</option>
+                <option value="general_note">General Note</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                Note
+              </label>
+              <textarea
+                value={updateNote}
+                onChange={(e) => setUpdateNote(e.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                placeholder="Enter update details..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setIsUpdateModalOpen(false)}
+                disabled={isSubmittingUpdate}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleUpdateSubmit}
+              >
+                Save Update
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 } 
