@@ -8,6 +8,7 @@ import { Modal } from "../../components/ui/modal";
 import AlarmForm from "../../components/alarms/AlarmForm";
 import SearchableDropdown from "../../components/alarms/SearchableDropdown";
 import DatePicker from "../../components/alarms/date-picker/DatePicker";
+import Select from "../../components/ui/select/Select";
 
 import api from "../../services/api";
 
@@ -452,47 +453,23 @@ export default function AlarmListPage() {
               {/* Stage Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Stage</label>
-                <div className="relative">
-                  <select
-                    value={selectedStage}
-                    onChange={handleStageFilterChange}
-                    className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                  >
-                    {stageOptions.map(option => (
-                      <option key={option.value} value={option.value} className="dark:bg-gray-900">
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
-                    <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
-                    </svg>
-                  </span>
-                </div>
+                <Select
+                  value={selectedStage}
+                  onChange={handleStageFilterChange}
+                  options={stageOptions}
+                  placeholder="Select Stage"
+                />
               </div>
 
               {/* Brand Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Brand</label>
-                <div className="relative">
-                  <select
-                    value={selectedBrand}
-                    onChange={handleBrandFilterChange}
-                    className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg appearance-none shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800"
-                  >
-                    {brandOptions.map(option => (
-                      <option key={option.value} value={option.value} className="dark:bg-gray-900">
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
-                    <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3.8335 5.9165L8.00016 10.0832L12.1668 5.9165" stroke="" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"></path>
-                    </svg>
-                  </span>
-                </div>
+                <Select
+                  value={selectedBrand}
+                  onChange={handleBrandFilterChange}
+                  options={brandOptions}
+                  placeholder="Select Brand"
+                />
               </div>
 
               {/* Address Filter */}

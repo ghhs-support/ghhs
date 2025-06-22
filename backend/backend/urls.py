@@ -1,12 +1,15 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
+from django.views.generic import TemplateView
 import requests
+from django.conf import settings
+from django.conf.urls.static import static
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -78,8 +81,19 @@ def admin_access(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+# Serve frontend for all non-API routes
+def serve_frontend(request):
+    return TemplateView.as_view(template_name='index.html')(request)
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/admin-access/', admin_access, name='admin_access'),
     path('api/', include('alarms.urls')),  # Add alarms URLs under /api/ prefix
-]
+    
+    # Serve React App - catch all routes and let React handle routing
+    re_path(r'^(?!api/)(?!admin/)(?!media/)(?!static/).*$', TemplateView.as_view(template_name='index.html')),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Add static files serving in development
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
