@@ -295,10 +295,20 @@ def main():
     Alarm.objects.all().delete()
 
     # Create or get a test user for the updates
-    test_user, _ = User.objects.get_or_create(
+    test_user, created = User.objects.get_or_create(
         username='test_user',
-        email='test@example.com'
+        defaults={
+            'email': 'test@example.com',
+            'first_name': 'John',
+            'last_name': 'Smith'
+        }
     )
+    
+    # Update the name if the user already existed
+    if not created:
+        test_user.first_name = 'John'
+        test_user.last_name = 'Smith'
+        test_user.save()
 
     print("Generating 200 alarms with tenants and updates...")
     # Generate 200 alarms

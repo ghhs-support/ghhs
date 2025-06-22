@@ -9,7 +9,6 @@ import {
 import Badge from "../ui/badge/Badge";
 import { format } from "date-fns";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 
 interface Tenant {
   id: number;
@@ -65,10 +64,8 @@ export default function AlarmBasicTable({
   totalCount = 0,
   loading = false,
   currentPage: externalPage = 1,
-  onSearchChange,
-  onSortChange
+  onSearchChange
 }: AlarmBasicTableProps) {
-  const navigate = useNavigate();
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(externalPage);
   const [searchTerm, setSearchTerm] = useState("");

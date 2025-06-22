@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../ui/modal';
-import Button from '../ui/button/Button';
-import InputField from '../form/input/InputField';
 
 interface Tenant {
   name: string;

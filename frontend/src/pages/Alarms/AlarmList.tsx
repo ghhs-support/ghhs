@@ -46,13 +46,7 @@ interface Alarm {
   tenants: Tenant[];
   created_at: string;
   updated_at: string;
-}
-
-interface PaginatedResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Alarm[];
+  notes: string | null;
 }
 
 interface AddressOption {
@@ -90,8 +84,6 @@ export default function AlarmListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const addressSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tenantSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [currentSortField, setCurrentSortField] = useState("");
-  const [currentSortDirection, setCurrentSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const stageOptions = [
     { value: '', label: 'All Stages' },
@@ -445,7 +437,6 @@ export default function AlarmListPage() {
       <PageBreadcrumb pageTitle="Alarm Management" />
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Alarm Management</h2>
           <Button
             variant="primary"
             onClick={handleAddClick}
@@ -667,11 +658,7 @@ export default function AlarmListPage() {
                       <span>
                         {currentExactDate 
                           ? `Date: ${formatDateForDisplay(currentExactDate)}`
-                          : currentDateFrom && currentDateTo 
-                            ? `Date: ${formatDateForDisplay(currentDateFrom)} to ${formatDateForDisplay(currentDateTo)}` 
-                            : currentDateFrom 
-                              ? `From ${formatDateForDisplay(currentDateFrom)}` 
-                              : `To ${formatDateForDisplay(currentDateTo)}`
+                          : 'Date Range'
                         }
                       </span>
                       <button
@@ -685,7 +672,7 @@ export default function AlarmListPage() {
 
                   {currentTenantFilter && (
                     <div className="flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm dark:bg-yellow-900 dark:text-yellow-200">
-                      <span>Tenant or Mobile: {currentTenantFilter}</span>
+                      <span>Tenant: {currentTenantFilter.length > 30 ? `${currentTenantFilter.substring(0, 30)}...` : currentTenantFilter}</span>
                       <button
                         onClick={handleClearTenantFilter}
                         className="ml-1 text-yellow-600 hover:text-yellow-800 dark:text-yellow-300 dark:hover:text-yellow-100"
@@ -700,18 +687,18 @@ export default function AlarmListPage() {
           </div>
         </ComponentCard>
 
-        <ComponentCard title="Alarm List">
-          <AlarmBasicTable 
-            alarms={alarms} 
-            loading={loading}
-            totalCount={totalCount}
-            onPageChange={handlePageChange}
-            currentPage={currentPage}
-            onSearchChange={handleSearchChange}
-          />
-        </ComponentCard>
+        {/* Alarm Table */}
+        <AlarmBasicTable
+          alarms={alarms}
+          loading={loading}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          onSearchChange={handleSearchChange}
+        />
       </div>
 
+      {/* Add/Edit Alarm Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleModalClose}

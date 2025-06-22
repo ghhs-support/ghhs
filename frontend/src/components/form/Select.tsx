@@ -1,14 +1,16 @@
 import React from 'react';
 
 interface SelectProps {
-  name: string;
-  value: string;
+  name?: string;
+  value?: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
   required?: boolean;
   label?: string;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
 }
 
 const Select: React.FC<SelectProps> = ({
@@ -20,6 +22,8 @@ const Select: React.FC<SelectProps> = ({
   disabled = false,
   required = false,
   label,
+  options = [],
+  placeholder,
 }) => {
   const selectClasses = `dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800 ${
     disabled ? "cursor-not-allowed opacity-50" : ""
@@ -45,6 +49,12 @@ const Select: React.FC<SelectProps> = ({
         disabled={disabled}
         required={required}
       >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
         {children}
       </select>
     </div>

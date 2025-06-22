@@ -7,8 +7,7 @@ import Badge from "../../components/ui/badge/Badge";
 import Button from "../../components/ui/button/Button";
 import Avatar from "../../components/ui/avatar/Avatar";
 import { Modal } from "../../components/ui/modal";
-import { Dropdown } from "../../components/ui/dropdown/Dropdown";
-import { DropdownItem } from "../../components/ui/dropdown/DropdownItem";
+
 import api from "../../services/api";
 import { format } from "date-fns";
 import AlarmForm from "../../components/alarms/AlarmForm";

@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import Button from '../ui/button/Button';
-import InputField from '../form/input/InputField';
-import Select from '../form/Select';
 import TenantModal from './TenantModal';
 import api from '../../services/api';
 import DatePicker from './date-picker/DatePicker';
@@ -79,7 +77,6 @@ export default function AlarmForm({ onClose, onSuccess, initialData }: AlarmForm
   const [error, setError] = useState<string | null>(null);
   const [initialNotes, setInitialNotes] = useState('');
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize form with initial data if provided
   useEffect(() => {
@@ -160,7 +157,7 @@ export default function AlarmForm({ onClose, onSuccess, initialData }: AlarmForm
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleDateChange = (selectedDates: Date[], dateStr: string, instance: any) => {
+  const handleDateChange = (_: Date[], dateStr: string, instance: any) => {
     // Only handle install_date changes now
     if (instance.element.id === 'install-date' && dateStr !== formData.install_date) {
       setFormData(prev => ({

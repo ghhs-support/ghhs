@@ -1,8 +1,6 @@
 import PageMeta from "../../components/common/PageMeta";
 import AuthLayout from "./AuthPageLayout";
 import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
-import { Link } from "react-router-dom";
-import { ChevronLeftIcon } from "../../icons";
 
 export default function SignIn() {
   const { login, isLoading } = useKindeAuth();
