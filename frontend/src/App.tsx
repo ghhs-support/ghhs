@@ -22,14 +22,21 @@ import AdminAccess from "./pages/AdminAccess";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import AlarmListPage from "./pages/Alarms/AlarmList";
-import { useEffect } from 'react';
-import api from './services/api';
+import { useEffect, useState } from 'react';
+import { setAuthToken } from './services/api';
 import AlarmDetails from "./pages/Alarms/AlarmDetails";
+import { useKindeAuth } from '@kinde-oss/kinde-auth-react';
 
 // Determine the base URL based on the environment
 const baseURL = import.meta.env.PROD 
   ? 'https://ghhs.fly.dev'
   : 'http://localhost:5173';
+
+// Use React frontend app configuration - this is safe to expose in browser code
+const KINDE_CONFIG = {
+  domain: 'https://ghhs.kinde.com',
+  clientId: '9b6e7df3e3ec46beb2d09a89565da00b'  // React frontend app client ID (no secret needed)
+};
 
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
@@ -38,77 +45,143 @@ if (import.meta.env.DEV) {
     // Filter out Kinde token exchange errors that don't affect functionality
     const errorMessage = args.join(' ');
     if (errorMessage.includes('Token exchange failed: 500') || 
-        errorMessage.includes('POST https://ghhs.kinde.com/oauth2/token 500')) {
+        errorMessage.includes('POST https://ghhs.kinde.com/oauth2/token 500') ||
+        errorMessage.includes('POST https://ghhs.kinde.com/oauth2/token 401')) {
       return;
     }
     originalError.apply(console, args);
   };
 }
 
-export default function App() {
+// AuthSetup component to handle authentication
+function AuthSetup({ children }: { children: React.ReactNode }) {
+  const { getToken, isLoading, isAuthenticated, user } = useKindeAuth();
+
   useEffect(() => {
-    // Fetch CSRF token by making a GET request to Django
-    api.get('/api/alarms/').catch(error => {
-      console.error('Error fetching initial data:', error);
-    });
+    const handleAuth = async () => {
+      if (isLoading) return;
+
+      if (isAuthenticated && user) {
+        try {
+          const token = await getToken();
+          if (token) {
+            setAuthToken(token);
+            console.log('Auth token set for user:', user.email);
+          } else {
+            console.warn('No token received despite being authenticated');
+            setAuthToken(null);
+          }
+        } catch (error) {
+          console.error('Error getting token:', error);
+          setAuthToken(null);
+        }
+      } else {
+        setAuthToken(null);
+      }
+    };
+
+    handleAuth();
+  }, [isAuthenticated, isLoading, getToken, user]);
+
+  // Refresh token periodically to prevent expiration during long sessions
+  useEffect(() => {
+    if (!isAuthenticated || isLoading) return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          setAuthToken(token);
+          console.log('Token refreshed');
+        }
+      } catch (error) {
+        console.warn('Token refresh failed:', error);
+      }
+    }, 4 * 60 * 1000); // Refresh every 4 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [isAuthenticated, isLoading, getToken]);
+
+  return <>{children}</>;
+}
+
+export default function App() {
+  const [kindeConfig, setKindeConfig] = useState(KINDE_CONFIG);
+
+  useEffect(() => {
+    // Try to fetch Kinde configuration from backend (for production)
+    // In development, we'll use the hardcoded config
+    if (import.meta.env.PROD) {
+      fetch(`${baseURL}/api/kinde-config/`)
+        .then(response => response.json())
+        .then(data => {
+          setKindeConfig(data);
+        })
+        .catch(error => {
+          console.warn('Failed to fetch Kinde config from backend, using environment config:', error);
+        });
+    }
   }, []);
 
   return (
     <KindeProvider
-      clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
-      domain={import.meta.env.VITE_KINDE_DOMAIN}
-      redirectUri={baseURL}
-      logoutUri={baseURL}
+      clientId={kindeConfig.clientId}
+      domain={kindeConfig.domain}
+      redirectUri={window.location.origin}
+      logoutUri={window.location.origin}
+      useInsecureForRefreshToken={import.meta.env.DEV}
     >
       <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Protected Dashboard Layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index path="/" element={<Home />} />
+        <AuthSetup>
+          <ScrollToTop />
+          <Routes>
+            {/* Protected Dashboard Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index path="/" element={<Home />} />
 
-            {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
-            <Route path="/alarms" element={<AlarmListPage />} />
-            <Route path="/alarms/:id" element={<AlarmDetails />} />
+              {/* Others Page */}
+              <Route path="/profile" element={<UserProfiles />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/blank" element={<Blank />} />
+              <Route path="/alarms" element={<AlarmListPage />} />
+              <Route path="/alarms/:id" element={<AlarmDetails />} />
 
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
+              {/* Forms */}
+              <Route path="/form-elements" element={<FormElements />} />
 
-            {/* Tables */}
-            <Route path="/basic-tables" element={<BasicTables />} />
+              {/* Tables */}
+              <Route path="/basic-tables" element={<BasicTables />} />
 
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
+              {/* Ui Elements */}
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/avatars" element={<Avatars />} />
+              <Route path="/badge" element={<Badges />} />
+              <Route path="/buttons" element={<Buttons />} />
+              <Route path="/images" element={<Images />} />
+              <Route path="/videos" element={<Videos />} />
 
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
-          </Route>
+              {/* Charts */}
+              <Route path="/line-chart" element={<LineChart />} />
+              <Route path="/bar-chart" element={<BarChart />} />
+            </Route>
 
-          {/* Admin Access - Protected */}
-          <Route path="/admin" element={<AdminAccess />} />
+            {/* Admin Access - Protected */}
+            <Route path="/admin" element={<AdminAccess />} />
 
-          {/* Auth Layout - Not Protected */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+            {/* Auth Layout - Not Protected */}
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
 
-          {/* Fallback Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Fallback Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthSetup>
       </Router>
     </KindeProvider>
   );

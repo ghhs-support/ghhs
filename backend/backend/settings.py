@@ -26,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_ENV') != 'production'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'ghhs.fly.dev', '.fly.dev']
 
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'backend.middleware.DebugMiddleware',  # Add debug middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # Django CORS middleware
     'django.middleware.common.CommonMiddleware',
@@ -131,42 +132,49 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # Media files configuration
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# S3 Storage Configuration
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development
+CORS_ALLOW_CREDENTIALS = True
+
+# Session settings
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# S3 Storage Configuration for media files
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Tigris S3 Settings
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-AWS_S3_ENDPOINT_URL = "https://ghhs.fly.storage.tigris.dev"  # Your bucket's Tigris endpoint with protocol
-AWS_S3_REGION_NAME = 'auto'  # Global setting
+AWS_S3_ENDPOINT_URL = "https://ghhs.fly.storage.tigris.dev"
+AWS_S3_REGION_NAME = 'auto'
 AWS_S3_USE_SSL = True
 AWS_S3_VERIFY = True
 
 # Public bucket settings
-AWS_DEFAULT_ACL = 'public-read'  # Make objects publicly readable
-AWS_QUERYSTRING_AUTH = False  # Disable query string auth for public objects
+AWS_DEFAULT_ACL = 'public-read'
+AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
 
 # Allow object ACL
 AWS_S3_OBJECT_PARAMETERS = {
-    'ACL': 'public-read',  # Default ACL for new objects
-    'CacheControl': 'max-age=86400',  # 24 hours cache control
+    'ACL': 'public-read',
+    'CacheControl': 'max-age=86400',
 }
 
 # CORS settings
@@ -175,15 +183,10 @@ AWS_S3_CORS_ENABLED = True
 # Use path-style URLs
 AWS_S3_ADDRESSING_STYLE = 'path'
 
-# Headers from your settings
+# Headers
 AWS_S3_CUSTOM_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
 }
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Kinde Configuration for Django Backend
 KINDE_ISSUER_URL = os.environ.get('KINDE_ISSUER_URL')
@@ -204,8 +207,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://ghhs.fly.dev",
 ]
-
-CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -242,6 +243,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'backend.authentication.KindeAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -259,14 +261,33 @@ AUTHENTICATION_BACKENDS = [
 # Debug logging configuration
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,  # Disable loggers for better performance
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
     'handlers': {
-        'null': {
-            'class': 'logging.NullHandler',
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
     },
     'root': {
-        'handlers': ['null'],
-        'level': 'WARNING',
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',  # Set to DEBUG to see detailed error information
+            'propagate': False,
+        },
     },
 }

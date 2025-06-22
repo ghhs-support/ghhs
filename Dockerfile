@@ -1,44 +1,58 @@
 # Build frontend
-FROM node:20-slim as frontend-builder
-WORKDIR /frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+
+# Set environment variables for frontend build
+ARG KINDE_CLIENT_ID
+ARG KINDE_DOMAIN=https://ghhs.kinde.com
+ENV VITE_KINDE_CLIENT_ID=$KINDE_CLIENT_ID
+ENV VITE_KINDE_DOMAIN=$KINDE_DOMAIN
+
+# Create .env file for Vite
+RUN echo "VITE_KINDE_CLIENT_ID=$VITE_KINDE_CLIENT_ID" > .env && \
+    echo "VITE_KINDE_DOMAIN=$VITE_KINDE_DOMAIN" >> .env
+
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-# Build backend
-FROM python:3.12-slim
+FROM python:3.11-slim-bullseye
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
+# Install system dependencies - minimal installation
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
     libpq-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir gunicorn
 
 # Copy backend code
 COPY backend/ .
 
-# Copy frontend build files to Django's static directory
-COPY --from=frontend-builder /frontend/dist/ /app/staticfiles/
-COPY --from=frontend-builder /frontend/dist/assets/ /app/staticfiles/assets/
+# Copy built frontend from the frontend-builder stage
+COPY --from=frontend-builder /app/frontend/dist /app/static
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Expose the port
+EXPOSE $PORT
 
-# Runtime configuration
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
-ENV DJANGO_ENV=production
+# Create a startup script
+RUN echo '#!/bin/bash\n\
+gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 2\n\
+' > /app/start.sh \
+    && chmod +x /app/start.sh
 
-# Create a non-root user
-RUN useradd -m appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-
-# Start command
-CMD python manage.py migrate && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT 
+# Start the application
+CMD ["/app/start.sh"] 

@@ -9,6 +9,7 @@ import {
 import Badge from "../ui/badge/Badge";
 import { format } from "date-fns";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Tenant {
   id: number;
@@ -66,6 +67,7 @@ export default function AlarmBasicTable({
   currentPage: externalPage = 1,
   onSearchChange
 }: AlarmBasicTableProps) {
+  const navigate = useNavigate();
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(externalPage);
   const [searchTerm, setSearchTerm] = useState("");
@@ -244,17 +246,23 @@ export default function AlarmBasicTable({
     return format(new Date(date), 'dd/MM/yyyy');
   };
 
-  const handleRowClick = (alarmId: number) => {
-    // Open in new tab using window.open
-    window.open(`/alarms/${alarmId}`, '_blank');
+  const handleRowClick = (alarmId: number, event: React.MouseEvent) => {
+    // Use Ctrl/Cmd + click to open in new tab (preserves auth context)
+    if (event.ctrlKey || event.metaKey) {
+      // Let the browser handle the new tab with proper context
+      window.open(`/alarms/${alarmId}`, '_blank');
+    } else {
+      // Normal navigation in same tab (preserves auth state)
+      navigate(`/alarms/${alarmId}`);
+    }
   };
 
   // Add keyboard handler for accessibility
   const handleKeyDown = (event: React.KeyboardEvent<Element>, alarmId: number) => {
-    // Open in new tab when pressing Enter or Space
+    // Navigate in same tab when pressing Enter or Space
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      handleRowClick(alarmId);
+      navigate(`/alarms/${alarmId}`);
     }
   };
 
@@ -427,7 +435,7 @@ export default function AlarmBasicTable({
                     <TableRow 
                       key={alarm.id} 
                       className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
-                      onClick={() => handleRowClick(alarm.id)}
+                      onClick={(e) => handleRowClick(alarm.id, e)}
                       onKeyDown={(e) => handleKeyDown(e, alarm.id)}
                       tabIndex={0}
                       role="link"

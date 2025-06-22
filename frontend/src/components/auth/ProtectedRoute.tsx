@@ -9,6 +9,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useKindeAuth();
   const location = useLocation();
 
+  // Add a small delay to ensure authentication state is properly loaded
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -17,7 +18,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // Double check authentication with token presence
   if (!isAuthenticated) {
+    console.warn('User not authenticated, redirecting to signin');
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 

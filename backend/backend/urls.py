@@ -12,6 +12,51 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 @csrf_exempt
+def kinde_config(request):
+    """Endpoint to provide Kinde configuration to frontend"""
+    return JsonResponse({
+        'clientId': '9b6e7df3e3ec46beb2d09a89565da00b',  # Use React frontend client ID
+        'domain': 'https://ghhs.kinde.com',
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def token_exchange(request):
+    """Handle token exchange with Kinde"""
+    try:
+        import json
+        data = json.loads(request.body)
+        code = data.get('code')
+        
+        if not code:
+            return JsonResponse({'error': 'No code provided'}, status=400)
+            
+        # Exchange code for token with Kinde using React frontend client ID
+        # Note: React frontend apps don't have client secrets, so we use PKCE flow
+        response = requests.post(
+            'https://ghhs.kinde.com/oauth2/token',
+            data={
+                'grant_type': 'authorization_code',
+                'client_id': '9b6e7df3e3ec46beb2d09a89565da00b',  # React frontend client ID
+                'code': code,
+                'redirect_uri': 'https://ghhs.fly.dev',  # Production redirect URI
+                # No client_secret for frontend apps
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            return JsonResponse(response.json())
+        else:
+            return JsonResponse(
+                {'error': 'Token exchange failed', 'details': response.text}, 
+                status=response.status_code
+            )
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
 @require_http_methods(["POST"])
 def admin_access(request):
     """Secure endpoint to validate Kinde token and grant admin access"""
@@ -88,12 +133,14 @@ def serve_frontend(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/admin-access/', admin_access, name='admin_access'),
+    path('api/kinde-config/', kinde_config, name='kinde_config'),
+    path('api/token-exchange/', token_exchange, name='token_exchange'),
     path('api/', include('alarms.urls')),  # Add alarms URLs under /api/ prefix
     
     # Serve React App - catch all routes and let React handle routing
     re_path(r'^(?!api/)(?!admin/)(?!media/)(?!static/).*$', TemplateView.as_view(template_name='index.html')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
-# Add static files serving in development
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# Add static and media files serving
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

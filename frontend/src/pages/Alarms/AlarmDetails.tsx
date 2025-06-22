@@ -337,7 +337,12 @@ export default function AlarmDetails() {
       }
 
       // Refresh updates list and alarm details to get new images
-      await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
+      try {
+        await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
+      } catch (refreshErr) {
+        console.warn('Error refreshing data after upload, but upload was successful:', refreshErr);
+        // Don't show this as an error to the user since upload succeeded
+      }
 
       // Reset form and close modal
       setUpdateType('general_note');
@@ -436,7 +441,12 @@ export default function AlarmDetails() {
       console.log('Image upload response:', response.data);
 
       // Refresh updates list and alarm details to get new images
-      await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
+      try {
+        await Promise.all([fetchUpdates(), fetchAlarmDetails()]);
+      } catch (refreshErr) {
+        console.warn('Error refreshing data after upload, but upload was successful:', refreshErr);
+        // Don't show this as an error to the user since upload succeeded
+      }
 
       // Reset form and close modal
       setSelectedImages([]);
