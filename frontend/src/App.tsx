@@ -26,6 +26,11 @@ import { useEffect } from 'react';
 import api from './services/api';
 import AlarmDetails from "./pages/Alarms/AlarmDetails";
 
+// Determine the base URL based on the environment
+const baseURL = import.meta.env.PROD 
+  ? 'https://ghhs.fly.dev'
+  : 'http://localhost:5173';
+
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
   const originalError = console.error;
@@ -52,8 +57,8 @@ export default function App() {
     <KindeProvider
       clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
       domain={import.meta.env.VITE_KINDE_DOMAIN}
-      redirectUri="http://localhost:5173"
-      logoutUri="http://localhost:5173"
+      redirectUri={baseURL}
+      logoutUri={baseURL}
     >
       <Router>
         <ScrollToTop />

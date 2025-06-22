@@ -7,8 +7,13 @@ function getCookie(name: string): string | null {
   return null;
 }
 
+// Determine the base URL based on the current environment
+const baseURL = import.meta.env.PROD 
+  ? 'https://ghhs.fly.dev'  // Production URL
+  : 'http://localhost:8000'; // Development URL
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000',  // Django development server
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
