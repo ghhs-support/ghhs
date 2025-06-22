@@ -200,6 +200,16 @@ KINDE_CLIENT_ID_M2M = os.environ.get('KINDE_CLIENT_ID_M2M')
 KINDE_CLIENT_SECRET_M2M = os.environ.get('KINDE_CLIENT_SECRET_M2M')
 KINDE_MGMNT_AUDIENCE = os.environ.get('KINDE_MGMNT_AUDIENCE')       
 
+# File Upload Settings - Optimize for memory efficiency
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB - keep files in memory up to this size
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB - max request size in memory
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # Limit form fields
+FILE_UPLOAD_PERMISSIONS = 0o644
+
+# Image Processing Settings
+PILLOW_RESIZE_ALGORITHM = 'LANCZOS'  # High quality resize
+PILLOW_JPEG_QUALITY = 75  # Balance between quality and file size
+PILLOW_OPTIMIZE = True  # Enable JPEG optimization
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
@@ -258,7 +268,7 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Debug logging configuration
+# Logging Configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -267,27 +277,65 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'maxBytes': 1024*1024*15,  # 15MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': False,
+            'propagate': True,
         },
-        'django.request': {
+        'alarms': {
             'handlers': ['console'],
-            'level': 'DEBUG',  # Set to DEBUG to see detailed error information
-            'propagate': False,
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'backend.authentication': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
         },
     },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
 }
+
+# Create logs directory if it doesn't exist
+logs_dir = os.path.join(BASE_DIR, 'logs')
+os.makedirs(logs_dir, exist_ok=True)
+
+# Cache Configuration for better performance
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        'TIMEOUT': 300,  # 5 minutes
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
+# Session configuration
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+SESSION_CACHE_ALIAS = 'default'
+SESSION_COOKIE_AGE = 86400  # 24 hours

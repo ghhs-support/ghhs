@@ -308,41 +308,70 @@ class AlarmImageViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
 
     def perform_create(self, serializer):
+        import gc
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
         try:
-            print("\n=== Starting Image Upload Process ===")
-            print(f"Request Data: {self.request.data}")
-            print(f"Request Files: {self.request.FILES}")
+            logger.info("\n=== Starting Image Upload Process ===")
+            logger.info(f"Request Data: {self.request.data}")
+            logger.info(f"Request Files: {self.request.FILES}")
             
             # Get the alarm ID from the request data
             alarm_id = self.request.data.get('alarm')
-            print(f"Alarm ID from request: {alarm_id}")
+            logger.info(f"Alarm ID from request: {alarm_id}")
             
             if not alarm_id:
-                print("Error: No alarm ID provided")
+                logger.error("Error: No alarm ID provided")
                 raise ValidationError('Alarm ID is required')
 
             # Get the update time if provided
             update_time = self.request.data.get('update_time')
-            print(f"Update time from request: {update_time}")
+            logger.info(f"Update time from request: {update_time}")
             
             # Save each image
             images = self.request.FILES.getlist('images')
-            print(f"Number of images received: {len(images)}")
+            logger.info(f"Number of images received: {len(images)}")
             
             if not images:
-                print("Error: No images provided in request")
+                logger.error("Error: No images provided in request")
                 raise ValidationError('No images provided')
 
+            # Check total size of all images before processing
+            total_size = sum(img.size for img in images)
+            max_total_size = 50 * 1024 * 1024  # 50MB total limit
+            
+            if total_size > max_total_size:
+                logger.warning(f"Total image size ({total_size} bytes) exceeds limit ({max_total_size} bytes)")
+                raise ValidationError(f'Total image size too large. Maximum allowed: {max_total_size // (1024*1024)}MB')
+
             created_images = []
+            
+            # Process images one at a time to avoid memory issues
             for idx, image in enumerate(images):
-                print(f"\nProcessing image {idx + 1}/{len(images)}")
-                print(f"Image name: {image.name}")
-                print(f"Image size: {image.size} bytes")
-                print(f"Image content type: {image.content_type}")
+                logger.info(f"\nProcessing image {idx + 1}/{len(images)}")
+                logger.info(f"Image name: {image.name}")
+                logger.info(f"Image size: {image.size} bytes")
+                logger.info(f"Image content type: {image.content_type}")
+                
+                # Force garbage collection before processing each image
+                gc.collect()
                 
                 try:
+                    # Validate image file
+                    if not image.content_type.startswith('image/'):
+                        logger.warning(f"Invalid content type: {image.content_type}")
+                        raise ValidationError(f'Invalid file type for {image.name}. Only images are allowed.')
+                    
+                    # Check individual image size
+                    max_image_size = 15 * 1024 * 1024  # 15MB per image
+                    if image.size > max_image_size:
+                        logger.warning(f"Image {image.name} is too large: {image.size} bytes")
+                        raise ValidationError(f'Image {image.name} is too large. Maximum size: {max_image_size // (1024*1024)}MB')
+                    
                     # Create the image instance
-                    print("Creating AlarmImage instance...")
+                    logger.info("Creating AlarmImage instance...")
                     instance = AlarmImage(
                         alarm_id=alarm_id,
                         image=image,
@@ -351,41 +380,64 @@ class AlarmImageViewSet(viewsets.ModelViewSet):
                     )
                     
                     # Save with the update time
-                    print(f"Saving image with update time: {update_time}")
+                    logger.info(f"Saving image with update time: {update_time}")
                     instance.save(update_time=update_time)
-                    print(f"Successfully saved image with ID: {instance.id}")
+                    logger.info(f"Successfully saved image with ID: {instance.id}")
                     
                     created_images.append(instance)
+                    
+                    # Force garbage collection after each image
+                    gc.collect()
+                    
                 except Exception as img_err:
-                    print(f"Error saving individual image: {str(img_err)}")
+                    logger.error(f"Error saving individual image: {str(img_err)}")
                     import traceback
-                    print(f"Traceback: {traceback.format_exc()}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    
+                    # Clean up any partially created images on error
+                    for created_img in created_images:
+                        try:
+                            created_img.delete()
+                        except:
+                            pass
+                    
                     raise ValidationError(f"Error saving image {image.name}: {str(img_err)}")
 
-            print(f"\nSuccessfully created {len(created_images)} images")
+            logger.info(f"\nSuccessfully created {len(created_images)} images")
+            
+            # Final cleanup
+            gc.collect()
+            
             return created_images
             
         except Exception as e:
-            print(f"\nError in perform_create: {str(e)}")
+            logger.error(f"\nError in perform_create: {str(e)}")
             import traceback
-            print(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Final cleanup on error
+            gc.collect()
+            
             raise ValidationError(str(e))
 
     def create(self, request, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
-            print("\n=== Starting create method ===")
+            logger.info("\n=== Starting create method ===")
             created_images = self.perform_create(serializer=None)
-            print("Getting serializer for response...")
+            logger.info("Getting serializer for response...")
             serializer = self.get_serializer(created_images, many=True)
-            print("Returning successful response")
+            logger.info("Returning successful response")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
-            print(f"Validation error in create: {str(e)}")
+            logger.error(f"Validation error in create: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Unexpected error in create: {str(e)}")
+            logger.error(f"Unexpected error in create: {str(e)}")
             import traceback
-            print(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return Response(
                 {'error': f'Unexpected error: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

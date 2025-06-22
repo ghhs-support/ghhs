@@ -1,8 +1,11 @@
+import { useState } from 'react';
+
 interface AvatarProps {
   src: string; // URL of the avatar image
   alt?: string; // Alt text for the avatar
   size?: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"; // Avatar size
   status?: "online" | "offline" | "busy" | "none"; // Status indicator
+  fallbackInitials?: string; // Initials to show if image fails to load
 }
 
 const sizeClasses = {
@@ -12,6 +15,15 @@ const sizeClasses = {
   large: "h-12 w-12 max-w-12",
   xlarge: "h-14 w-14 max-w-14",
   xxlarge: "h-16 w-16 max-w-16",
+};
+
+const textSizeClasses = {
+  xsmall: "text-xs",
+  small: "text-xs",
+  medium: "text-sm",
+  large: "text-base",
+  xlarge: "text-lg",
+  xxlarge: "text-xl",
 };
 
 const statusSizeClasses = {
@@ -34,11 +46,59 @@ const Avatar: React.FC<AvatarProps> = ({
   alt = "User Avatar",
   size = "medium",
   status = "none",
+  fallbackInitials,
 }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
   return (
-    <div className={`relative  rounded-full ${sizeClasses[size]}`}>
+    <div className={`relative rounded-full ${sizeClasses[size]}`}>
       {/* Avatar Image */}
-      <img src={src} alt={alt} className="object-cover rounded-full" />
+      {!imageError && (
+        <img 
+          src={src} 
+          alt={alt} 
+          className={`object-cover rounded-full w-full h-full transition-opacity duration-200 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+        />
+      )}
+
+      {/* Fallback Initials */}
+      {(imageError || !imageLoaded) && fallbackInitials && (
+        <div className={`
+          flex items-center justify-center w-full h-full rounded-full 
+          bg-gradient-to-br from-brand-500 to-brand-600 
+          text-white font-semibold ${textSizeClasses[size]}
+          ${imageError ? 'opacity-100' : 'opacity-0'}
+        `}>
+          {fallbackInitials}
+        </div>
+      )}
+
+      {/* Loading state for when no fallback is provided */}
+      {(imageError || !imageLoaded) && !fallbackInitials && (
+        <div className={`
+          flex items-center justify-center w-full h-full rounded-full 
+          bg-gray-300 dark:bg-gray-600 animate-pulse
+          ${imageError ? 'opacity-100' : 'opacity-0'}
+        `}>
+          <svg className={`${textSizeClasses[size]} text-gray-500 dark:text-gray-400`} fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+          </svg>
+        </div>
+      )}
 
       {/* Status Indicator */}
       {status !== "none" && (

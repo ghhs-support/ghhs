@@ -7,7 +7,10 @@ from PIL import Image as PILImage
 from io import BytesIO
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
+import gc
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # Create your models here.
@@ -120,36 +123,96 @@ class AlarmImage(models.Model):
         update_time = kwargs.pop('update_time', None)
         
         if self.image:
-            # Open the image using PIL
-            img = PILImage.open(self.image)
-            
-            # Convert RGBA to RGB if needed
-            if img.mode == 'RGBA':
-                # Create a white background
-                background = PILImage.new('RGB', img.size, (255, 255, 255))
-                # Paste the image on the background using alpha channel
-                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
-                img = background
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
+            try:
+                logger.info(f"Starting image processing for {self.image.name}")
+                
+                # Check file size first - skip processing if too large
+                if hasattr(self.image, 'size') and self.image.size > 10 * 1024 * 1024:  # 10MB limit
+                    logger.warning(f"Image {self.image.name} is too large ({self.image.size} bytes), skipping processing")
+                    # Just save as-is for very large files
+                    super().save(*args, **kwargs)
+                    if update_time:
+                        AlarmImage.objects.filter(pk=self.pk).update(uploaded_at=update_time)
+                    return
 
-            # Resize if larger than max dimensions
-            if img.height > 1200 or img.width > 1200:
-                output_size = (1200, 1200)
-                img.thumbnail(output_size, PILImage.Resampling.LANCZOS)
+                # Open the image using PIL with explicit file seeking
+                self.image.seek(0)  # Ensure we're at the start of the file
+                img = PILImage.open(self.image)
+                
+                # Get original format and size for logging
+                original_size = img.size
+                original_format = img.format
+                logger.info(f"Processing image: {original_size[0]}x{original_size[1]} {original_format}")
 
-            # Save the processed image
-            buffer = BytesIO()
-            img.save(buffer, format='JPEG', quality=85)
-            buffer.seek(0)
-            self.image = InMemoryUploadedFile(
-                buffer,
-                'ImageField',
-                f"{os.path.splitext(self.image.name)[0]}.jpg",
-                'image/jpeg',
-                buffer.getbuffer().nbytes,
-                None
-            )
+                # Load the image data to ensure it's fully in memory
+                img.load()
+                
+                # Convert RGBA to RGB if needed (memory efficient)
+                if img.mode == 'RGBA':
+                    logger.info("Converting RGBA to RGB")
+                    # Create a white background of the same size
+                    background = PILImage.new('RGB', img.size, (255, 255, 255))
+                    # Paste the image on the background using alpha channel
+                    background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                    # Clean up original image
+                    img.close()
+                    img = background
+                elif img.mode != 'RGB':
+                    logger.info(f"Converting {img.mode} to RGB")
+                    old_img = img
+                    img = img.convert('RGB')
+                    old_img.close()
+
+                # Resize if larger than max dimensions (memory efficient)
+                if img.height > 1200 or img.width > 1200:
+                    logger.info(f"Resizing image from {img.size[0]}x{img.size[1]} to max 1200x1200")
+                    # Calculate new size maintaining aspect ratio
+                    ratio = min(1200/img.width, 1200/img.height)
+                    new_size = (int(img.width * ratio), int(img.height * ratio))
+                    
+                    # Use thumbnail for memory efficiency
+                    old_img = img
+                    img = img.resize(new_size, PILImage.Resampling.LANCZOS)
+                    old_img.close()
+                    
+                    # Force garbage collection after resize
+                    gc.collect()
+
+                # Save the processed image with optimized settings
+                buffer = BytesIO()
+                
+                # Use optimized JPEG settings for smaller file size
+                img.save(buffer, 
+                        format='JPEG', 
+                        quality=75,  # Reduced from 85 for smaller files
+                        optimize=True,  # Enable optimization
+                        progressive=True)  # Progressive JPEG for faster loading
+                
+                # Clean up the PIL image
+                img.close()
+                
+                # Create the Django file object
+                buffer.seek(0)
+                file_size = buffer.getbuffer().nbytes
+                logger.info(f"Processed image size: {file_size} bytes")
+                
+                self.image = InMemoryUploadedFile(
+                    buffer,
+                    'ImageField',
+                    f"{os.path.splitext(self.image.name)[0]}.jpg",
+                    'image/jpeg',
+                    file_size,
+                    None
+                )
+                
+                # Force garbage collection
+                gc.collect()
+                logger.info("Image processing completed successfully")
+                
+            except Exception as e:
+                logger.error(f"Error processing image {self.image.name}: {str(e)}")
+                # If processing fails, save the original image
+                logger.info("Saving original image due to processing error")
 
         # First save without the update_time to let the model handle the file
         super().save(*args, **kwargs)
@@ -157,6 +220,9 @@ class AlarmImage(models.Model):
         # If we have an update_time, set it after the initial save
         if update_time:
             AlarmImage.objects.filter(pk=self.pk).update(uploaded_at=update_time)
+        
+        # Final garbage collection
+        gc.collect()
 
     def __str__(self):
         return f"Image for Alarm {self.alarm.id} uploaded at {self.uploaded_at.strftime('%Y-%m-%d %H:%M')}"

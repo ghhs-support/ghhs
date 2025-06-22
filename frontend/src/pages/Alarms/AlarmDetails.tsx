@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import AlarmForm from "../../components/alarms/AlarmForm";
 import SmallMap from "../../components/alarms/maps/SmallMap";
 import MapViewerModal from "../../components/alarms/maps/MapViewerModal";
+import { generateUserAvatar as getAvatar, generateUserInitials as getInitials, generateUserDisplayName } from "../../utils/avatarUtils";
 
 interface Tenant {
   id: number;
@@ -592,9 +593,7 @@ export default function AlarmDetails() {
                         isOwnUpdate
                       });
                       
-                      const userName = user
-                        ? `${user.first_name} ${user.last_name}`.trim() || user.email || `User ${update.created_by}`
-                        : `User ${update.created_by}`;
+                      const userName = generateUserDisplayName(user, update.created_by);
 
                       const matchingImages = alarm.images?.filter(image => {
                         // If the image has a description that matches the update ID, it was uploaded to this specific update
@@ -615,9 +614,10 @@ export default function AlarmDetails() {
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
                               <Avatar 
-                                src={`/images/user/user-0${Math.floor(Math.random() * 9) + 1}.jpg`}
+                                src={getAvatar(user, update.created_by)}
                                 alt={userName}
                                 size="small"
+                                fallbackInitials={getInitials(user, update.created_by)}
                               />
                               <div>
                                 <div className="flex items-center gap-2">
