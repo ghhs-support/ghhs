@@ -16,7 +16,7 @@ def get_kinde_m2m_token():
     client_id = settings.KINDE_CLIENT_ID_M2M
     client_secret = settings.KINDE_CLIENT_SECRET_M2M
     audience = settings.KINDE_MGMNT_AUDIENCE
-    token_url = f"{settings.KINDE_DOMAIN}/oauth2/token"
+    token_url = "https://ghhs.kinde.com/oauth2/token"
 
     if not client_id or not client_secret:
         print("[ERROR] Kinde M2M Client ID or Secret not configured in environment variables.")
@@ -55,7 +55,7 @@ def get_kinde_m2m_token():
 
 def create_kinde_user(email, first_name, last_name, access_token):
     """Create a user in Kinde with email + password authentication enabled"""
-    kinde_api_url = f"{settings.KINDE_DOMAIN}/api/v1/user"
+    kinde_api_url = "https://ghhs.kinde.com/api/v1/user"
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Accept': 'application/json',

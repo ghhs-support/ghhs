@@ -84,8 +84,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'neondb',
         'USER': 'neondb_owner',
-        'PASSWORD': 'npg_QorkCeZXU80B',
-        'HOST': 'ep-royal-frost-a7pd52wd-pooler.ap-southeast-2.aws.neon.tech',
+        'PASSWORD': 'npg_fVIyZBP59HYb',
+        'HOST': 'ep-patient-bread-a7vjkfcx-pooler.ap-southeast-2.aws.neon.tech',
         'PORT': '5432',
         'OPTIONS': {
             'sslmode': 'require',
