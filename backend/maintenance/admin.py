@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import IssueType, Alarmissue
+from .models import IssueType
 
 @admin.register(IssueType)
 class IssueTypeAdmin(admin.ModelAdmin):

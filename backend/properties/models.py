@@ -52,12 +52,14 @@ class PrivateOwner(models.Model):
     notes = models.TextField(max_length=1000, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        if self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.first_name
 
 class Property(models.Model):
     uid = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
-    agency = models.ForeignKey(Agency, on_delete=models.CASCADE)
-    private_owner = models.ForeignKey(PrivateOwner, on_delete=models.CASCADE)
+    agency = models.ForeignKey(Agency, on_delete=models.CASCADE, null=True, blank=True)
+    private_owner = models.ForeignKey(PrivateOwner, on_delete=models.CASCADE, null=True, blank=True)
     unit_number = models.CharField(max_length=100, null=True, blank=True)
     street_number = models.CharField(max_length=100)
     street_name = models.CharField(max_length=100)
