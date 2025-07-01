@@ -13,6 +13,15 @@ import { format } from "date-fns";
 
 type SortField = 'allocation' | 'status' | 'notes' | 'agency_private' | 'customer_contacted' | 'property' | 'created_at';
 
+interface PaginatedResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: BeepingAlarm[];
+  total_pages: number;
+  current_page: number;
+}
+
 export default function BeepingAlarmsTable() {
   const { authenticatedGet } = useAuthenticatedApi();
   const [beepingAlarms, setBeepingAlarms] = useState<BeepingAlarm[]>([]);
@@ -21,6 +30,8 @@ export default function BeepingAlarmsTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -28,8 +39,23 @@ export default function BeepingAlarmsTable() {
   const fetchAlarms = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await authenticatedGet('/beeping_alarms');
-      setBeepingAlarms(response.results);
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        page_size: entriesPerPage,
+      });
+      
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      const response = await authenticatedGet(`/beeping_alarms?${params.toString()}`);
+      const paginatedResponse = response as PaginatedResponse;
+      
+      setBeepingAlarms(paginatedResponse.results);
+      setTotalCount(paginatedResponse.count);
+      setTotalPages(paginatedResponse.total_pages);
       setError(null);
     } catch (err) {
       console.error('Error fetching alarms:', err);
@@ -37,7 +63,7 @@ export default function BeepingAlarmsTable() {
     } finally {
       setLoading(false);
     }
-  }, [authenticatedGet]);
+  }, [authenticatedGet, currentPage, entriesPerPage, searchTerm]);
 
   useEffect(() => {
     fetchAlarms();
@@ -56,7 +82,6 @@ export default function BeepingAlarmsTable() {
       setSortField(field);
       setSortDirection('asc');
     }
-    setCurrentPage(1);
   };
 
   const SortArrow = ({ field }: { field: SortField }) => {
@@ -84,82 +109,57 @@ export default function BeepingAlarmsTable() {
     );
   };
 
-  const getFilteredAndSortedAlarms = () => {
-    let result = [...beepingAlarms];
-
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      result = result.filter(alarm => {
-        return (
-          alarm.notes?.toLowerCase().includes(searchLower) ||
-          alarm.property?.street_name?.toLowerCase().includes(searchLower) ||
-          alarm.property?.street_number?.toLowerCase().includes(searchLower) ||
-          alarm.property?.suburb?.toLowerCase().includes(searchLower) ||
-          alarm.property?.state?.toLowerCase().includes(searchLower) ||
-          alarm.property?.postcode?.toLowerCase().includes(searchLower) ||
-          alarm.allocation?.some(user => 
-            `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchLower)
-          )
-        );
-      });
+  // Client-side sorting function
+  const getSortedAlarms = () => {
+    if (!sortField) {
+      return beepingAlarms;
     }
 
-    // Apply sorting
-    if (sortField) {
-      result.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
+    return [...beepingAlarms].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
 
-        switch (sortField) {
-          case 'allocation':
-            aValue = a.allocation?.[0]?.first_name || '';
-            bValue = b.allocation?.[0]?.first_name || '';
-            break;
-          case 'status':
-            aValue = a.status || '';
-            bValue = b.status || '';
-            break;
-          case 'notes':
-            aValue = a.notes || '';
-            bValue = b.notes || '';
-            break;
-          case 'agency_private':
-            aValue = a.is_agency ? 'Agency' : 'Private';
-            bValue = b.is_agency ? 'Agency' : 'Private';
-            break;
-          case 'customer_contacted':
-            aValue = a.is_customer_contacted;
-            bValue = b.is_customer_contacted;
-            break;
-          case 'property':
-            aValue = `${a.property?.street_number || ''} ${a.property?.street_name || ''}`;
-            bValue = `${b.property?.street_number || ''} ${b.property?.street_name || ''}`;
-            break;
-          case 'created_at':
-            aValue = new Date(a.created_at).getTime();
-            bValue = new Date(b.created_at).getTime();
-            break;
-          default:
-            return 0;
-        }
+      switch (sortField) {
+        case 'allocation':
+          aValue = a.allocation?.[0]?.first_name || '';
+          bValue = b.allocation?.[0]?.first_name || '';
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'notes':
+          aValue = a.notes || '';
+          bValue = b.notes || '';
+          break;
+        case 'agency_private':
+          aValue = a.is_agency ? 'Agency' : 'Private';
+          bValue = b.is_agency ? 'Agency' : 'Private';
+          break;
+        case 'customer_contacted':
+          aValue = a.is_customer_contacted;
+          bValue = b.is_customer_contacted;
+          break;
+        case 'property':
+          aValue = `${a.property?.street_number || ''} ${a.property?.street_name || ''}`;
+          bValue = `${b.property?.street_number || ''} ${b.property?.street_name || ''}`;
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        default:
+          return 0;
+      }
 
-        if (aValue === bValue) return 0;
-        
-        const comparison = aValue > bValue ? 1 : -1;
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-    }
-
-    return result;
+      if (aValue === bValue) return 0;
+      
+      const comparison = aValue > bValue ? 1 : -1;
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
   };
 
-  const filteredAlarms = getFilteredAndSortedAlarms();
-  const totalCount = filteredAlarms.length;
-  const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
-  const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
-  const endIndex = startIndex + parseInt(entriesPerPage);
-  const currentAlarms = filteredAlarms.slice(startIndex, endIndex);
+  const sortedAlarms = getSortedAlarms();
 
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy');
@@ -221,6 +221,9 @@ export default function BeepingAlarmsTable() {
       </div>
     );
   }
+
+  const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
+  const endIndex = startIndex + sortedAlarms.length;
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
@@ -378,7 +381,7 @@ export default function BeepingAlarmsTable() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : currentAlarms.length === 0 ? (
+                ) : sortedAlarms.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
@@ -387,7 +390,7 @@ export default function BeepingAlarmsTable() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentAlarms.map((alarm) => (
+                  sortedAlarms.map((alarm) => (
                     <TableRow 
                       key={alarm.id}
                       className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
@@ -438,7 +441,7 @@ export default function BeepingAlarmsTable() {
 
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Showing {currentAlarms.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, totalCount)} of {totalCount} entries
+          Showing {sortedAlarms.length > 0 ? startIndex + 1 : 0} to {endIndex} of {totalCount} entries
         </div>
         <div className="flex gap-2">
           <button
