@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
     icon: <PlugInIcon />,
     name: "Maintenance",
     subItems: [
-      { name: "Beeping Alarms", path: "/beeping-alarms", pro: false },
+      { name: "Beeping Alarms", path: "/maintenance/beeping-alarms", pro: false },
     ],
   },
   {

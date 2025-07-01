@@ -19,6 +19,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AdminAccess from "./pages/AdminAccess";
+import BeepingAlarms from "./pages/Maintenance/BeepingAlarms";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -61,6 +62,9 @@ export default function App() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
+
+            {/* Maintenance */}
+            <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />
