@@ -21,6 +21,7 @@ export default function BeepingAlarmsTable() {
       try {
         setLoading(true);
         const data = await authenticatedGet('/beeping_alarms');
+        console.log('API Response:', data); // Debug log
         setBeepingAlarms(data);
         setError(null);
       } catch (err) {
@@ -36,15 +37,62 @@ export default function BeepingAlarmsTable() {
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active':
-        return <Badge size="sm" color="success">Active</Badge>;
-      case 'pending':
-        return <Badge size="sm" color="warning">Pending</Badge>;
-      case 'resolved':
-        return <Badge size="sm" color="info">Resolved</Badge>;
+      case 'new':
+        return <Badge size="sm" color="info">New</Badge>;
+      case 'requires_call_back':
+        return <Badge size="sm" color="warning">Requires Call Back</Badge>;
+      case 'awaiting_response':
+        return <Badge size="sm" color="warning">Awaiting Response</Badge>;
+      case 'to_be_scheduled':
+        return <Badge size="sm" color="warning">To Be Scheduled</Badge>;
+      case 'to_be_quoted':
+        return <Badge size="sm" color="warning">To Be Quoted</Badge>;
+      case 'completed':
+        return <Badge size="sm" color="success">Completed</Badge>;
+      case 'cancelled':
+        return <Badge size="sm" color="error">Cancelled</Badge>;
       default:
         return <Badge size="sm" color="error">{status || 'Unknown'}</Badge>;
     }
+  };
+
+  const formatPropertyAddress = (property: any) => {
+    console.log('Property data:', property); // Debug log
+    
+    if (!property) {
+      return 'No property data';
+    }
+    
+    // Handle case where property might be just an ID
+    if (typeof property === 'number') {
+      return `Property ID: ${property}`;
+    }
+    
+    const parts = [
+      property.unit_number,
+      property.street_number,
+      property.street_name,
+      property.suburb,
+      property.state,
+      property.postcode
+    ].filter(Boolean);
+    
+    const address = parts.join(' ');
+    console.log('Formatted address:', address); // Debug log
+    return address || 'No address data';
+  };
+
+  const formatAllocation = (allocation: any[]) => {
+    if (!allocation || allocation.length === 0) {
+      return 'Unassigned';
+    }
+    
+    // Handle case where allocation might be just IDs
+    if (allocation.length > 0 && typeof allocation[0] === 'number') {
+      return `Assigned (${allocation.length} users)`;
+    }
+    
+    return allocation.map((user: any) => `${user.first_name} ${user.last_name}`).join(', ');
   };
 
   if (loading) {
@@ -74,13 +122,7 @@ export default function BeepingAlarmsTable() {
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Name
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Description
+                Allocation
               </TableCell>
               <TableCell
                 isHeader
@@ -92,13 +134,31 @@ export default function BeepingAlarmsTable() {
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Created At
+                Notes
               </TableCell>
               <TableCell
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
               >
-                Updated At
+                Agency/Private
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                Customer Contacted
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                Property
+              </TableCell>
+              <TableCell
+                isHeader
+                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+              >
+                Created At
               </TableCell>
             </TableRow>
           </TableHeader>
@@ -107,7 +167,7 @@ export default function BeepingAlarmsTable() {
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {beepingAlarms.length === 0 ? (
               <TableRow>
-                <TableCell className="px-5 py-8 text-center text-gray-500">
+                <TableCell className="px-5 py-8 text-center text-gray-500" colSpan={7}>
                   No beeping alarms found
                 </TableCell>
               </TableRow>
@@ -116,20 +176,43 @@ export default function BeepingAlarmsTable() {
                 <TableRow key={alarm.id}>
                   <TableCell className="px-5 py-4 sm:px-6 text-start">
                     <span className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                      {alarm.name}
+                      {formatAllocation(alarm.allocation)}
                     </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {alarm.description}
+                    {getStatusBadge(alarm.status)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {getStatusBadge(alarm.status || 'Unknown')}
+                    <div className="max-w-xs truncate" title={alarm.notes}>
+                      {alarm.notes}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(alarm.created_at).toLocaleDateString()}
+                    <span className="font-medium text-gray-800 dark:text-white/90">
+                      {alarm.is_agency ? 'Agency' : 'Private'}
+                    </span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(alarm.updated_at).toLocaleDateString()}
+                    <Badge 
+                      size="sm" 
+                      color={alarm.is_customer_contacted ? "success" : "warning"}
+                    >
+                      {alarm.is_customer_contacted ? 'Yes' : 'No'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    <div className="max-w-xs truncate" title={formatPropertyAddress(alarm.property)}>
+                      {formatPropertyAddress(alarm.property)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
+                    {new Date(alarm.created_at).toLocaleDateString('en-AU', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </TableCell>
                 </TableRow>
               ))
