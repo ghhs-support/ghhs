@@ -294,7 +294,7 @@ export default function BeepingAlarmsTable() {
                 <TableRow>
                   <TableCell
                     isHeader
-                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 first:rounded-tl-xl last:rounded-tr-xl bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 first:rounded-tl-xl last:rounded-tr-xl bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('allocation')}
                   >
                     <div className="flex items-center">
@@ -304,7 +304,7 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center justify-center">
@@ -314,7 +314,7 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('agency_private')}
                   >
                     <div className="flex items-center">
@@ -324,7 +324,7 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('customer_contacted')}
                   >
                     <div className="flex items-center justify-center">
@@ -334,7 +334,7 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-64 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-64 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('property')}
                   >
                     <div className="flex items-center justify-center">
@@ -344,7 +344,7 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base bg-gray-50 dark:bg-gray-800 whitespace-nowrap cursor-pointer"
                     onClick={() => handleSort('created_at')}
                   >
                     <div className="flex items-center justify-end">
