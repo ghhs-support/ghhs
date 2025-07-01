@@ -15,7 +15,7 @@ export default function BeepingAlarms() {
           <h3 className="mb-4 font-semibold text-gray-800 text-theme-xl dark:text-white/90 sm:text-2xl">
             Beeping Alarms List
           </h3>
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto custom-scrollbar">
             <BeepingAlarmsTable />
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 sm:text-base">

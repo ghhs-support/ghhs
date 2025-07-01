@@ -287,8 +287,8 @@ export default function BeepingAlarmsTable() {
       </div>
 
       <div className="max-w-full overflow-hidden">
-        <div className="overflow-x-auto">
-          <div className="overflow-y-auto max-h-[432px] min-h-[432px]">
+        <div className="overflow-x-auto custom-scrollbar">
+          <div className="overflow-y-auto max-h-[432px] min-h-[432px] custom-scrollbar">
             <Table>
               <TableHeader className="border-b border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <TableRow>
