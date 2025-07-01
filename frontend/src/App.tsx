@@ -40,7 +40,7 @@ if (import.meta.env.DEV) {
 export default function App() {
   return (
     <KindeProvider
-      clientId="8e219e4343ba4cd2b27ef9ab9f007d84"
+      clientId="9b6e7df3e3ec46beb2d09a89565da00b"
       domain="https://ghhs.kinde.com"
       redirectUri="http://localhost:5173"
       logoutUri="http://localhost:5173"
