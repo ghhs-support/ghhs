@@ -217,120 +217,130 @@ export default function BeepingAlarmsTable() {
         </div>
       </div>
 
-      <div className="max-w-full overflow-x-auto">
-        <Table>
-          <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-            <TableRow>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Allocation
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Status
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Notes
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Agency/Private
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Customer Contacted
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Property
-              </TableCell>
-              <TableCell
-                isHeader
-                className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
-              >
-                Created At
-              </TableCell>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="px-5 py-8 text-center">
-                  <div className="flex items-center justify-center h-[360px]">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : beepingAlarms.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="px-5 py-8 text-center">
-                  <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
-                    No beeping alarms found
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              beepingAlarms.map((alarm) => (
-                <TableRow key={alarm.id}>
-                  <TableCell className="px-5 py-4 sm:px-6 text-start">
-                    <span className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                      {formatAllocation(alarm.allocation)}
-                    </span>
+      <div className="relative">
+        <div className="overflow-auto h-[600px]">
+          <div className="min-w-[1140px]">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-white dark:bg-white/[0.03] border-b border-gray-100 dark:border-white/[0.05]">
+                <TableRow>
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                  >
+                    Allocation
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {getStatusBadge(alarm.status)}
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[120px]"
+                  >
+                    Status
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <div className="max-w-xs truncate" title={alarm.notes}>
-                      {alarm.notes}
-                    </div>
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[200px]"
+                  >
+                    Notes
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <span className="font-medium text-gray-800 dark:text-white/90">
-                      {alarm.is_agency ? 'Agency' : 'Private'}
-                    </span>
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[120px]"
+                  >
+                    Agency/Private
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <Badge 
-                      size="sm" 
-                      color={alarm.is_customer_contacted ? "success" : "warning"}
-                    >
-                      {alarm.is_customer_contacted ? 'Yes' : 'No'}
-                    </Badge>
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                  >
+                    Customer Contacted
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    <div className="max-w-xs truncate" title={formatPropertyAddress(alarm.property)}>
-                      {formatPropertyAddress(alarm.property)}
-                    </div>
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[250px]"
+                  >
+                    Property
                   </TableCell>
-                  <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400">
-                    {new Date(alarm.created_at).toLocaleDateString('en-AU', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                  <TableCell
+                    isHeader
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                  >
+                    Created At
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+
+              <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-[600px] px-5 py-8">
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : beepingAlarms.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-[600px] px-5 py-8">
+                      <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                        No beeping alarms found
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  beepingAlarms.map((alarm, index) => (
+                    <TableRow 
+                      key={alarm.id}
+                      className={`
+                        ${index % 2 === 0 ? 'bg-white dark:bg-white/[0.02]' : 'bg-gray-50 dark:bg-white/[0.01]'}
+                        hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-colors duration-150 ease-in-out cursor-pointer
+                      `}
+                    >
+                      <TableCell className="px-5 py-4 sm:px-6 text-start w-[150px]">
+                        <span className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                          {formatAllocation(alarm.allocation)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[120px]">
+                        {getStatusBadge(alarm.status)}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[200px]">
+                        <div className="max-w-xs truncate" title={alarm.notes}>
+                          {alarm.notes}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[120px]">
+                        <span className="font-medium text-gray-800 dark:text-white/90">
+                          {alarm.is_agency ? 'Agency' : 'Private'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[150px]">
+                        <Badge 
+                          size="sm" 
+                          color={alarm.is_customer_contacted ? "success" : "warning"}
+                        >
+                          {alarm.is_customer_contacted ? 'Yes' : 'No'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[250px]">
+                        <div className="max-w-xs truncate" title={formatPropertyAddress(alarm.property)}>
+                          {formatPropertyAddress(alarm.property)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[150px]">
+                        {new Date(alarm.created_at).toLocaleDateString('en-AU', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
