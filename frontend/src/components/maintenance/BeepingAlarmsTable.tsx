@@ -383,7 +383,7 @@ export default function BeepingAlarmsTable() {
                         </span>
                       </TableCell>
                       <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-                        <div className="w-24 mx-auto whitespace-nowrap">
+                        <div className="mx-auto whitespace-nowrap">
                           {getStatusBadge(alarm.status)}
                         </div>
                       </TableCell>
