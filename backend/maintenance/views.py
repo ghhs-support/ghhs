@@ -20,7 +20,7 @@ def beeping_alarms(request):
         status_filter = request.query_params.get('status', None)
         
         # Start with all alarms
-        queryset = BeepingAlarm.objects.all().order_by('-created_at')
+        queryset = BeepingAlarm.objects.all()
         
         # Apply status filter if provided
         if status_filter:

@@ -9,6 +9,9 @@ import {
 } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
+import { format } from "date-fns";
+
+type SortField = 'allocation' | 'status' | 'notes' | 'agency_private' | 'customer_contacted' | 'property' | 'created_at';
 
 export default function BeepingAlarmsTable() {
   const { authenticatedGet } = useAuthenticatedApi();
@@ -17,25 +20,16 @@ export default function BeepingAlarmsTable() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const fetchAlarms = useCallback(async (page: number, pageSize: number, search: string = "") => {
+  const fetchAlarms = useCallback(async () => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        page_size: pageSize.toString(),
-      });
-
-      if (search) {
-        queryParams.append('search', search);
-      }
-
-      const response = await authenticatedGet(`/beeping_alarms?${queryParams.toString()}`);
+      const response = await authenticatedGet('/beeping_alarms');
       setBeepingAlarms(response.results);
-      setTotalCount(response.count);
       setError(null);
     } catch (err) {
       console.error('Error fetching alarms:', err);
@@ -46,57 +40,130 @@ export default function BeepingAlarmsTable() {
   }, [authenticatedGet]);
 
   useEffect(() => {
-    fetchAlarms(currentPage, parseInt(entriesPerPage), searchTerm);
-  }, [fetchAlarms, currentPage, entriesPerPage]);
+    fetchAlarms();
+  }, [fetchAlarms]);
 
-  // Debounced search handler
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      setCurrentPage(1); // Reset to first page when searching
-      fetchAlarms(1, parseInt(entriesPerPage), value);
-    }, 500);
-  }, [fetchAlarms, entriesPerPage]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
+    setCurrentPage(1);
   }, []);
 
-  const handleEntriesPerPageChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSize = e.target.value;
-    setEntriesPerPage(newSize);
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
     setCurrentPage(1);
-    fetchAlarms(1, parseInt(newSize), searchTerm);
-  }, [fetchAlarms, searchTerm]);
+  };
 
+  const SortArrow = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return (
+        <span className="text-gray-400 dark:text-gray-500">
+          <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 12l6-6 6 6M8 18l6-6 6 6"/>
+          </svg>
+        </span>
+      );
+    }
+    return sortDirection === 'asc' ? (
+      <span className="text-gray-700 dark:text-gray-200">
+        <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 12l6-6 6 6"/>
+        </svg>
+      </span>
+    ) : (
+      <span className="text-gray-700 dark:text-gray-200">
+        <svg className="w-3 h-3 ml-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 18l6-6 6 6"/>
+        </svg>
+      </span>
+    );
+  };
+
+  const getFilteredAndSortedAlarms = () => {
+    let result = [...beepingAlarms];
+
+    // Apply search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(alarm => {
+        return (
+          alarm.notes?.toLowerCase().includes(searchLower) ||
+          alarm.property?.street_name?.toLowerCase().includes(searchLower) ||
+          alarm.property?.street_number?.toLowerCase().includes(searchLower) ||
+          alarm.property?.suburb?.toLowerCase().includes(searchLower) ||
+          alarm.property?.state?.toLowerCase().includes(searchLower) ||
+          alarm.property?.postcode?.toLowerCase().includes(searchLower) ||
+          alarm.allocation?.some(user => 
+            `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchLower)
+          )
+        );
+      });
+    }
+
+    // Apply sorting
+    if (sortField) {
+      result.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        switch (sortField) {
+          case 'allocation':
+            aValue = a.allocation?.[0]?.first_name || '';
+            bValue = b.allocation?.[0]?.first_name || '';
+            break;
+          case 'status':
+            aValue = a.status || '';
+            bValue = b.status || '';
+            break;
+          case 'notes':
+            aValue = a.notes || '';
+            bValue = b.notes || '';
+            break;
+          case 'agency_private':
+            aValue = a.is_agency ? 'Agency' : 'Private';
+            bValue = b.is_agency ? 'Agency' : 'Private';
+            break;
+          case 'customer_contacted':
+            aValue = a.is_customer_contacted;
+            bValue = b.is_customer_contacted;
+            break;
+          case 'property':
+            aValue = `${a.property?.street_number || ''} ${a.property?.street_name || ''}`;
+            bValue = `${b.property?.street_number || ''} ${b.property?.street_name || ''}`;
+            break;
+          case 'created_at':
+            aValue = new Date(a.created_at).getTime();
+            bValue = new Date(b.created_at).getTime();
+            break;
+          default:
+            return 0;
+        }
+
+        if (aValue === bValue) return 0;
+        
+        const comparison = aValue > bValue ? 1 : -1;
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  };
+
+  const filteredAlarms = getFilteredAndSortedAlarms();
+  const totalCount = filteredAlarms.length;
   const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
+  const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
+  const endIndex = startIndex + parseInt(entriesPerPage);
+  const currentAlarms = filteredAlarms.slice(startIndex, endIndex);
 
-  const handlePreviousPage = useCallback(() => {
-    if (currentPage > 1) {
-      const newPage = currentPage - 1;
-      setCurrentPage(newPage);
-      fetchAlarms(newPage, parseInt(entriesPerPage), searchTerm);
-    }
-  }, [currentPage, entriesPerPage, fetchAlarms, searchTerm]);
-
-  const handleNextPage = useCallback(() => {
-    if (currentPage < totalPages) {
-      const newPage = currentPage + 1;
-      setCurrentPage(newPage);
-      fetchAlarms(newPage, parseInt(entriesPerPage), searchTerm);
-    }
-  }, [currentPage, entriesPerPage, fetchAlarms, searchTerm, totalPages]);
+  const formatDate = (date: string) => {
+    return format(new Date(date), 'dd/MM/yyyy');
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -163,14 +230,17 @@ export default function BeepingAlarmsTable() {
           <div className="relative z-20 bg-transparent">
             <select
               value={entriesPerPage}
-              onChange={handleEntriesPerPageChange}
+              onChange={(e) => {
+                setEntriesPerPage(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full py-2 pl-3 pr-8 text-sm text-gray-800 bg-transparent border border-gray-300 rounded-lg appearance-none dark:bg-dark-900 h-9 bg-none shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
             >
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-              <option value="200">200</option>
+              <option value="10" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">10</option>
+              <option value="25" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">25</option>
+              <option value="50" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">50</option>
+              <option value="100" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">100</option>
+              <option value="200" className="text-gray-500 dark:bg-gray-900 dark:text-gray-400">200</option>
             </select>
             <span className="absolute z-30 text-gray-500 -translate-y-1/2 right-2 top-1/2 dark:text-gray-400">
               <svg className="stroke-current" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -180,7 +250,7 @@ export default function BeepingAlarmsTable() {
           </div>
           <span className="text-gray-500 dark:text-gray-400">entries</span>
         </div>
-
+        
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
@@ -206,7 +276,6 @@ export default function BeepingAlarmsTable() {
                 onClick={() => {
                   setSearchTerm('');
                   setCurrentPage(1);
-                  fetchAlarms(1, parseInt(entriesPerPage), '');
                 }}
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 self-end mr-2"
               >
@@ -217,122 +286,146 @@ export default function BeepingAlarmsTable() {
         </div>
       </div>
 
-      <div className="relative">
-        <div className="overflow-auto h-[600px]">
-          <div className="min-w-[1140px]">
+      <div className="max-w-full overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="overflow-hidden">
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-white dark:bg-white/[0.03] border-b border-gray-100 dark:border-white/[0.05]">
+              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.03]">
                 <TableRow>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                    className="w-40 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('allocation')}
                   >
-                    Allocation
+                    <div className="flex items-center">
+                      Allocation
+                      <SortArrow field="allocation" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[120px]"
+                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('status')}
                   >
-                    Status
+                    <div className="flex items-center">
+                      Status
+                      <SortArrow field="status" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[200px]"
+                    className="w-64 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('notes')}
                   >
-                    Notes
+                    <div className="flex items-center">
+                      Notes
+                      <SortArrow field="notes" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[120px]"
+                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('agency_private')}
                   >
-                    Agency/Private
+                    <div className="flex items-center">
+                      Agency/Private
+                      <SortArrow field="agency_private" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                    className="w-40 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('customer_contacted')}
                   >
-                    Customer Contacted
+                    <div className="flex items-center">
+                      Customer Contacted
+                      <SortArrow field="customer_contacted" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[250px]"
+                    className="w-64 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('property')}
                   >
-                    Property
+                    <div className="flex items-center">
+                      Property
+                      <SortArrow field="property" />
+                    </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-[150px]"
+                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    onClick={() => handleSort('created_at')}
                   >
-                    Created At
+                    <div className="flex items-center">
+                      Created At
+                      <SortArrow field="created_at" />
+                    </div>
                   </TableCell>
                 </TableRow>
               </TableHeader>
+            </Table>
+          </div>
 
+          <div className="overflow-y-auto max-h-[432px] min-h-[432px]">
+            <Table>
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-[600px] px-5 py-8">
-                      <div className="flex items-center justify-center h-full">
+                    <TableCell colSpan={7} className="px-3 py-8 text-center">
+                      <div className="flex items-center justify-center h-[360px]">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : beepingAlarms.length === 0 ? (
+                ) : currentAlarms.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-[600px] px-5 py-8">
-                      <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                    <TableCell colSpan={7} className="px-3 py-8 text-center">
+                      <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
                         No beeping alarms found
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  beepingAlarms.map((alarm, index) => (
+                  currentAlarms.map((alarm) => (
                     <TableRow 
                       key={alarm.id}
-                      className={`
-                        ${index % 2 === 0 ? 'bg-white dark:bg-white/[0.02]' : 'bg-gray-50 dark:bg-white/[0.01]'}
-                        hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-colors duration-150 ease-in-out cursor-pointer
-                      `}
+                      className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
                     >
-                      <TableCell className="px-5 py-4 sm:px-6 text-start w-[150px]">
-                        <span className="font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                      <TableCell className="w-40 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {formatAllocation(alarm.allocation)}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[120px]">
-                        {getStatusBadge(alarm.status)}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[200px]">
-                        <div className="max-w-xs truncate" title={alarm.notes}>
-                          {alarm.notes}
+                      <TableCell className="w-32 px-3 py-2 text-start">
+                        <div className="w-24 whitespace-nowrap">
+                          {getStatusBadge(alarm.status)}
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[120px]">
-                        <span className="font-medium text-gray-800 dark:text-white/90">
+                      <TableCell className="w-64 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {alarm.notes || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="w-32 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {alarm.is_agency ? 'Agency' : 'Private'}
                         </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[150px]">
-                        <Badge 
-                          size="sm" 
-                          color={alarm.is_customer_contacted ? "success" : "warning"}
-                        >
+                      <TableCell className="w-40 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {alarm.is_customer_contacted ? 'Yes' : 'No'}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[250px]">
-                        <div className="max-w-xs truncate" title={formatPropertyAddress(alarm.property)}>
+                      <TableCell className="w-64 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
                           {formatPropertyAddress(alarm.property)}
-                        </div>
+                        </span>
                       </TableCell>
-                      <TableCell className="px-4 py-3 text-gray-500 text-start text-theme-sm dark:text-gray-400 w-[150px]">
-                        {new Date(alarm.created_at).toLocaleDateString('en-AU', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                      <TableCell className="w-32 px-3 py-2 text-start">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                          {formatDate(alarm.created_at)}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))
@@ -345,18 +438,18 @@ export default function BeepingAlarmsTable() {
 
       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/[0.05]">
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Showing {beepingAlarms.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+          Showing {currentAlarms.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, totalCount)} of {totalCount} entries
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handlePreviousPage}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
             className="px-3 py-1 text-sm text-gray-500 bg-white border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
           <button
-            onClick={handleNextPage}
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage >= totalPages}
             className="px-3 py-1 text-sm text-gray-500 bg-white border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
           >
