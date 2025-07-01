@@ -54,3 +54,31 @@ export interface BeepingAlarmResponse {
   data: BeepingAlarm[];
 }
 
+interface Property {
+  id: number;
+  unit_number: string | null;
+  street_number: string;
+  street_name: string;
+  suburb: string;
+  state: string;
+  postcode: string;
+}
+
+export const formatPropertyAddress = (property: Property) => {
+  if (!property) {
+    return 'No property data';
+  }
+  
+  const parts = [
+    property.unit_number && `Unit ${property.unit_number}`,
+    property.street_number,
+    property.street_name,
+    property.suburb,
+    property.state,
+    property.postcode
+  ].filter(Boolean);
+  
+  const address = parts.join(' ');
+  return address || 'No address data';
+};
+

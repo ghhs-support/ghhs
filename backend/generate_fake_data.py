@@ -260,7 +260,7 @@ def create_fake_properties(agencies, private_owners):
             property_data = {
                 'agency': agency,
                 'private_owner': private_owner,
-                'unit_number': f"Unit {random.randint(1, 50)}" if random.choice([True, False]) else None,
+                'unit_number': str(random.randint(1, 50)) if random.choice([True, False]) else None,
                 'street_number': str(random.randint(1, 999)),
                 'street_name': random.choice([
                     'Main Street', 'Ocean Drive', 'Beach Road', 'Park Avenue', 

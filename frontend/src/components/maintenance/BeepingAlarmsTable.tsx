@@ -57,19 +57,12 @@ export default function BeepingAlarmsTable() {
   };
 
   const formatPropertyAddress = (property: any) => {
-    console.log('Property data:', property); // Debug log
-    
     if (!property) {
       return 'No property data';
     }
     
-    // Handle case where property might be just an ID
-    if (typeof property === 'number') {
-      return `Property ID: ${property}`;
-    }
-    
     const parts = [
-      property.unit_number,
+      property.unit_number && `Unit ${property.unit_number}`,
       property.street_number,
       property.street_name,
       property.suburb,
@@ -78,7 +71,6 @@ export default function BeepingAlarmsTable() {
     ].filter(Boolean);
     
     const address = parts.join(' ');
-    console.log('Formatted address:', address); // Debug log
     return address || 'No address data';
   };
 
