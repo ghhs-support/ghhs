@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 import requests
-from maintenance.views import alarm_issue
+from maintenance.views import beeping_alarms
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -82,5 +82,5 @@ def admin_access(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/admin-access/', admin_access, name='admin_access'),
-    path('api/alarm_issues/', alarm_issue, name='alarm_issues'),
+    path('api/beeping_alarms/', beeping_alarms, name='beeping_alarms'),
 ]

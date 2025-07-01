@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import alarm_issue
+from .views import beeping_alarms
 
 urlpatterns = [
-    path('alarm_issues/', alarm_issue, name='alarm_issues'),
+    path('beeping_alarms/', beeping_alarms, name='beeping_alarms'),
 ]

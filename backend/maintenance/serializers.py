@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from .models import AlarmIssue
+from .models import BeepingAlarm
 
-class AlarmIssueSerializer(serializers.ModelSerializer):
+class BeepingAlarmSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AlarmIssue
+        model = BeepingAlarm
         fields = '__all__'

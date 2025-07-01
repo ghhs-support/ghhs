@@ -1,17 +1,17 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import AlarmIssue
-from .serializers import AlarmIssueSerializer
+from .models import BeepingAlarm
+from .serializers import BeepingAlarmSerializer
 from rest_framework import status
 
 @api_view(['GET', 'POST'])
-def alarm_issue(request):
+def beeping_alarms(request):
     if request.method == 'GET':
-        alarm_issues = AlarmIssue.objects.all()
-        serializer = AlarmIssueSerializer(alarm_issues, many=True)
+        beeping_alarms = BeepingAlarm.objects.all()
+        serializer = BeepingAlarmSerializer(beeping_alarms, many=True)
         return Response(serializer.data)
     elif request.method == 'POST':
-        serializer = AlarmIssueSerializer(data=request.data)
+        serializer = BeepingAlarmSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
