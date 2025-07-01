@@ -82,17 +82,14 @@ export default function BeepingAlarmsTable() {
     return address || 'No address data';
   };
 
-  const formatAllocation = (allocation: any[]) => {
+  const formatAllocation = (allocation: BeepingAlarm['allocation']) => {
     if (!allocation || allocation.length === 0) {
       return 'Unassigned';
     }
     
-    // Handle case where allocation might be just IDs
-    if (allocation.length > 0 && typeof allocation[0] === 'number') {
-      return `Assigned (${allocation.length} users)`;
-    }
-    
-    return allocation.map((user: any) => `${user.first_name} ${user.last_name}`).join(', ');
+    return allocation
+      .map(user => `${user.first_name} ${user.last_name}`.trim() || user.username)
+      .join(', ');
   };
 
   if (loading) {
