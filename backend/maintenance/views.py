@@ -7,7 +7,6 @@ from django.views.decorators.csrf import csrf_exempt
 from backend.authentication import validate_kinde_token
 
 @api_view(['GET', 'POST'])
-@csrf_exempt
 @validate_kinde_token
 def beeping_alarms(request):
     if request.method == 'GET':
