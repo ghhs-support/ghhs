@@ -11,7 +11,7 @@ import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
 import { format } from "date-fns";
 
-type SortField = 'allocation' | 'status' | 'notes' | 'agency_private' | 'customer_contacted' | 'property' | 'created_at';
+type SortField = 'allocation' | 'status' | 'agency_private' | 'customer_contacted' | 'property' | 'created_at';
 
 interface PaginatedResponse {
   count: number;
@@ -128,10 +128,7 @@ export default function BeepingAlarmsTable() {
           aValue = a.status || '';
           bValue = b.status || '';
           break;
-        case 'notes':
-          aValue = a.notes || '';
-          bValue = b.notes || '';
-          break;
+
         case 'agency_private':
           aValue = a.is_agency ? 'Agency' : 'Private';
           bValue = b.is_agency ? 'Agency' : 'Private';
@@ -226,7 +223,7 @@ export default function BeepingAlarmsTable() {
   const endIndex = startIndex + sortedAlarms.length;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03] shadow-lg">
       <div className="flex flex-col gap-4 px-4 py-4 border border-b-0 border-gray-100 dark:border-white/[0.05] rounded-t-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-gray-500 dark:text-gray-400">Show</span>
@@ -291,13 +288,13 @@ export default function BeepingAlarmsTable() {
 
       <div className="max-w-full overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="overflow-hidden">
+          <div className="overflow-y-auto max-h-[432px] min-h-[432px]">
             <Table>
-              <TableHeader className="border-b border-gray-100 dark:border-white/[0.05] bg-white dark:bg-white/[0.03]">
+              <TableHeader className="border-b border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <TableRow>
                   <TableCell
                     isHeader
-                    className="w-40 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 first:rounded-tl-xl last:rounded-tr-xl bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('allocation')}
                   >
                     <div className="flex items-center">
@@ -307,27 +304,17 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('status')}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       Status
                       <SortArrow field="status" />
                     </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-64 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                    onClick={() => handleSort('notes')}
-                  >
-                    <div className="flex items-center">
-                      Notes
-                      <SortArrow field="notes" />
-                    </div>
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('agency_private')}
                   >
                     <div className="flex items-center">
@@ -337,45 +324,40 @@ export default function BeepingAlarmsTable() {
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-40 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-40 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('customer_contacted')}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       Customer Contacted
                       <SortArrow field="customer_contacted" />
                     </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-64 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-64 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('property')}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center">
                       Property
                       <SortArrow field="property" />
                     </div>
                   </TableCell>
                   <TableCell
                     isHeader
-                    className="w-32 px-3 py-2 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="w-32 px-5 py-4 font-semibold text-gray-700 dark:text-gray-200 text-center text-base bg-gray-50 dark:bg-gray-800 whitespace-nowrap"
                     onClick={() => handleSort('created_at')}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-end">
                       Created At
                       <SortArrow field="created_at" />
                     </div>
                   </TableCell>
                 </TableRow>
               </TableHeader>
-            </Table>
-          </div>
-
-          <div className="overflow-y-auto max-h-[432px] min-h-[432px]">
-            <Table>
               <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="px-3 py-8 text-center">
+                    <TableCell colSpan={6} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center h-[360px]">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
                       </div>
@@ -383,7 +365,7 @@ export default function BeepingAlarmsTable() {
                   </TableRow>
                 ) : sortedAlarms.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="px-3 py-8 text-center">
+                    <TableCell colSpan={6} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
                         No beeping alarms found
                       </div>
@@ -393,40 +375,38 @@ export default function BeepingAlarmsTable() {
                   sortedAlarms.map((alarm) => (
                     <TableRow 
                       key={alarm.id}
-                      className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
+                      className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
                     >
-                      <TableCell className="w-40 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
                           {formatAllocation(alarm.allocation)}
                         </span>
                       </TableCell>
-                      <TableCell className="w-32 px-3 py-2 text-start">
-                        <div className="w-24 whitespace-nowrap">
+                      <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <div className="w-24 mx-auto whitespace-nowrap">
                           {getStatusBadge(alarm.status)}
                         </div>
                       </TableCell>
-                      <TableCell className="w-64 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
-                          {alarm.notes || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="w-32 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
                           {alarm.is_agency ? 'Agency' : 'Private'}
                         </span>
                       </TableCell>
-                      <TableCell className="w-40 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
                           {alarm.is_customer_contacted ? 'Yes' : 'No'}
                         </span>
                       </TableCell>
-                      <TableCell className="w-64 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      <TableCell className="w-64 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+                        <span
+                          className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap"
+                          title={formatPropertyAddress(alarm.property)}
+                        >
                           {formatPropertyAddress(alarm.property)}
                         </span>
                       </TableCell>
-                      <TableCell className="w-32 px-3 py-2 text-start">
-                        <span className="text-theme-xs text-gray-800 dark:text-white/90">
+                      <TableCell className="w-32 px-5 py-4 text-center">
+                        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
                           {formatDate(alarm.created_at)}
                         </span>
                       </TableCell>
