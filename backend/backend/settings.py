@@ -139,8 +139,8 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Kinde Configuration for Django Backend
-KINDE_ISSUER_URL = os.environ.get('KINDE_ISSUER_URL')
-KINDE_CLIENT_ID = os.environ.get('KINDE_CLIENT_ID')
+KINDE_ISSUER_URL = "https://ghhs.kinde.com"
+KINDE_CLIENT_ID = "8e219e4343ba4cd2b27ef9ab9f007d84"  # Your client ID from the docs
 KINDE_CLIENT_SECRET = os.environ.get('KINDE_CLIENT_SECRET')      
 KINDE_CALLBACK_URL = os.environ.get('KINDE_CALLBACK_URL')
 KINDE_LOGOUT_URL = os.environ.get('KINDE_LOGOUT_URL')
@@ -193,10 +193,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.SessionAuthentication',  # Keep for admin
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # We handle auth in views
     ],
 }
 
