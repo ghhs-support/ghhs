@@ -10,9 +10,15 @@ interface BeepingAlarmsTableProps {
   allocationFilter: string | null;
   tenantFilter: string | null;
   statusFilter: string | null;
+  customerContactedFilter: string | null;
 }
 
-const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter, tenantFilter, statusFilter }) => {
+const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ 
+  allocationFilter, 
+  tenantFilter, 
+  statusFilter,
+  customerContactedFilter
+}) => {
   // Local state for client-side sorting
   const [localSortField, setLocalSortField] = useState<string | null>('created_at');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -21,8 +27,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
   const filters = useMemo(() => ({
     allocation: allocationFilter,
     tenant: tenantFilter,
-    status: statusFilter
-  }), [allocationFilter, tenantFilter, statusFilter]);
+    status: statusFilter,
+    is_customer_contacted: customerContactedFilter
+  }), [allocationFilter, tenantFilter, statusFilter, customerContactedFilter]);
 
   const {
     data: beepingAlarms,

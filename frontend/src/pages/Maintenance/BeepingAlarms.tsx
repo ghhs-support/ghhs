@@ -8,6 +8,7 @@ export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
   const [tenantFilter, setTenantFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [customerContactedFilter, setCustomerContactedFilter] = useState<string | null>(null);
 
   const handleAllocationChange = useCallback((allocationId: string | null) => {
     setAllocationFilter(allocationId);
@@ -19,6 +20,10 @@ export default function BeepingAlarms() {
 
   const handleStatusChange = useCallback((status: string | null) => {
     setStatusFilter(status);
+  }, []);
+
+  const handleCustomerContactedChange = useCallback((customerContacted: string | null) => {
+    setCustomerContactedFilter(customerContacted);
   }, []);
 
   return (
@@ -39,9 +44,11 @@ export default function BeepingAlarms() {
             onAllocationChange={handleAllocationChange}
             onTenantChange={handleTenantChange}
             onStatusChange={handleStatusChange}
+            onCustomerContactedChange={handleCustomerContactedChange}
             currentAllocation={allocationFilter}
             currentTenant={tenantFilter}
             currentStatus={statusFilter}
+            currentCustomerContacted={customerContactedFilter}
           />
         </div>
 
@@ -51,6 +58,7 @@ export default function BeepingAlarms() {
             allocationFilter={allocationFilter}
             tenantFilter={tenantFilter}
             statusFilter={statusFilter}
+            customerContactedFilter={customerContactedFilter}
           />
         </div>
       </div>

@@ -15,18 +15,22 @@ interface BeepingAlarmsFiltersCardProps {
   onAllocationChange: (allocationId: string | null) => void;
   onTenantChange: (tenantId: string | null) => void;
   onStatusChange: (status: string | null) => void;
+  onCustomerContactedChange: (customerContacted: string | null) => void;
   currentAllocation: string | null;
   currentTenant: string | null;
   currentStatus: string | null;
+  currentCustomerContacted: string | null;
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
   onAllocationChange,
   onTenantChange,
   onStatusChange,
+  onCustomerContactedChange,
   currentAllocation,
   currentTenant,
-  currentStatus
+  currentStatus,
+  currentCustomerContacted
 }) => {
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,6 +60,12 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
+  // Customer contacted options
+  const customerContactedOptions: Option[] = [
+    { value: 'true', label: 'Yes' },
+    { value: 'false', label: 'No' }
+  ];
+
   // Initialize filter values
   const [filterValues, setFilterValues] = useState<FilterValue>({
     allocation: currentAllocation ? 
@@ -63,7 +73,9 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     tenant: currentTenant ? 
       { value: currentTenant, label: currentTenant } : null,
     status: currentStatus ?
-      statusOptions.find(opt => opt.value === currentStatus) || null : null
+      statusOptions.find(opt => opt.value === currentStatus) || null : null,
+    customerContacted: currentCustomerContacted ?
+      customerContactedOptions.find(opt => opt.value === currentCustomerContacted) || null : null
   });
 
   useEffect(() => {
@@ -137,6 +149,14 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       placeholder: 'Select status...',
       allOptionLabel: 'All Statuses',
       options: statusOptions
+    },
+    {
+      id: 'customerContacted',
+      type: 'dropdown',
+      label: 'Customer Contacted',
+      placeholder: 'Select option...',
+      allOptionLabel: 'All',
+      options: customerContactedOptions
     }
   ];
 
@@ -148,6 +168,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     onAllocationChange(values.allocation?.value || null);
     onTenantChange(values.tenant?.value || null);
     onStatusChange(values.status?.value || null);
+    onCustomerContactedChange(values.customerContacted?.value || null);
   };
 
   return (

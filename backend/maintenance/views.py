@@ -21,6 +21,7 @@ def beeping_alarms(request):
         # Get query parameters
         search = request.query_params.get('search', '').strip()
         status_filter = request.query_params.get('status', None)
+        is_customer_contacted_filter = request.query_params.get('is_customer_contacted', None)
         ordering = request.query_params.get('ordering', '-created_at')  # Default sort by created_at desc
         
         # Start with all alarms
@@ -29,6 +30,13 @@ def beeping_alarms(request):
         # Apply status filter if provided
         if status_filter:
             queryset = queryset.filter(status=status_filter)
+        
+        # Apply customer contacted filter if provided
+        if is_customer_contacted_filter is not None:
+            if is_customer_contacted_filter.lower() == 'true':
+                queryset = queryset.filter(is_customer_contacted=True)
+            elif is_customer_contacted_filter.lower() == 'false':
+                queryset = queryset.filter(is_customer_contacted=False)
         
         # Apply search filter
         if search:
