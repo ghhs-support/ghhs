@@ -103,42 +103,48 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       desc="Filter your beeping alarms"
     >
       <div className="space-y-4">
-        <SearchableDropdown
-          label="Allocation"
-          options={allocationOptions}
-          value={selectedOption}
-          onChange={setSelectedOption}
-          loading={loading}
-          error={error}
-          placeholder="Search allocations..."
-          allOptionLabel="All Allocations"
-          showApplyButton={false}
-          showClearButton={true}
-        />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 max-w-sm">
+            <SearchableDropdown
+              label="Allocation"
+              options={allocationOptions}
+              value={selectedOption}
+              onChange={setSelectedOption}
+              loading={loading}
+              error={error}
+              placeholder="Search allocations..."
+              allOptionLabel="All Allocations"
+              showApplyButton={false}
+              showClearButton={true}
+            />
+          </div>
 
-        <SearchableDropdown
-          label="Tenant"
-          value={selectedTenantOption}
-          onChange={setSelectedTenantOption}
-          onSearch={async (query) => {
-            console.log('Searching for tenant with query:', query);
-            try {
-              // Always call the API - let the backend handle empty queries by returning all tenants
-              const response = await authenticatedGet('/maintenance/tenant-suggestions/', {
-                params: { q: query }
-              });
-              console.log('Tenant search response:', response);
-              return response || [];
-            } catch (error) {
-              console.error('Error fetching tenant suggestions:', error);
-              return [];
-            }
-          }}
-          placeholder="Search by tenant name or mobile..."
-          allOptionLabel="All Tenants"
-          showApplyButton={false}
-          showClearButton={true}
-        />
+          <div className="flex-1 max-w-sm">
+            <SearchableDropdown
+              label="Tenant"
+              value={selectedTenantOption}
+              onChange={setSelectedTenantOption}
+              onSearch={async (query) => {
+                console.log('Searching for tenant with query:', query);
+                try {
+                  // Always call the API - let the backend handle empty queries by returning all tenants
+                  const response = await authenticatedGet('/maintenance/tenant-suggestions/', {
+                    params: { q: query }
+                  });
+                  console.log('Tenant search response:', response);
+                  return response || [];
+                } catch (error) {
+                  console.error('Error fetching tenant suggestions:', error);
+                  return [];
+                }
+              }}
+              placeholder="Search by tenant name or mobile..."
+              allOptionLabel="All Tenants"
+              showApplyButton={false}
+              showClearButton={true}
+            />
+          </div>
+        </div>
 
         <div className="flex space-x-2 pt-4">
           <Button
