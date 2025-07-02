@@ -143,7 +143,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
         <div className="flex space-x-2 pt-4">
           <Button
             onClick={handleApplyFilters}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
             disabled={loading}
           >
             Apply Filters
@@ -156,7 +156,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
               onTenantChange(null);
             }}
             variant="outline"
-            className="w-full text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
+            className="text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 px-4 py-2"
             disabled={loading}
           >
             Clear Filters

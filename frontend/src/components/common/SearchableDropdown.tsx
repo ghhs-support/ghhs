@@ -203,7 +203,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
         {/* Dropdown menu */}
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-gray-900 dark:border-gray-700">
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-scrollbar dark:bg-gray-900 dark:border-gray-700">
             {loading || isSearching ? (
               <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                 Loading...
