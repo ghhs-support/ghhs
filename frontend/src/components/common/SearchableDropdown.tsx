@@ -6,10 +6,11 @@ interface Option {
 }
 
 interface SearchableDropdownProps {
-  options: Option[];
+  options?: Option[];
   value: Option | null;
   onChange: (option: Option | null) => void;
   onApply?: (option: Option | null) => void;
+  onSearch?: (query: string) => Promise<Option[] | undefined>;
   loading?: boolean;
   error?: string | null;
   placeholder?: string;
@@ -23,10 +24,11 @@ interface SearchableDropdownProps {
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
-  options,
+  options = [],
   value,
   onChange,
   onApply,
+  onSearch,
   loading = false,
   error = null,
   placeholder = "Click to view all or type to search...",
@@ -41,6 +43,9 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isUserTyping, setIsUserTyping] = useState(false);
+  const [searchResults, setSearchResults] = useState<Option[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -62,17 +67,60 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleInputClick = () => {
-    if (!disabled) {
-      setIsOpen(true);
+  // Load initial data when dropdown opens for the first time
+  const loadInitialData = async () => {
+    if (onSearch && !hasLoadedInitialData) {
+      setIsSearching(true);
+      try {
+        console.log('Loading initial tenant data...');
+        const results = await onSearch(''); // Empty string to get all tenants
+        setSearchResults(results || []);
+        setHasLoadedInitialData(true);
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputClick = async () => {
+    if (!disabled) {
+      setIsOpen(true);
+      await loadInitialData();
+    }
+  };
+
+  const handleDropdownToggle = async () => {
+    if (!disabled) {
+      const newIsOpen = !isOpen;
+      setIsOpen(newIsOpen);
+      if (newIsOpen) {
+        await loadInitialData();
+      }
+    }
+  };
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
     setIsUserTyping(true);
     setIsOpen(true);
+
+    if (onSearch) {
+      setIsSearching(true);
+      try {
+        console.log('Searching for:', value);
+        const results = await onSearch(value);
+        setSearchResults(results || []);
+      } catch (error) {
+        console.error('Error searching:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }
   };
 
   const handleOptionSelect = (option: Option) => {
@@ -87,6 +135,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     setSearchQuery("");
     setIsOpen(false);
     setIsUserTyping(false);
+    setSearchResults([]);
+    setHasLoadedInitialData(false); // Reset so it loads data again next time
     inputRef.current?.focus();
   };
 
@@ -96,11 +146,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     }
   };
 
-  const filteredOptions = searchQuery
-    ? options.filter(option => 
-        option.label.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : options;
+  // Use searchResults if onSearch is provided, otherwise use options
+  const displayOptions = onSearch ? searchResults : options;
 
   return (
     <div className={className}>
@@ -126,7 +173,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           
           {/* Dropdown arrow icon */}
           <button 
-            onClick={() => !disabled && setIsOpen(!isOpen)}
+            onClick={handleDropdownToggle}
             disabled={disabled}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 disabled:opacity-50"
           >
@@ -157,7 +204,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         {/* Dropdown menu */}
         {isOpen && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-gray-900 dark:border-gray-700">
-            {loading ? (
+            {loading || isSearching ? (
               <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                 Loading...
               </div>
@@ -165,7 +212,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
               <div className="px-3 py-2 text-sm text-red-500 dark:text-red-400">
                 {error}
               </div>
-            ) : filteredOptions.length > 0 || includeAllOption ? (
+            ) : displayOptions.length > 0 || includeAllOption ? (
               <>
                 {includeAllOption && (
                   <>
@@ -181,7 +228,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                   </>
                 )}
                 
-                {filteredOptions.map((option) => (
+                {displayOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleOptionSelect(option)}
@@ -197,7 +244,9 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
               </>
             ) : (
               <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                No options found
+                {searchQuery.length === 0 && !hasLoadedInitialData ? "Click to load tenants..." : 
+                 searchQuery.length < 2 ? "Type at least 2 characters to search..." : 
+                 "No options found"}
               </div>
             )}
           </div>

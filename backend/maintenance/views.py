@@ -1,11 +1,15 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import BeepingAlarm
+from .models import BeepingAlarm, Tenant
 from .serializers import BeepingAlarmSerializer
 from rest_framework import status
 from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
 from django.db.models import Q
+from properties.models import Tenant as PropertyTenant
+import logging
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET', 'POST'])
 @validate_kinde_token
@@ -54,6 +58,11 @@ def beeping_alarms(request):
         if allocation_id:
             queryset = queryset.filter(allocation__id=allocation_id)
         
+        # Get tenant filter
+        tenant_id = request.query_params.get('tenant', None)
+        if tenant_id:
+            queryset = queryset.filter(tenant_id=tenant_id)
+        
         # Apply ordering
         if ordering:
             # Handle custom ordering for specific fields
@@ -88,3 +97,107 @@ def beeping_alarms(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@validate_kinde_token
+def tenant_suggestions(request):
+    print(f"=== TENANT SUGGESTIONS DEBUG ===")
+    print(f"Query params: {request.query_params}")
+    
+    search = request.query_params.get('q', '').strip()
+    print(f"Search query: '{search}'")
+    
+    # Get tenants that are actually used in BeepingAlarms
+    used_tenant_ids = BeepingAlarm.objects.values_list('tenant_id', flat=True).distinct()
+    
+    # If no search query, return all used tenants (limited)
+    if len(search) == 0:
+        print("No search query, returning all used tenants")
+        tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).order_by('first_name')[:20]
+        tenants = list(tenants)
+        
+        print(f"Returning {len(tenants)} all tenants")
+        for tenant in tenants[:5]:  # Show first 5 in debug
+            print(f"All tenant: ID={tenant.id}, name='{tenant.first_name} {tenant.last_name}', phone='{tenant.phone}'")
+        
+        results = [
+            {
+                'value': str(tenant.id),
+                'label': f"{tenant.first_name} {tenant.last_name} - {tenant.phone}"
+            }
+            for tenant in tenants
+        ]
+        
+        print(f"Returning {len(results)} results for empty search")
+        print(f"=== END DEBUG ===")
+        return Response(results)
+    
+    # If search is too short but not empty, still return empty to avoid too many results while typing
+    if len(search) < 2:
+        print("Search query too short (but not empty), returning empty list")
+        return Response([])
+    
+    # For phone number search, remove spaces and common formatting characters
+    search_clean_phone = ''.join(char for char in search if char.isdigit())
+    print(f"Cleaned phone search: '{search_clean_phone}'")
+    
+    # Build the search query
+    query_filter = (
+        Q(first_name__icontains=search) |
+        Q(last_name__icontains=search) |
+        Q(phone__icontains=search)  # Original phone search with spaces
+    )
+    
+    # If the search looks like a phone number (contains digits), add flexible phone matching
+    if search_clean_phone and len(search_clean_phone) >= 3:
+        print(f"Added flexible phone search for: '{search_clean_phone}'")
+    
+    print(f"Search filter applied")
+    
+    # Search in tenants that are used by BeepingAlarms
+    tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).filter(query_filter)[:10]
+    
+    # If no results with standard search and it looks like a phone number, try manual matching
+    if not tenants.exists() and search_clean_phone and len(search_clean_phone) >= 3:
+        print("No results with standard search, trying custom phone matching...")
+        
+        # Get all used tenants and filter manually
+        all_used_tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids)
+        matching_tenants = []
+        
+        for tenant in all_used_tenants:
+            # Clean the tenant's phone number
+            tenant_clean_phone = ''.join(char for char in (tenant.phone or '') if char.isdigit())
+            
+            # Check if search phone is contained in tenant phone or vice versa
+            if (search_clean_phone in tenant_clean_phone or 
+                tenant_clean_phone in search_clean_phone):
+                matching_tenants.append(tenant)
+                print(f"Manual match: tenant phone '{tenant.phone}' -> '{tenant_clean_phone}' matches search '{search_clean_phone}'")
+                
+                if len(matching_tenants) >= 10:  # Limit results
+                    break
+        
+        tenants = matching_tenants
+    else:
+        tenants = list(tenants)
+    
+    print(f"Found {len(tenants)} tenants matching query")
+    
+    # Show matching tenants for debugging
+    for tenant in tenants:
+        tenant_clean_phone = ''.join(char for char in (tenant.phone or '') if char.isdigit())
+        print(f"Matching tenant: ID={tenant.id}, name='{tenant.first_name} {tenant.last_name}', phone='{tenant.phone}' (clean: '{tenant_clean_phone}')")
+    
+    # Format results
+    results = [
+        {
+            'value': str(tenant.id),
+            'label': f"{tenant.first_name} {tenant.last_name} - {tenant.phone}"
+        }
+        for tenant in tenants
+    ]
+    
+    print(f"Returning {len(results)} results: {results}")
+    print(f"=== END DEBUG ===")
+    return Response(results)

@@ -6,9 +6,14 @@ import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarms
 
 export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
+  const [tenantFilter, setTenantFilter] = useState<string | null>(null);
 
   const handleAllocationChange = useCallback((allocationId: string | null) => {
     setAllocationFilter(allocationId);
+  }, []);
+
+  const handleTenantChange = useCallback((tenantId: string | null) => {
+    setTenantFilter(tenantId);
   }, []);
 
   return (
@@ -27,13 +32,18 @@ export default function BeepingAlarms() {
         <div className="mb-6">
           <BeepingAlarmsFiltersCard 
             onAllocationChange={handleAllocationChange}
+            onTenantChange={handleTenantChange}
             currentAllocation={allocationFilter}
+            currentTenant={tenantFilter}
           />
         </div>
 
         {/* Table */}
         <div className="w-full overflow-x-auto custom-scrollbar">
-          <BeepingAlarmsTable allocationFilter={allocationFilter} />
+          <BeepingAlarmsTable 
+            allocationFilter={allocationFilter}
+            tenantFilter={tenantFilter}
+          />
         </div>
       </div>
     </div>

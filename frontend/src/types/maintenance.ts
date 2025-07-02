@@ -35,8 +35,9 @@ export interface BeepingAlarm {
   tenant: {
     id: number;
     first_name: string;
-    last_name: string;
-    email: string;
+    last_name: string | null;
+    email: string | null;
+    phone: string;
   };
   is_customer_contacted: boolean;
   created_at: string;

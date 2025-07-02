@@ -8,13 +8,15 @@ import { useDataTable } from "../../hooks/useDataTable";
 
 interface BeepingAlarmsTableProps {
   allocationFilter: string | null;
+  tenantFilter: string | null;
 }
 
-const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter }) => {
+const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter, tenantFilter }) => {
   // Memoize the filters object
   const filters = useMemo(() => ({
-    allocation: allocationFilter
-  }), [allocationFilter]);
+    allocation: allocationFilter,
+    tenant: tenantFilter
+  }), [allocationFilter, tenantFilter]);
 
   const {
     data: beepingAlarms,
@@ -60,6 +62,12 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       align: 'center'
     },
     {
+      key: 'tenant',
+      label: 'Tenant',
+      width: 'w-48',
+      align: 'center'
+    },
+    {
       key: 'customer_contacted',
       label: 'Customer Contacted',
       width: 'w-40',
@@ -101,6 +109,10 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
         case 'agency_private':
           aValue = a.is_agency ? 'Agency' : 'Private';
           bValue = b.is_agency ? 'Agency' : 'Private';
+          break;
+        case 'tenant':
+          aValue = `${a.tenant?.first_name || ''} ${a.tenant?.last_name || ''}`.trim();
+          bValue = `${b.tenant?.first_name || ''} ${b.tenant?.last_name || ''}`.trim();
           break;
         case 'customer_contacted':
           aValue = a.is_customer_contacted;
@@ -180,6 +192,26 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       .join(', ');
   };
 
+  const formatTenant = (tenant: BeepingAlarm['tenant']) => {
+    if (!tenant) return 'No tenant data';
+    
+    const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
+    const phone = tenant.phone;
+    
+    if (!name && !phone) return 'No tenant data';
+    
+    return (
+      <div className="flex flex-col items-center">
+        <span className="font-medium text-gray-800 dark:text-white/90">
+          {name || 'No name'}
+        </span>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          {phone || 'No phone'}
+        </span>
+      </div>
+    );
+  };
+
   // Render individual row
   const renderRow = useCallback((alarm: BeepingAlarm) => (
     <TableRow 
@@ -201,6 +233,11 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
           {alarm.is_agency ? 'Agency' : 'Private'}
         </span>
       </TableCell>
+      <TableCell className="w-48 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+        <div className="whitespace-nowrap">
+          {formatTenant(alarm.tenant)}
+        </div>
+      </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
           {alarm.is_customer_contacted ? 'Yes' : 'No'}
@@ -220,7 +257,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
         </span>
       </TableCell>
     </TableRow>
-  ), [formatAllocation, getStatusBadge, formatPropertyAddress, formatDate]);
+  ), [formatAllocation, getStatusBadge, formatPropertyAddress, formatDate, formatTenant]);
 
   return (
     <DataTable
