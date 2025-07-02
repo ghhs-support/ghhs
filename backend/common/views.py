@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from maintenance.serializers import UserSerializer  # We might want to move this to common as well
+from common.serializer import UserSerializer  
 from backend.authentication import validate_kinde_token
 
 # Create your views here.

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -83,4 +83,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/admin-access/', admin_access, name='admin_access'),
     path('api/beeping_alarms/', beeping_alarms, name='beeping_alarms'),
+    path('api/common/', include('common.urls')),
 ]
