@@ -65,6 +65,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
   className = ""
 }) => {
   const [localValues, setLocalValues] = useState<FilterValue>(values);
+  const [datePickerKey, setDatePickerKey] = useState(0); // Add key to force re-render
 
   // Sync with external values when they change
   useEffect(() => {
@@ -79,6 +80,8 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     // Auto-apply filters when a filter is cleared (becomes null)
     if (value === null) {
       onApply(newValues);
+      // Force date picker re-render when cleared
+      setDatePickerKey(prev => prev + 1);
     }
   };
 
@@ -94,6 +97,8 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
         to: undefined
       };
       handleFilterChange(filterId, newValue);
+      // Force date picker re-render when mode changes
+      setDatePickerKey(prev => prev + 1);
     } else {
       // For date values, ensure we preserve the local date
       const newValue = { ...currentValue, [field]: value as string };
@@ -121,6 +126,8 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     setLocalValues(clearedValues);
     onValuesChange(clearedValues);
     onApply(clearedValues);
+    // Force date picker re-render when all filters are cleared
+    setDatePickerKey(prev => prev + 1);
   };
 
   const hasActiveFilters = Object.values(localValues).some(value => {
@@ -184,6 +191,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
             <div className="space-y-2">
               {currentMode === 'single' ? (
                 <DatePicker
+                  key={`${filter.id}-single-${datePickerKey}`} // Add key for force re-render
                   id={`${filter.id}-single`}
                   placeholder={filter.singleDatePlaceholder || "Select date"}
                   defaultDate={dateValue.single}
@@ -203,6 +211,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
               ) : (
                 <div className="grid grid-cols-1 gap-2">
                   <DatePicker
+                    key={`${filter.id}-from-${datePickerKey}`} // Add key for force re-render
                     id={`${filter.id}-from`}
                     label={filter.dateFromLabel || "From"}
                     placeholder={filter.dateFromPlaceholder || "Select start date"}
@@ -221,6 +230,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                     }}
                   />
                   <DatePicker
+                    key={`${filter.id}-to-${datePickerKey}`} // Add key for force re-render
                     id={`${filter.id}-to`}
                     label={filter.dateToLabel || "To"}
                     placeholder={filter.dateToPlaceholder || "Select end date"}
@@ -308,20 +318,33 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                   if (!filter) return null;
 
                   let displayText = '';
-                  if (typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
+                  
+                  // Handle date-filter type
+                  if (filter.type === 'date-filter' && typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
                     const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
+                    
                     if (dateValue.mode === 'single' && dateValue.single) {
-                      displayText = `${filter.label}: ${dateValue.single}`;
+                      // Format date for display (convert YYYY-MM-DD to DD/MM/YYYY)
+                      const [year, month, day] = dateValue.single.split('-');
+                      const formattedDate = `${day}/${month}/${year}`;
+                      displayText = `${filter.label}: ${formattedDate}`;
                     } else if (dateValue.mode === 'range') {
+                      const formatDate = (dateStr: string) => {
+                        const [year, month, day] = dateStr.split('-');
+                        return `${day}/${month}/${year}`;
+                      };
+                      
                       if (dateValue.from && dateValue.to) {
-                        displayText = `${filter.label}: ${dateValue.from} to ${dateValue.to}`;
+                        displayText = `${filter.label}: ${formatDate(dateValue.from)} to ${formatDate(dateValue.to)}`;
                       } else if (dateValue.from) {
-                        displayText = `${filter.label}: From ${dateValue.from}`;
+                        displayText = `${filter.label}: From ${formatDate(dateValue.from)}`;
                       } else if (dateValue.to) {
-                        displayText = `${filter.label}: Until ${dateValue.to}`;
+                        displayText = `${filter.label}: Until ${formatDate(dateValue.to)}`;
                       }
                     }
-                  } else if (value && typeof value === 'object' && 'label' in value) {
+                  }
+                  // Handle regular dropdown/searchable-dropdown filters
+                  else if (value && typeof value === 'object' && 'label' in value) {
                     displayText = `${filter.label}: ${value.label}`;
                   }
 
@@ -330,14 +353,14 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                   return (
                     <div
                       key={filterId}
-                      className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1"
+                      className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 rounded-md px-3 py-1 border border-blue-200 dark:border-blue-800"
                     >
-                      <span className="text-xs text-gray-700 dark:text-gray-200">
+                      <span className="text-xs text-blue-800 dark:text-blue-200 font-medium">
                         {displayText}
                       </span>
                       <button
                         onClick={() => handleFilterChange(filterId, null)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        className="text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-100 ml-1"
                         aria-label={`Remove ${filter.label} filter`}
                       >
                         <svg
