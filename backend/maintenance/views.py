@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from .models import BeepingAlarm
 from .serializers import BeepingAlarmSerializer
 from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
 from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
 from django.db.models import Q
@@ -47,6 +46,13 @@ def beeping_alarms(request):
                 q_objects &= term_q
             
             queryset = queryset.filter(q_objects).distinct()
+        
+        # Get allocation filter
+        allocation_id = request.query_params.get('allocation', None)
+        
+        # Apply allocation filter if provided
+        if allocation_id:
+            queryset = queryset.filter(allocation__id=allocation_id)
         
         # Apply ordering
         if ordering:

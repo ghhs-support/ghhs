@@ -2,11 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import BeepingAlarm
 from properties.models import Property
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+from common.serializer import UserSerializer
 
 class PropertySerializer(serializers.ModelSerializer):
     class Meta:
