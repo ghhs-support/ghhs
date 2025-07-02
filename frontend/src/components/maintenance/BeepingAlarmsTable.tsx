@@ -190,6 +190,18 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
     }
   };
 
+  const getCustomerContactedBadge = (isContacted: boolean) => {
+    return isContacted ? 
+      <Badge size="sm" color="success">Yes</Badge> : 
+      <Badge size="sm" color="error">No</Badge>;
+  };
+
+  const getAgencyPrivateBadge = (isAgency: boolean) => {
+    return isAgency ? 
+      <Badge size="sm" color="info">Agency</Badge> : 
+      <Badge size="sm" color="warning">Private</Badge>;
+  };
+
   const formatPropertyAddress = (property: any) => {
     if (!property) {
       return 'No property data';
@@ -255,9 +267,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         </div>
       </TableCell>
       <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
-          {alarm.is_agency ? 'Agency' : 'Private'}
-        </span>
+        <div className="mx-auto whitespace-nowrap">
+          {getAgencyPrivateBadge(alarm.is_agency)}
+        </div>
       </TableCell>
       <TableCell className="w-48 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="whitespace-nowrap">
@@ -265,9 +277,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         </div>
       </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
-          {alarm.is_customer_contacted ? 'Yes' : 'No'}
-        </span>
+        <div className="mx-auto whitespace-nowrap">
+          {getCustomerContactedBadge(alarm.is_customer_contacted)}
+        </div>
       </TableCell>
       <TableCell className="w-64 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <span
@@ -283,7 +295,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         </span>
       </TableCell>
     </TableRow>
-  ), [formatAllocation, getStatusBadge, formatPropertyAddress, formatDate, formatTenant]);
+  ), [formatAllocation, getStatusBadge, getCustomerContactedBadge, getAgencyPrivateBadge, formatPropertyAddress, formatDate, formatTenant]);
 
   return (
     <DataTable
