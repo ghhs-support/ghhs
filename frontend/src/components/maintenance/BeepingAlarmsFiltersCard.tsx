@@ -18,12 +18,17 @@ interface BeepingAlarmsFiltersCardProps {
   onCustomerContactedChange: (customerContacted: string | null) => void;
   onPropertyChange: (propertyId: string | null) => void;
   onAgencyPrivateChange: (agencyPrivate: string | null) => void;
+  onCreatedAtChange: (createdAtSingle: string | null, createdAtFrom: string | null, createdAtTo: string | null, mode: 'single' | 'range') => void;
   currentAllocation: string | null;
   currentTenant: string | null;
   currentStatus: string | null;
   currentCustomerContacted: string | null;
   currentProperty: string | null;
   currentAgencyPrivate: string | null;
+  currentCreatedAtSingle: string | null;
+  currentCreatedAtFrom: string | null;
+  currentCreatedAtTo: string | null;
+  currentCreatedAtMode: 'single' | 'range';
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
@@ -33,12 +38,17 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   onCustomerContactedChange,
   onPropertyChange,
   onAgencyPrivateChange,
+  onCreatedAtChange,
   currentAllocation,
   currentTenant,
   currentStatus,
   currentCustomerContacted,
   currentProperty,
-  currentAgencyPrivate
+  currentAgencyPrivate,
+  currentCreatedAtSingle,
+  currentCreatedAtFrom,
+  currentCreatedAtTo,
+  currentCreatedAtMode
 }) => {
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +103,13 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     property: currentProperty ?
       { value: currentProperty, label: currentProperty } : null,
     agencyPrivate: currentAgencyPrivate ?
-      agencyPrivateOptions.find(opt => opt.value === currentAgencyPrivate) || null : null
+      agencyPrivateOptions.find(opt => opt.value === currentAgencyPrivate) || null : null,
+    createdAt: (currentCreatedAtSingle || currentCreatedAtFrom || currentCreatedAtTo) ? {
+      mode: currentCreatedAtMode,
+      single: currentCreatedAtSingle || undefined,
+      from: currentCreatedAtFrom || undefined,
+      to: currentCreatedAtTo || undefined
+    } : null
   });
 
   useEffect(() => {
@@ -203,6 +219,18 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       placeholder: 'Select type...',
       allOptionLabel: 'All Types',
       options: agencyPrivateOptions
+    },
+    {
+      id: 'createdAt',
+      type: 'date-filter',
+      label: 'Created At',
+      singleDateLabel: 'Specific Date',
+      dateRangeLabel: 'Date Range',
+      dateFromLabel: 'From Date',
+      dateToLabel: 'To Date',
+      singleDatePlaceholder: 'Select date',
+      dateFromPlaceholder: 'Select start date',
+      dateToPlaceholder: 'Select end date'
     }
   ];
 
@@ -217,6 +245,15 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     onCustomerContactedChange(values.customerContacted?.value || null);
     onPropertyChange(values.property?.value || null);
     onAgencyPrivateChange(values.agencyPrivate?.value || null);
+    
+    // Handle created at date filter
+    const createdAtValue = values.createdAt as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } | null;
+    onCreatedAtChange(
+      createdAtValue?.single || null,
+      createdAtValue?.from || null,
+      createdAtValue?.to || null,
+      createdAtValue?.mode || 'single'
+    );
   };
 
   return (

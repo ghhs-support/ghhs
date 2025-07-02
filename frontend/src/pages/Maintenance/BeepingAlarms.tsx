@@ -11,6 +11,12 @@ export default function BeepingAlarms() {
   const [customerContactedFilter, setCustomerContactedFilter] = useState<string | null>(null);
   const [propertyFilter, setPropertyFilter] = useState<string | null>(null);
   const [agencyPrivateFilter, setAgencyPrivateFilter] = useState<string | null>(null);
+  
+  // Created At filter state
+  const [createdAtSingleFilter, setCreatedAtSingleFilter] = useState<string | null>(null);
+  const [createdAtFromFilter, setCreatedAtFromFilter] = useState<string | null>(null);
+  const [createdAtToFilter, setCreatedAtToFilter] = useState<string | null>(null);
+  const [createdAtMode, setCreatedAtMode] = useState<'single' | 'range'>('single');
 
   const handleAllocationChange = useCallback((allocationId: string | null) => {
     setAllocationFilter(allocationId);
@@ -36,6 +42,18 @@ export default function BeepingAlarms() {
     setAgencyPrivateFilter(agencyPrivate);
   }, []);
 
+  const handleCreatedAtChange = useCallback((
+    createdAtSingle: string | null, 
+    createdAtFrom: string | null, 
+    createdAtTo: string | null, 
+    mode: 'single' | 'range'
+  ) => {
+    setCreatedAtSingleFilter(createdAtSingle);
+    setCreatedAtFromFilter(createdAtFrom);
+    setCreatedAtToFilter(createdAtTo);
+    setCreatedAtMode(mode);
+  }, []);
+
   return (
     <div>
       <PageMeta
@@ -57,12 +75,17 @@ export default function BeepingAlarms() {
             onCustomerContactedChange={handleCustomerContactedChange}
             onPropertyChange={handlePropertyChange}
             onAgencyPrivateChange={handleAgencyPrivateChange}
+            onCreatedAtChange={handleCreatedAtChange}
             currentAllocation={allocationFilter}
             currentTenant={tenantFilter}
             currentStatus={statusFilter}
             currentCustomerContacted={customerContactedFilter}
             currentProperty={propertyFilter}
             currentAgencyPrivate={agencyPrivateFilter}
+            currentCreatedAtSingle={createdAtSingleFilter}
+            currentCreatedAtFrom={createdAtFromFilter}
+            currentCreatedAtTo={createdAtToFilter}
+            currentCreatedAtMode={createdAtMode}
           />
         </div>
 
@@ -75,6 +98,10 @@ export default function BeepingAlarms() {
             customerContactedFilter={customerContactedFilter}
             propertyFilter={propertyFilter}
             agencyPrivateFilter={agencyPrivateFilter}
+            createdAtSingleFilter={createdAtSingleFilter}
+            createdAtFromFilter={createdAtFromFilter}
+            createdAtToFilter={createdAtToFilter}
+            createdAtMode={createdAtMode}
           />
         </div>
       </div>

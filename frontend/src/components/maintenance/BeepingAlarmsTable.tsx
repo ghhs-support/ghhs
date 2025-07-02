@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
-import { format } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay } from "date-fns";
+import { enUS } from "date-fns/locale";
 import DataTable, { SortField } from "../common/DataTable";
 import { useDataTable } from "../../hooks/useDataTable";
 
@@ -13,6 +14,10 @@ interface BeepingAlarmsTableProps {
   customerContactedFilter: string | null;
   propertyFilter: string | null;
   agencyPrivateFilter: string | null;
+  createdAtSingleFilter: string | null;
+  createdAtFromFilter: string | null;
+  createdAtToFilter: string | null;
+  createdAtMode: 'single' | 'range';
 }
 
 const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ 
@@ -21,21 +26,92 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   statusFilter,
   customerContactedFilter,
   propertyFilter,
-  agencyPrivateFilter
+  agencyPrivateFilter,
+  createdAtSingleFilter,
+  createdAtFromFilter,
+  createdAtToFilter,
+  createdAtMode
 }) => {
   // Local state for client-side sorting
   const [localSortField, setLocalSortField] = useState<string | null>('created_at');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  // Helper function to create proper UTC timestamps for GMT+10 dates
+  const createGMT10DateRangeForBackend = (dateString: string, isEndDate: boolean = false) => {
+    // Parse the YYYY-MM-DD string
+    const [year, month, day] = dateString.split('-').map(Number);
+    
+    if (isEndDate) {
+      // End of day in GMT+10: 23:59:59.999 on the selected date
+      // Create the date in UTC directly by specifying what time it would be in UTC
+      // July 2nd 23:59:59 GMT+10 = July 2nd 13:59:59 UTC
+      const utcDate = new Date(Date.UTC(year, month - 1, day, 13, 59, 59, 999));
+      return utcDate.toISOString();
+    } else {
+      // Start of day in GMT+10: 00:00:00.000 on the selected date
+      // July 2nd 00:00:00 GMT+10 = July 1st 14:00:00 UTC
+      const utcDate = new Date(Date.UTC(year, month - 1, day - 1, 14, 0, 0, 0));
+      return utcDate.toISOString();
+    }
+  };
+
   // Memoize the filters object
-  const filters = useMemo(() => ({
-    allocation: allocationFilter,
-    tenant: tenantFilter,
-    status: statusFilter,
-    is_customer_contacted: customerContactedFilter,
-    property: propertyFilter,
-    agency_private: agencyPrivateFilter
-  }), [allocationFilter, tenantFilter, statusFilter, customerContactedFilter, propertyFilter, agencyPrivateFilter]);
+  const filters = useMemo(() => {
+    let createdAtFilters = {};
+    
+    if (createdAtMode === 'single' && createdAtSingleFilter) {
+      // For single date, create a range for the entire day in GMT+10
+      const startISO = createGMT10DateRangeForBackend(createdAtSingleFilter, false);
+      const endISO = createGMT10DateRangeForBackend(createdAtSingleFilter, true);
+      
+      console.log(`Single date filter (GMT+10): ${createdAtSingleFilter}`);
+      console.log(`Start of ${createdAtSingleFilter} GMT+10 in UTC: ${startISO}`);
+      console.log(`End of ${createdAtSingleFilter} GMT+10 in UTC: ${endISO}`);
+      
+      createdAtFilters = {
+        created_at_from: startISO,
+        created_at_to: endISO
+      };
+    } else if (createdAtMode === 'range') {
+      if (createdAtFromFilter) {
+        const startISO = createGMT10DateRangeForBackend(createdAtFromFilter, false);
+        console.log(`From date filter (GMT+10): ${createdAtFromFilter} -> UTC: ${startISO}`);
+        createdAtFilters = { 
+          ...createdAtFilters, 
+          created_at_from: startISO
+        };
+      }
+      if (createdAtToFilter) {
+        const endISO = createGMT10DateRangeForBackend(createdAtToFilter, true);
+        console.log(`To date filter (GMT+10): ${createdAtToFilter} -> UTC: ${endISO}`);
+        createdAtFilters = { 
+          ...createdAtFilters, 
+          created_at_to: endISO
+        };
+      }
+    }
+
+    return {
+      allocation: allocationFilter,
+      tenant: tenantFilter,
+      status: statusFilter,
+      is_customer_contacted: customerContactedFilter,
+      property: propertyFilter,
+      agency_private: agencyPrivateFilter,
+      ...createdAtFilters
+    };
+  }, [
+    allocationFilter, 
+    tenantFilter, 
+    statusFilter, 
+    customerContactedFilter, 
+    propertyFilter, 
+    agencyPrivateFilter,
+    createdAtSingleFilter,
+    createdAtFromFilter,
+    createdAtToFilter,
+    createdAtMode
+  ]);
 
   const {
     data: beepingAlarms,
@@ -165,8 +241,16 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
 
   const sortedAlarms = getSortedAlarms();
 
+  // Simplified date formatting - displays in user's local timezone
   const formatDate = (date: string) => {
-    return format(new Date(date), 'dd/MM/yyyy');
+    try {
+      // parseISO correctly handles UTC dates and converts to local timezone
+      const parsedDate = parseISO(date);
+      return format(parsedDate, 'dd/MM/yyyy HH:mm');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -289,13 +373,18 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
           {formatPropertyAddress(alarm.property)}
         </span>
       </TableCell>
-      <TableCell className="w-32 px-5 py-4 text-center">
-        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap">
-          {formatDate(alarm.created_at)}
-        </span>
+      <TableCell className="w-40 px-5 py-4 text-center">
+        <div className="flex flex-col">
+          <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
+            {format(parseISO(alarm.created_at), 'dd/MM/yyyy')}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            {format(parseISO(alarm.created_at), 'HH:mm')}
+          </span>
+        </div>
       </TableCell>
     </TableRow>
-  ), [formatAllocation, getStatusBadge, getCustomerContactedBadge, getAgencyPrivateBadge, formatPropertyAddress, formatDate, formatTenant]);
+  ), [formatAllocation, getStatusBadge, getCustomerContactedBadge, getAgencyPrivateBadge, formatPropertyAddress, formatTenant]);
 
   return (
     <DataTable

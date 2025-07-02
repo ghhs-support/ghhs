@@ -7,6 +7,7 @@ from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
 from django.db.models import Q
 from properties.models import Tenant as PropertyTenant, Property
+from django.utils.dateparse import parse_datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,35 @@ def beeping_alarms(request):
         agency_private_filter = request.query_params.get('agency_private', None)
         ordering = request.query_params.get('ordering', '-created_at')  # Default sort by created_at desc
         
+        # Get date filter parameters
+        created_at_from = request.query_params.get('created_at_from', None)
+        created_at_to = request.query_params.get('created_at_to', None)
+        
         # Start with all alarms
         queryset = BeepingAlarm.objects.select_related('property', 'agency', 'private_owner', 'tenant').prefetch_related('allocation')
+        
+        # Apply date filters if provided
+        if created_at_from:
+            try:
+                from_datetime = parse_datetime(created_at_from)
+                if from_datetime:
+                    queryset = queryset.filter(created_at__gte=from_datetime)
+                    logger.info(f"Applied created_at_from filter: {from_datetime}")
+                else:
+                    logger.warning(f"Could not parse created_at_from: {created_at_from}")
+            except Exception as e:
+                logger.error(f"Error parsing created_at_from '{created_at_from}': {e}")
+        
+        if created_at_to:
+            try:
+                to_datetime = parse_datetime(created_at_to)
+                if to_datetime:
+                    queryset = queryset.filter(created_at__lte=to_datetime)
+                    logger.info(f"Applied created_at_to filter: {to_datetime}")
+                else:
+                    logger.warning(f"Could not parse created_at_to: {created_at_to}")
+            except Exception as e:
+                logger.error(f"Error parsing created_at_to '{created_at_to}': {e}")
         
         # Apply status filter if provided
         if status_filter:
@@ -106,6 +134,9 @@ def beeping_alarms(request):
             else:
                 # For other fields, use the ordering directly
                 queryset = queryset.order_by(ordering)
+        
+        # Log the final query for debugging
+        logger.info(f"Final queryset count: {queryset.count()}")
         
         # Paginate the results
         page = paginator.paginate_queryset(queryset, request)

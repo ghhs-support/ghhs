@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ComponentCard from './ComponentCard';
 import SearchableDropdown from './SearchableDropdown';
 import Button from '../ui/button/Button';
+import DatePicker from '../form/date-picker';
+import Switch from '../form/switch/Switch';
 
 export interface Option {
   value: string;
@@ -10,7 +12,7 @@ export interface Option {
 
 export interface FilterConfig {
   id: string;
-  type: 'searchable-dropdown' | 'dropdown' | 'text'; // Can extend with more types
+  type: 'searchable-dropdown' | 'dropdown' | 'text' | 'date-filter'; // Changed from date-range to date-filter
   label: string;
   placeholder?: string;
   allOptionLabel?: string;
@@ -18,6 +20,14 @@ export interface FilterConfig {
   options?: Option[];
   // For searchable dropdown
   onSearch?: (query: string) => Promise<Option[]>;
+  // For date filter
+  singleDateLabel?: string;
+  dateRangeLabel?: string;
+  dateFromLabel?: string;
+  dateToLabel?: string;
+  singleDatePlaceholder?: string;
+  dateFromPlaceholder?: string;
+  dateToPlaceholder?: string;
   // Common props
   loading?: boolean;
   error?: string | null;
@@ -25,7 +35,12 @@ export interface FilterConfig {
 }
 
 export interface FilterValue {
-  [filterId: string]: Option | null;
+  [filterId: string]: Option | null | {
+    mode?: 'single' | 'range';
+    single?: string;
+    from?: string;
+    to?: string;
+  };
 }
 
 interface FiltersCardProps {
@@ -56,7 +71,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     setLocalValues(values);
   }, [values]);
 
-  const handleFilterChange = (filterId: string, value: Option | null) => {
+  const handleFilterChange = (filterId: string, value: Option | null | { mode?: 'single' | 'range'; single?: string; from?: string; to?: string }) => {
     const newValues = { ...localValues, [filterId]: value };
     setLocalValues(newValues);
     onValuesChange(newValues);
@@ -65,6 +80,33 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     if (value === null) {
       onApply(newValues);
     }
+  };
+
+  const handleDateFilterChange = (filterId: string, field: 'mode' | 'single' | 'from' | 'to', value: string | 'single' | 'range') => {
+    const currentValue = localValues[filterId] as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } || {};
+    
+    if (field === 'mode') {
+      // When changing mode, clear existing date values
+      const newValue = { 
+        mode: value as 'single' | 'range',
+        single: undefined,
+        from: undefined,
+        to: undefined
+      };
+      handleFilterChange(filterId, newValue);
+    } else {
+      // For date values, ensure we preserve the local date
+      const newValue = { ...currentValue, [field]: value as string };
+      handleFilterChange(filterId, newValue);
+    }
+  };
+
+  // Helper function to get local date string from Date object
+  const getLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const handleApply = () => {
@@ -81,7 +123,14 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     onApply(clearedValues);
   };
 
-  const hasActiveFilters = Object.values(localValues).some(value => value !== null);
+  const hasActiveFilters = Object.values(localValues).some(value => {
+    if (value === null) return false;
+    if (typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
+      const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
+      return dateValue.single || dateValue.from || dateValue.to;
+    }
+    return true;
+  });
 
   const renderFilter = (filter: FilterConfig) => {
     const value = localValues[filter.id] || null;
@@ -93,7 +142,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
           <SearchableDropdown
             key={filter.id}
             label={filter.label}
-            value={value}
+            value={value as Option | null}
             onChange={(option) => handleFilterChange(filter.id, option)}
             options={filter.options}
             onSearch={filter.onSearch}
@@ -105,6 +154,104 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
             showApplyButton={false}
             showClearButton={true}
           />
+        );
+      case 'date-filter':
+        const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } || { mode: 'single' };
+        const currentMode = dateValue.mode || 'single';
+        
+        return (
+          <div key={filter.id} className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {filter.label}
+            </label>
+            
+            {/* Toggle between single date and date range */}
+            <div className="flex items-center space-x-3">
+              <span className={`text-sm ${currentMode === 'single' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {filter.singleDateLabel || 'Single Date'}
+              </span>
+              <Switch
+                checked={currentMode === 'range'}
+                onChange={(checked) => handleDateFilterChange(filter.id, 'mode', checked ? 'range' : 'single')}
+                className="mx-2"
+              />
+              <span className={`text-sm ${currentMode === 'range' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                {filter.dateRangeLabel || 'Date Range'}
+              </span>
+            </div>
+
+            {/* Date picker(s) based on mode */}
+            <div className="space-y-2">
+              {currentMode === 'single' ? (
+                <DatePicker
+                  id={`${filter.id}-single`}
+                  placeholder={filter.singleDatePlaceholder || "Select date"}
+                  defaultDate={dateValue.single}
+                  onChange={(selectedDates) => {
+                    console.log('Single date picker onChange:', selectedDates);
+                    if (selectedDates.length > 0) {
+                      const selectedDate = selectedDates[0];
+                      const localDateString = getLocalDateString(selectedDate);
+                      console.log('Selected date object:', selectedDate);
+                      console.log('Converted to local date string:', localDateString);
+                      handleDateFilterChange(filter.id, 'single', localDateString);
+                    } else {
+                      handleDateFilterChange(filter.id, 'single', '');
+                    }
+                  }}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  <DatePicker
+                    id={`${filter.id}-from`}
+                    label={filter.dateFromLabel || "From"}
+                    placeholder={filter.dateFromPlaceholder || "Select start date"}
+                    defaultDate={dateValue.from}
+                    onChange={(selectedDates) => {
+                      console.log('From date picker onChange:', selectedDates);
+                      if (selectedDates.length > 0) {
+                        const selectedDate = selectedDates[0];
+                        const localDateString = getLocalDateString(selectedDate);
+                        console.log('From date object:', selectedDate);
+                        console.log('Converted to local date string:', localDateString);
+                        handleDateFilterChange(filter.id, 'from', localDateString);
+                      } else {
+                        handleDateFilterChange(filter.id, 'from', '');
+                      }
+                    }}
+                  />
+                  <DatePicker
+                    id={`${filter.id}-to`}
+                    label={filter.dateToLabel || "To"}
+                    placeholder={filter.dateToPlaceholder || "Select end date"}
+                    defaultDate={dateValue.to}
+                    onChange={(selectedDates) => {
+                      console.log('To date picker onChange:', selectedDates);
+                      if (selectedDates.length > 0) {
+                        const selectedDate = selectedDates[0];
+                        const localDateString = getLocalDateString(selectedDate);
+                        console.log('To date object:', selectedDate);
+                        console.log('Converted to local date string:', localDateString);
+                        handleDateFilterChange(filter.id, 'to', localDateString);
+                      } else {
+                        handleDateFilterChange(filter.id, 'to', '');
+                      }
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            
+            {/* Clear button */}
+            {(dateValue.single || dateValue.from || dateValue.to) && (
+              <button
+                onClick={() => handleFilterChange(filter.id, null)}
+                className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                Clear dates
+              </button>
+            )}
+          </div>
         );
       // Can add more filter types here in the future
       default:
@@ -160,13 +307,33 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                   const filter = filters.find(f => f.id === filterId);
                   if (!filter) return null;
 
+                  let displayText = '';
+                  if (typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
+                    const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
+                    if (dateValue.mode === 'single' && dateValue.single) {
+                      displayText = `${filter.label}: ${dateValue.single}`;
+                    } else if (dateValue.mode === 'range') {
+                      if (dateValue.from && dateValue.to) {
+                        displayText = `${filter.label}: ${dateValue.from} to ${dateValue.to}`;
+                      } else if (dateValue.from) {
+                        displayText = `${filter.label}: From ${dateValue.from}`;
+                      } else if (dateValue.to) {
+                        displayText = `${filter.label}: Until ${dateValue.to}`;
+                      }
+                    }
+                  } else if (value && typeof value === 'object' && 'label' in value) {
+                    displayText = `${filter.label}: ${value.label}`;
+                  }
+
+                  if (!displayText) return null;
+
                   return (
                     <div
                       key={filterId}
                       className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1"
                     >
                       <span className="text-xs text-gray-700 dark:text-gray-200">
-                        {filter.label}: {value.label}
+                        {displayText}
                       </span>
                       <button
                         onClick={() => handleFilterChange(filterId, null)}
