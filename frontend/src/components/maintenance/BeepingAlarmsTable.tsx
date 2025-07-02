@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
@@ -12,6 +12,10 @@ interface BeepingAlarmsTableProps {
 }
 
 const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter, tenantFilter }) => {
+  // Local state for client-side sorting
+  const [localSortField, setLocalSortField] = useState<string | null>('created_at');
+  const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('desc');
+
   // Memoize the filters object
   const filters = useMemo(() => ({
     allocation: allocationFilter,
@@ -27,19 +31,26 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
     currentPage,
     entriesPerPage,
     searchTerm,
-    sortField,
-    sortDirection,
     handleSearchChange,
     handlePageChange,
     handleEntriesPerPageChange,
-    handleSort,
   } = useDataTable<BeepingAlarm>({
     endpoint: '/beeping_alarms/',
-    defaultSortField: 'created_at',
-    defaultSortDirection: 'desc',
     defaultEntriesPerPage: '10',
     filters
   });
+
+  // Handle local sorting
+  const handleLocalSort = useCallback((field: string) => {
+    if (localSortField === field) {
+      // Toggle direction if same field
+      setLocalSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with default direction
+      setLocalSortField(field);
+      setLocalSortDirection('asc');
+    }
+  }, [localSortField]);
 
   // Define table columns
   const sortFields: SortField[] = [
@@ -89,7 +100,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
 
   // Client-side sorting function (since backend sorting might not handle all fields)
   const getSortedAlarms = useCallback(() => {
-    if (!sortField) {
+    if (!localSortField) {
       return beepingAlarms;
     }
 
@@ -97,7 +108,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       let aValue: any;
       let bValue: any;
 
-      switch (sortField) {
+      switch (localSortField) {
         case 'allocation':
           aValue = a.allocation?.[0]?.first_name || '';
           bValue = b.allocation?.[0]?.first_name || '';
@@ -133,9 +144,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       if (aValue === bValue) return 0;
       
       const comparison = aValue > bValue ? 1 : -1;
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return localSortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [beepingAlarms, sortField, sortDirection]);
+  }, [beepingAlarms, localSortField, localSortDirection]);
 
   const sortedAlarms = getSortedAlarms();
 
@@ -271,10 +282,10 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       onPageChange={handlePageChange}
       onEntriesPerPageChange={handleEntriesPerPageChange}
       onSearchChange={handleSearchChange}
-      onSort={handleSort}
+      onSort={handleLocalSort}
       sortFields={sortFields}
-      sortField={sortField}
-      sortDirection={sortDirection}
+      sortField={localSortField}
+      sortDirection={localSortDirection}
       searchTerm={searchTerm}
       searchPlaceholder="Search by address, allocation, notes..."
       renderRow={renderRow}
