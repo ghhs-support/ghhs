@@ -65,7 +65,6 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
   className = ""
 }) => {
   const [localValues, setLocalValues] = useState<FilterValue>(values);
-  const [datePickerKey, setDatePickerKey] = useState(0);
 
   // Sync with external values when they change
   useEffect(() => {
@@ -77,12 +76,8 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     setLocalValues(newValues);
     onValuesChange(newValues);
     
-    // Auto-apply filters when a filter is cleared (becomes null) or when it's a date filter
+    // Auto-apply filters when a filter is cleared (becomes null)
     if (value === null) {
-      onApply(newValues);
-      setDatePickerKey(prev => prev + 1);
-    } else if (typeof value === 'object' && ('mode' in value || 'single' in value || 'from' in value)) {
-      // Auto-apply date filters when they change
       onApply(newValues);
     }
   };
@@ -99,7 +94,6 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
         to: undefined
       };
       handleFilterChange(filterId, newValue);
-      setDatePickerKey(prev => prev + 1);
     } else {
       // For date values, ensure we preserve the local date
       const newValue = { ...currentValue, [field]: value as string };
@@ -127,27 +121,16 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     setLocalValues(clearedValues);
     onValuesChange(clearedValues);
     onApply(clearedValues);
-    setDatePickerKey(prev => prev + 1);
   };
 
-  // Improved active filters detection
   const hasActiveFilters = Object.values(localValues).some(value => {
-    if (value === null || value === undefined) return false;
-    
-    // For date filters
+    if (value === null) return false;
     if (typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
       const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
-      return !!(dateValue.single || dateValue.from || dateValue.to);
+      return dateValue.single || dateValue.from || dateValue.to;
     }
-    
-    // For other filters
     return true;
   });
-
-  // Helper function to check if a date filter has values
-  const hasDateFilterValues = (dateValue: { mode?: 'single' | 'range'; single?: string; from?: string; to?: string }): boolean => {
-    return !!(dateValue.single || dateValue.from || dateValue.to);
-  };
 
   const renderFilter = (filter: FilterConfig) => {
     const value = localValues[filter.id] || null;
@@ -201,7 +184,6 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
             <div className="space-y-2">
               {currentMode === 'single' ? (
                 <DatePicker
-                  key={`${filter.id}-single-${datePickerKey}`}
                   id={`${filter.id}-single`}
                   placeholder={filter.singleDatePlaceholder || "Select date"}
                   defaultDate={dateValue.single}
@@ -221,7 +203,6 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
               ) : (
                 <div className="grid grid-cols-1 gap-2">
                   <DatePicker
-                    key={`${filter.id}-from-${datePickerKey}`}
                     id={`${filter.id}-from`}
                     label={filter.dateFromLabel || "From"}
                     placeholder={filter.dateFromPlaceholder || "Select start date"}
@@ -240,7 +221,6 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                     }}
                   />
                   <DatePicker
-                    key={`${filter.id}-to-${datePickerKey}`}
                     id={`${filter.id}-to`}
                     label={filter.dateToLabel || "To"}
                     placeholder={filter.dateToPlaceholder || "Select end date"}
@@ -263,7 +243,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
             </div>
             
             {/* Clear button */}
-            {hasDateFilterValues(dateValue) && (
+            {(dateValue.single || dateValue.from || dateValue.to) && (
               <button
                 onClick={() => handleFilterChange(filter.id, null)}
                 className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -273,6 +253,7 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
             )}
           </div>
         );
+      // Can add more filter types here in the future
       default:
         return null;
     }
@@ -332,17 +313,12 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
                   if (filter.type === 'date-filter' && typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
                     const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
                     
-                    // Only show if there are actual date values
-                    if (!hasDateFilterValues(dateValue)) {
-                      return null;
-                    }
-                    
                     if (dateValue.mode === 'single' && dateValue.single) {
                       // Format date for display (convert YYYY-MM-DD to DD/MM/YYYY)
                       const [year, month, day] = dateValue.single.split('-');
                       const formattedDate = `${day}/${month}/${year}`;
                       displayText = `${filter.label}: ${formattedDate}`;
-                    } else if (dateValue.mode === 'range' || (!dateValue.mode && (dateValue.from || dateValue.to))) {
+                    } else if (dateValue.mode === 'range') {
                       const formatDate = (dateStr: string) => {
                         const [year, month, day] = dateStr.split('-');
                         return `${day}/${month}/${year}`;
