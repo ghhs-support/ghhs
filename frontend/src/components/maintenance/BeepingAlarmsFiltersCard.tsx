@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import ComponentCard from '../common/ComponentCard';
-import SearchableDropdown from '../common/SearchableDropdown';
+import FiltersCard, { FilterConfig, FilterValue, Option } from '../common/FiltersCard';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
-import Button from '../ui/button/Button';
-import Badge from "../ui/badge/Badge";
 
 // Define a proper User type based on the backend serializer
 interface User {
@@ -12,11 +9,6 @@ interface User {
   first_name: string;
   last_name: string;
   email: string;
-}
-
-interface Option {
-  value: string;
-  label: string;
 }
 
 interface BeepingAlarmsFiltersCardProps {
@@ -35,8 +27,6 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<Option | null>(null);
-  const [selectedTenantOption, setSelectedTenantOption] = useState<Option | null>(null);
   const { authenticatedGet } = useAuthenticatedApi();
 
   const getUserDisplayName = (user: User): string => {
@@ -50,6 +40,14 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       label: getUserDisplayName(user)
     }))
   , [allocations]);
+
+  // Initialize filter values
+  const [filterValues, setFilterValues] = useState<FilterValue>({
+    allocation: currentAllocation ? 
+      allocationOptions.find(opt => opt.value === currentAllocation) || null : null,
+    tenant: currentTenant ? 
+      { value: currentTenant, label: currentTenant } : null // You might need to fetch tenant label
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -83,163 +81,59 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (currentAllocation) {
-      const option = allocationOptions.find(opt => opt.value === currentAllocation);
-      if (option) {
-        setSelectedOption(option);
+  // Define filter configurations
+  const filterConfigs: FilterConfig[] = [
+    {
+      id: 'allocation',
+      type: 'dropdown',
+      label: 'Allocation',
+      placeholder: 'Search allocations...',
+      allOptionLabel: 'All Allocations',
+      options: allocationOptions,
+      loading: loading,
+      error: error
+    },
+    {
+      id: 'tenant',
+      type: 'searchable-dropdown',
+      label: 'Tenant',
+      placeholder: 'Search by tenant name or mobile...',
+      allOptionLabel: 'All Tenants',
+      onSearch: async (query: string) => {
+        console.log('Searching for tenant with query:', query);
+        try {
+          const response = await authenticatedGet('/maintenance/tenant-suggestions/', {
+            params: { q: query }
+          });
+          console.log('Tenant search response:', response);
+          return response || [];
+        } catch (error) {
+          console.error('Error fetching tenant suggestions:', error);
+          return [];
+        }
       }
     }
-  }, [currentAllocation, allocationOptions]);
+  ];
 
-  const handleApplyFilters = () => {
-    onAllocationChange(selectedOption?.value || null);
-    onTenantChange(selectedTenantOption?.value || null);
+  const handleValuesChange = (values: FilterValue) => {
+    setFilterValues(values);
+  };
+
+  const handleApply = (values: FilterValue) => {
+    onAllocationChange(values.allocation?.value || null);
+    onTenantChange(values.tenant?.value || null);
   };
 
   return (
-    <ComponentCard 
+    <FiltersCard
       title="Filters"
-      desc="Filter your beeping alarms"
-    >
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 max-w-sm">
-            <SearchableDropdown
-              label="Allocation"
-              options={allocationOptions}
-              value={selectedOption}
-              onChange={setSelectedOption}
-              loading={loading}
-              error={error}
-              placeholder="Search allocations..."
-              allOptionLabel="All Allocations"
-              showApplyButton={false}
-              showClearButton={true}
-            />
-          </div>
-
-          <div className="flex-1 max-w-sm">
-            <SearchableDropdown
-              label="Tenant"
-              value={selectedTenantOption}
-              onChange={setSelectedTenantOption}
-              onSearch={async (query) => {
-                console.log('Searching for tenant with query:', query);
-                try {
-                  // Always call the API - let the backend handle empty queries by returning all tenants
-                  const response = await authenticatedGet('/maintenance/tenant-suggestions/', {
-                    params: { q: query }
-                  });
-                  console.log('Tenant search response:', response);
-                  return response || [];
-                } catch (error) {
-                  console.error('Error fetching tenant suggestions:', error);
-                  return [];
-                }
-              }}
-              placeholder="Search by tenant name or mobile..."
-              allOptionLabel="All Tenants"
-              showApplyButton={false}
-              showClearButton={true}
-            />
-          </div>
-        </div>
-
-        <div className="flex space-x-2 pt-4">
-          <Button
-            onClick={handleApplyFilters}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2"
-            disabled={loading}
-          >
-            Apply Filters
-          </Button>
-          <Button
-            onClick={() => {
-              setSelectedOption(null);
-              setSelectedTenantOption(null);
-              onAllocationChange(null);
-              onTenantChange(null);
-            }}
-            variant="outline"
-            className="text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 px-4 py-2"
-            disabled={loading}
-          >
-            Clear Filters
-          </Button>
-        </div>
-
-        <div className="pt-4">
-          <div className="flex items-center gap-1 text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Active Filters:</span>
-            {!selectedOption && !selectedTenantOption ? (
-              <span className="text-gray-500 dark:text-gray-400 italic">None</span>
-            ) : (
-              <div className="flex flex-wrap gap-2 ml-2">
-                {selectedOption && (
-                  <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1">
-                    <span className="text-xs text-gray-700 dark:text-gray-200">
-                      Allocation: {selectedOption.label}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setSelectedOption(null);
-                        onAllocationChange(null);
-                      }}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                      aria-label="Remove allocation filter"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-                {selectedTenantOption && (
-                  <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1">
-                    <span className="text-xs text-gray-700 dark:text-gray-200">
-                      Tenant: {selectedTenantOption.label}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setSelectedTenantOption(null);
-                        onTenantChange(null);
-                      }}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                      aria-label="Remove tenant filter"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </ComponentCard>
+      description="Filter your beeping alarms"
+      filters={filterConfigs}
+      values={filterValues}
+      onValuesChange={handleValuesChange}
+      onApply={handleApply}
+      loading={loading}
+    />
   );
 };
 

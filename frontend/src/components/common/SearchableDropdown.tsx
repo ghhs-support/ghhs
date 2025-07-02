@@ -52,6 +52,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   useEffect(() => {
     if (value) {
       setSearchQuery(value.label);
+    } else {
+      setSearchQuery(""); // Clear the search query when value is null
     }
   }, [value]);
 
