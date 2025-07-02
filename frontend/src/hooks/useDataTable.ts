@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthenticatedApi } from './useAuthenticatedApi';
 
 export interface PaginatedResponse<T> {
@@ -16,6 +16,7 @@ export interface UseDataTableOptions<T> {
   defaultSortField?: string;
   defaultSortDirection?: 'asc' | 'desc';
   defaultEntriesPerPage?: string;
+  filters?: Record<string, any>;
 }
 
 export function useDataTable<T>({
@@ -23,7 +24,8 @@ export function useDataTable<T>({
   searchFields = [],
   defaultSortField,
   defaultSortDirection = 'desc',
-  defaultEntriesPerPage = '10'
+  defaultEntriesPerPage = '10',
+  filters = {}
 }: UseDataTableOptions<T>) {
   const { authenticatedGet } = useAuthenticatedApi();
   
@@ -38,6 +40,9 @@ export function useDataTable<T>({
   const [totalPages, setTotalPages] = useState(0);
   const [sortField, setSortField] = useState<string | null>(defaultSortField || null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
+
+  // Memoize the filters object to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
 
   // Fetch data function
   const fetchData = useCallback(async () => {
@@ -57,6 +62,13 @@ export function useDataTable<T>({
       if (sortField) {
         params.append('ordering', sortDirection === 'desc' ? `-${sortField}` : sortField);
       }
+
+      // Add filters to query parameters
+      Object.entries(memoizedFilters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          params.append(key, value.toString());
+        }
+      });
       
       const response = await authenticatedGet(`${endpoint}?${params.toString()}`);
       const paginatedResponse = response as PaginatedResponse<T>;
@@ -71,7 +83,7 @@ export function useDataTable<T>({
     } finally {
       setLoading(false);
     }
-  }, [authenticatedGet, endpoint, currentPage, entriesPerPage, searchTerm, sortField, sortDirection]);
+  }, [authenticatedGet, endpoint, currentPage, entriesPerPage, searchTerm, sortField, sortDirection, memoizedFilters]);
 
   // Effects
   useEffect(() => {

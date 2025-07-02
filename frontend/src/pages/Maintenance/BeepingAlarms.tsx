@@ -1,9 +1,17 @@
+import { useState, useCallback } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import BeepingAlarmsTable from "../../components/maintenance/BeepingAlarmsTable";
 import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarmsFiltersCard";
 
 export default function BeepingAlarms() {
+  const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
+
+  const handleAllocationChange = useCallback((allocationId: string | null) => {
+    console.log("Allocation changed to:", allocationId); // Debug log
+    setAllocationFilter(allocationId);
+  }, []); // Empty dependency array since it only uses setState
+
   return (
     <div>
       <PageMeta
@@ -18,12 +26,15 @@ export default function BeepingAlarms() {
         
         {/* Filters Card */}
         <div className="mb-6">
-          <BeepingAlarmsFiltersCard />
+          <BeepingAlarmsFiltersCard 
+            onAllocationChange={handleAllocationChange}
+            currentAllocation={allocationFilter}
+          />
         </div>
 
         {/* Table */}
         <div className="w-full overflow-x-auto custom-scrollbar">
-          <BeepingAlarmsTable />
+          <BeepingAlarmsTable allocationFilter={allocationFilter} />
         </div>
       </div>
     </div>

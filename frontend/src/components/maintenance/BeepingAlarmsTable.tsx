@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
@@ -6,7 +6,16 @@ import { format } from "date-fns";
 import DataTable, { SortField } from "../common/DataTable";
 import { useDataTable } from "../../hooks/useDataTable";
 
-export default function BeepingAlarmsTable() {
+interface BeepingAlarmsTableProps {
+  allocationFilter: string | null;
+}
+
+const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter }) => {
+  // Memoize the filters object
+  const filters = useMemo(() => ({
+    allocation: allocationFilter
+  }), [allocationFilter]);
+
   const {
     data: beepingAlarms,
     loading,
@@ -23,10 +32,11 @@ export default function BeepingAlarmsTable() {
     handleEntriesPerPageChange,
     handleSort,
   } = useDataTable<BeepingAlarm>({
-    endpoint: '/beeping_alarms',
+    endpoint: '/beeping_alarms/',
     defaultSortField: 'created_at',
     defaultSortDirection: 'desc',
-    defaultEntriesPerPage: '10'
+    defaultEntriesPerPage: '10',
+    filters
   });
 
   // Define table columns
@@ -238,4 +248,6 @@ export default function BeepingAlarmsTable() {
       }
     />
   );
-}
+};
+
+export default BeepingAlarmsTable;
