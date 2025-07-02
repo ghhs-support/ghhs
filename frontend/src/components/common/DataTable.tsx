@@ -195,7 +195,13 @@ export default function DataTable<T>({
       {/* Table */}
       <div className="max-w-full overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <div className={`overflow-y-auto max-h-[${tableHeight}] min-h-[${tableHeight}] custom-scrollbar`}>
+          <div 
+            className="overflow-y-auto custom-scrollbar"
+            style={{ 
+              maxHeight: tableHeight,
+              minHeight: tableHeight 
+            }}
+          >
             <Table>
               <TableHeader className="border-b border-gray-200 dark:border-white/[0.08] bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <TableRow>

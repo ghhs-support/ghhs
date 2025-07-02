@@ -289,6 +289,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
       searchTerm={searchTerm}
       searchPlaceholder="Search by address, allocation, notes..."
       renderRow={renderRow}
+      tableHeight="600px"
       renderEmptyState={
         <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
           No beeping alarms found
