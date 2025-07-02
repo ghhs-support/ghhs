@@ -6,7 +6,7 @@ import Badge from "../ui/badge/Badge";
 
 // Define a proper User type based on the backend serializer
 interface User {
-  id: string;
+  id: number;
   username: string;
   first_name: string;
   last_name: string;
@@ -27,6 +27,11 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { authenticatedGet } = useAuthenticatedApi();
+
+  // Add console.log to debug
+  console.log('Current Allocation:', currentAllocation);
+  console.log('Temp Allocation:', tempAllocation);
+  console.log('All Allocations:', allocations);
 
   useEffect(() => {
     let mounted = true;
@@ -86,7 +91,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const getActiveFilters = () => {
     const filters = [];
     if (currentAllocation) {
-      const selectedUser = allocations.find(user => user.id === currentAllocation);
+      const selectedUser = allocations.find(user => user.id === Number(currentAllocation));
       if (selectedUser) {
         filters.push({
           type: 'Allocation',
@@ -131,7 +136,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
         <div className="flex space-x-2 pt-4">
           <Button
             onClick={handleApplyFilters}
-            className="w-full"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             disabled={loading}
           >
             Apply Filters
@@ -139,51 +144,54 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
           <Button
             onClick={handleClearFilters}
             variant="outline"
-            className="w-full"
+            className="w-full text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600"
             disabled={loading}
           >
             Clear Filters
           </Button>
         </div>
 
-        {/* Active Filters Section */}
-        {getActiveFilters().length > 0 && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex flex-wrap gap-2">
-              {getActiveFilters().map((filter, index) => (
-                <Badge
-                  key={index}
-                  variant="light"
-                  color="primary"
-                  className="flex items-center gap-2"
-                >
-                  <span className="text-xs font-medium">
-                    {filter.type}: {filter.value}
-                  </span>
-                  <button
-                    onClick={filter.onRemove}
-                    className="p-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+        {/* Active Filters Section - Add debug info */}
+        <div className="pt-4">
+          <div className="flex items-center gap-1 text-sm">
+            <span className="text-gray-500 dark:text-gray-400">Active Filters:</span>
+            {getActiveFilters().length === 0 ? (
+              <span className="text-gray-500 dark:text-gray-400 italic">None</span>
+            ) : (
+              <div className="flex flex-wrap gap-2 ml-2">
+                {getActiveFilters().map((filter, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1"
                   >
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
+                    <span className="text-xs text-gray-700 dark:text-gray-200">
+                      {filter.type}: {filter.value}
+                    </span>
+                    <button
+                      onClick={filter.onRemove}
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                      aria-label={`Remove ${filter.type} filter`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </Badge>
-              ))}
-            </div>
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </ComponentCard>
   );

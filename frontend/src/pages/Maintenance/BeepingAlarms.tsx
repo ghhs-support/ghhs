@@ -7,10 +7,13 @@ import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarms
 export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
 
+  // Add console.log to debug
+  console.log('Allocation Filter in Parent:', allocationFilter);
+
   const handleAllocationChange = useCallback((allocationId: string | null) => {
-    console.log("Allocation changed to:", allocationId); // Debug log
+    console.log('Setting allocation to:', allocationId); // Debug log
     setAllocationFilter(allocationId);
-  }, []); // Empty dependency array since it only uses setState
+  }, []);
 
   return (
     <div>
