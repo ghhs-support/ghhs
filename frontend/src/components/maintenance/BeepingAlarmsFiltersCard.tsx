@@ -17,11 +17,13 @@ interface BeepingAlarmsFiltersCardProps {
   onStatusChange: (status: string | null) => void;
   onCustomerContactedChange: (customerContacted: string | null) => void;
   onPropertyChange: (propertyId: string | null) => void;
+  onAgencyPrivateChange: (agencyPrivate: string | null) => void;
   currentAllocation: string | null;
   currentTenant: string | null;
   currentStatus: string | null;
   currentCustomerContacted: string | null;
   currentProperty: string | null;
+  currentAgencyPrivate: string | null;
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
@@ -30,11 +32,13 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   onStatusChange,
   onCustomerContactedChange,
   onPropertyChange,
+  onAgencyPrivateChange,
   currentAllocation,
   currentTenant,
   currentStatus,
   currentCustomerContacted,
-  currentProperty
+  currentProperty,
+  currentAgencyPrivate
 }) => {
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,6 +74,12 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     { value: 'false', label: 'No' }
   ];
 
+  // Agency/Private options
+  const agencyPrivateOptions: Option[] = [
+    { value: 'agency', label: 'Agency' },
+    { value: 'private', label: 'Private' }
+  ];
+
   // Initialize filter values
   const [filterValues, setFilterValues] = useState<FilterValue>({
     allocation: currentAllocation ? 
@@ -81,7 +91,9 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     customerContacted: currentCustomerContacted ?
       customerContactedOptions.find(opt => opt.value === currentCustomerContacted) || null : null,
     property: currentProperty ?
-      { value: currentProperty, label: currentProperty } : null
+      { value: currentProperty, label: currentProperty } : null,
+    agencyPrivate: currentAgencyPrivate ?
+      agencyPrivateOptions.find(opt => opt.value === currentAgencyPrivate) || null : null
   });
 
   useEffect(() => {
@@ -183,6 +195,14 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
           return [];
         }
       }
+    },
+    {
+      id: 'agencyPrivate',
+      type: 'dropdown',
+      label: 'Agency/Private',
+      placeholder: 'Select type...',
+      allOptionLabel: 'All Types',
+      options: agencyPrivateOptions
     }
   ];
 
@@ -196,6 +216,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     onStatusChange(values.status?.value || null);
     onCustomerContactedChange(values.customerContacted?.value || null);
     onPropertyChange(values.property?.value || null);
+    onAgencyPrivateChange(values.agencyPrivate?.value || null);
   };
 
   return (

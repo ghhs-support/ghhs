@@ -23,6 +23,7 @@ def beeping_alarms(request):
         status_filter = request.query_params.get('status', None)
         is_customer_contacted_filter = request.query_params.get('is_customer_contacted', None)
         property_filter = request.query_params.get('property', None)
+        agency_private_filter = request.query_params.get('agency_private', None)
         ordering = request.query_params.get('ordering', '-created_at')  # Default sort by created_at desc
         
         # Start with all alarms
@@ -42,6 +43,13 @@ def beeping_alarms(request):
         # Apply property filter if provided
         if property_filter:
             queryset = queryset.filter(property_id=property_filter)
+        
+        # Apply agency/private filter if provided
+        if agency_private_filter:
+            if agency_private_filter.lower() == 'agency':
+                queryset = queryset.filter(is_agency=True)
+            elif agency_private_filter.lower() == 'private':
+                queryset = queryset.filter(is_private_owner=True)
         
         # Apply search filter
         if search:
