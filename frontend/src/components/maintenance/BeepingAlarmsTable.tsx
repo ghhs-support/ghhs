@@ -11,13 +11,15 @@ interface BeepingAlarmsTableProps {
   tenantFilter: string | null;
   statusFilter: string | null;
   customerContactedFilter: string | null;
+  propertyFilter: string | null;
 }
 
 const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ 
   allocationFilter, 
   tenantFilter, 
   statusFilter,
-  customerContactedFilter
+  customerContactedFilter,
+  propertyFilter
 }) => {
   // Local state for client-side sorting
   const [localSortField, setLocalSortField] = useState<string | null>('created_at');
@@ -28,8 +30,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
     allocation: allocationFilter,
     tenant: tenantFilter,
     status: statusFilter,
-    is_customer_contacted: customerContactedFilter
-  }), [allocationFilter, tenantFilter, statusFilter, customerContactedFilter]);
+    is_customer_contacted: customerContactedFilter,
+    property: propertyFilter
+  }), [allocationFilter, tenantFilter, statusFilter, customerContactedFilter, propertyFilter]);
 
   const {
     data: beepingAlarms,

@@ -16,10 +16,12 @@ interface BeepingAlarmsFiltersCardProps {
   onTenantChange: (tenantId: string | null) => void;
   onStatusChange: (status: string | null) => void;
   onCustomerContactedChange: (customerContacted: string | null) => void;
+  onPropertyChange: (propertyId: string | null) => void;
   currentAllocation: string | null;
   currentTenant: string | null;
   currentStatus: string | null;
   currentCustomerContacted: string | null;
+  currentProperty: string | null;
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
@@ -27,10 +29,12 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   onTenantChange,
   onStatusChange,
   onCustomerContactedChange,
+  onPropertyChange,
   currentAllocation,
   currentTenant,
   currentStatus,
-  currentCustomerContacted
+  currentCustomerContacted,
+  currentProperty
 }) => {
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +79,9 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     status: currentStatus ?
       statusOptions.find(opt => opt.value === currentStatus) || null : null,
     customerContacted: currentCustomerContacted ?
-      customerContactedOptions.find(opt => opt.value === currentCustomerContacted) || null : null
+      customerContactedOptions.find(opt => opt.value === currentCustomerContacted) || null : null,
+    property: currentProperty ?
+      { value: currentProperty, label: currentProperty } : null
   });
 
   useEffect(() => {
@@ -157,6 +163,26 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       placeholder: 'Select option...',
       allOptionLabel: 'All',
       options: customerContactedOptions
+    },
+    {
+      id: 'property',
+      type: 'searchable-dropdown',
+      label: 'Property Address',
+      placeholder: 'Search by address...',
+      allOptionLabel: 'All Properties',
+      onSearch: async (query: string) => {
+        console.log('Searching for property with query:', query);
+        try {
+          const response = await authenticatedGet('/maintenance/property-suggestions/', {
+            params: { q: query }
+          });
+          console.log('Property search response:', response);
+          return response || [];
+        } catch (error) {
+          console.error('Error fetching property suggestions:', error);
+          return [];
+        }
+      }
     }
   ];
 
@@ -169,6 +195,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     onTenantChange(values.tenant?.value || null);
     onStatusChange(values.status?.value || null);
     onCustomerContactedChange(values.customerContacted?.value || null);
+    onPropertyChange(values.property?.value || null);
   };
 
   return (

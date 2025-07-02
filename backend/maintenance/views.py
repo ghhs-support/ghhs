@@ -6,7 +6,7 @@ from rest_framework import status
 from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
 from django.db.models import Q
-from properties.models import Tenant as PropertyTenant
+from properties.models import Tenant as PropertyTenant, Property
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ def beeping_alarms(request):
         search = request.query_params.get('search', '').strip()
         status_filter = request.query_params.get('status', None)
         is_customer_contacted_filter = request.query_params.get('is_customer_contacted', None)
+        property_filter = request.query_params.get('property', None)
         ordering = request.query_params.get('ordering', '-created_at')  # Default sort by created_at desc
         
         # Start with all alarms
@@ -37,6 +38,10 @@ def beeping_alarms(request):
                 queryset = queryset.filter(is_customer_contacted=True)
             elif is_customer_contacted_filter.lower() == 'false':
                 queryset = queryset.filter(is_customer_contacted=False)
+        
+        # Apply property filter if provided
+        if property_filter:
+            queryset = queryset.filter(property_id=property_filter)
         
         # Apply search filter
         if search:
@@ -208,4 +213,54 @@ def tenant_suggestions(request):
     
     print(f"Returning {len(results)} results: {results}")
     print(f"=== END DEBUG ===")
+    return Response(results)
+
+@api_view(['GET'])
+@validate_kinde_token
+def property_suggestions(request):
+    search = request.query_params.get('q', '').strip()
+    
+    # Get properties that are actually used in BeepingAlarms
+    used_property_ids = BeepingAlarm.objects.values_list('property_id', flat=True).distinct()
+    
+    # If no search query, return all used properties (limited)
+    if len(search) == 0:
+        properties = Property.objects.filter(id__in=used_property_ids).order_by('street_name', 'street_number')[:20]
+        
+        results = [
+            {
+                'value': str(prop.id),
+                'label': f"{prop.unit_number + '/' if prop.unit_number else ''}{prop.street_number} {prop.street_name}, {prop.suburb} {prop.state} {prop.postcode}"
+            }
+            for prop in properties
+        ]
+        
+        return Response(results)
+    
+    # If search is too short but not empty, return empty to avoid too many results while typing
+    if len(search) < 2:
+        return Response([])
+    
+    # Build the search query for property address components
+    query_filter = (
+        Q(street_number__icontains=search) |
+        Q(street_name__icontains=search) |
+        Q(suburb__icontains=search) |
+        Q(state__icontains=search) |
+        Q(postcode__icontains=search) |
+        Q(unit_number__icontains=search)
+    )
+    
+    # Search in properties that are used by BeepingAlarms
+    properties = Property.objects.filter(id__in=used_property_ids).filter(query_filter).order_by('street_name', 'street_number')[:10]
+    
+    # Format results
+    results = [
+        {
+            'value': str(prop.id),
+            'label': f"{prop.unit_number + '/' if prop.unit_number else ''}{prop.street_number} {prop.street_name}, {prop.suburb} {prop.state} {prop.postcode}"
+        }
+        for prop in properties
+    ]
+    
     return Response(results)

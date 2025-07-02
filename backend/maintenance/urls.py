@@ -5,4 +5,5 @@ from . import views
 urlpatterns = [
     path('beeping_alarms/', beeping_alarms, name='beeping_alarms'),
     path('tenant-suggestions/', views.tenant_suggestions, name='tenant-suggestions'),
+    path('property-suggestions/', views.property_suggestions, name='property_suggestions'),
 ]
