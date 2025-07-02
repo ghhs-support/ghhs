@@ -14,15 +14,19 @@ interface User {
 interface BeepingAlarmsFiltersCardProps {
   onAllocationChange: (allocationId: string | null) => void;
   onTenantChange: (tenantId: string | null) => void;
+  onStatusChange: (status: string | null) => void;
   currentAllocation: string | null;
   currentTenant: string | null;
+  currentStatus: string | null;
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
   onAllocationChange,
   onTenantChange,
+  onStatusChange,
   currentAllocation,
-  currentTenant
+  currentTenant,
+  currentStatus
 }) => {
   const [allocations, setAllocations] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,12 +45,25 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     }))
   , [allocations]);
 
+  // Status options based on backend STATUS_CHOICES
+  const statusOptions: Option[] = [
+    { value: 'new', label: 'New' },
+    { value: 'requires_call_back', label: 'Requires Call Back' },
+    { value: 'awaiting_response', label: 'Awaiting Response' },
+    { value: 'to_be_scheduled', label: 'To Be Scheduled' },
+    { value: 'to_be_quoted', label: 'To Be Quoted' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
+
   // Initialize filter values
   const [filterValues, setFilterValues] = useState<FilterValue>({
     allocation: currentAllocation ? 
       allocationOptions.find(opt => opt.value === currentAllocation) || null : null,
     tenant: currentTenant ? 
-      { value: currentTenant, label: currentTenant } : null // You might need to fetch tenant label
+      { value: currentTenant, label: currentTenant } : null,
+    status: currentStatus ?
+      statusOptions.find(opt => opt.value === currentStatus) || null : null
   });
 
   useEffect(() => {
@@ -112,6 +129,14 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
           return [];
         }
       }
+    },
+    {
+      id: 'status',
+      type: 'dropdown',
+      label: 'Status',
+      placeholder: 'Select status...',
+      allOptionLabel: 'All Statuses',
+      options: statusOptions
     }
   ];
 
@@ -122,6 +147,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const handleApply = (values: FilterValue) => {
     onAllocationChange(values.allocation?.value || null);
     onTenantChange(values.tenant?.value || null);
+    onStatusChange(values.status?.value || null);
   };
 
   return (

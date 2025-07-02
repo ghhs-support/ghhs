@@ -9,9 +9,10 @@ import { useDataTable } from "../../hooks/useDataTable";
 interface BeepingAlarmsTableProps {
   allocationFilter: string | null;
   tenantFilter: string | null;
+  statusFilter: string | null;
 }
 
-const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter, tenantFilter }) => {
+const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilter, tenantFilter, statusFilter }) => {
   // Local state for client-side sorting
   const [localSortField, setLocalSortField] = useState<string | null>('created_at');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -19,8 +20,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({ allocationFilte
   // Memoize the filters object
   const filters = useMemo(() => ({
     allocation: allocationFilter,
-    tenant: tenantFilter
-  }), [allocationFilter, tenantFilter]);
+    tenant: tenantFilter,
+    status: statusFilter
+  }), [allocationFilter, tenantFilter, statusFilter]);
 
   const {
     data: beepingAlarms,

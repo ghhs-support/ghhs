@@ -7,6 +7,7 @@ import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarms
 export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
   const [tenantFilter, setTenantFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const handleAllocationChange = useCallback((allocationId: string | null) => {
     setAllocationFilter(allocationId);
@@ -14,6 +15,10 @@ export default function BeepingAlarms() {
 
   const handleTenantChange = useCallback((tenantId: string | null) => {
     setTenantFilter(tenantId);
+  }, []);
+
+  const handleStatusChange = useCallback((status: string | null) => {
+    setStatusFilter(status);
   }, []);
 
   return (
@@ -33,8 +38,10 @@ export default function BeepingAlarms() {
           <BeepingAlarmsFiltersCard 
             onAllocationChange={handleAllocationChange}
             onTenantChange={handleTenantChange}
+            onStatusChange={handleStatusChange}
             currentAllocation={allocationFilter}
             currentTenant={tenantFilter}
+            currentStatus={statusFilter}
           />
         </div>
 
@@ -43,6 +50,7 @@ export default function BeepingAlarms() {
           <BeepingAlarmsTable 
             allocationFilter={allocationFilter}
             tenantFilter={tenantFilter}
+            statusFilter={statusFilter}
           />
         </div>
       </div>
