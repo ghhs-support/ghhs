@@ -37,6 +37,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const [isUserTyping, setIsUserTyping] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [tempSelection, setTempSelection] = useState<Option | null>(null);
 
   // Move getUserDisplayName before it's used
   const getUserDisplayName = (user: User): string => {
@@ -90,6 +91,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       const option = allocationOptions.find(opt => opt.value === currentAllocation);
       if (option) {
         setSelectedOption(option);
+        setTempSelection(option);
         setSearchQuery(option.label);
       }
     }
@@ -108,32 +110,31 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleInputClick = () => {
+    setIsOpen(true);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
     setIsUserTyping(true);
+    setIsOpen(true); // Always show dropdown when typing
     
     if (selectedOption && value !== selectedOption.label) {
       setSelectedOption(null);
     }
-    
-    if (value.length >= 2) {
-      setIsOpen(true);
-    } else {
-      setIsOpen(false);
-    }
   };
 
   const handleOptionSelect = (option: Option) => {
-    setSelectedOption(option);
+    setTempSelection(option);
     setSearchQuery(option.label);
     setIsOpen(false);
     setIsUserTyping(false);
-    onAllocationChange(option.value);
   };
 
   const handleClear = () => {
     setSelectedOption(null);
+    setTempSelection(null);
     setSearchQuery("");
     setIsOpen(false);
     setIsUserTyping(false);
@@ -163,6 +164,11 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const showResults = isOpen && searchQuery.length >= 2;
   const hasResults = filteredOptions.length > 0;
 
+  const handleApplyFilters = () => {
+    setSelectedOption(tempSelection);
+    onAllocationChange(tempSelection?.value || null);
+  };
+
   return (
     <ComponentCard 
       title="Filters"
@@ -180,13 +186,30 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={handleInputChange}
+                onClick={handleInputClick}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
-                placeholder={selectedOption ? selectedOption.label : "Search allocations..."}
-                className="w-full py-2 pl-3 pr-10 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800"
+                placeholder={selectedOption ? selectedOption.label : "Click to view all or type to search..."}
+                className="w-full py-2 pl-3 pr-10 text-sm text-gray-800 bg-white border border-gray-300 rounded-lg shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 cursor-pointer"
               />
               
-              {selectedOption && !isUserTyping && (
+              {/* Dropdown arrow icon */}
+              <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+              >
+                <svg 
+                  className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Clear button - show only when there's a selection or search query */}
+              {(selectedOption || searchQuery) && (
                 <button
                   onClick={handleClear}
                   className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400"
@@ -196,38 +219,47 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
                   </svg>
                 </button>
               )}
-              
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
-                {loading ? (
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="m14 14-2.9-2.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </span>
             </div>
 
-            {showResults && (
+            {/* Dropdown menu - show when isOpen is true (not just when searching) */}
+            {isOpen && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto dark:bg-gray-900 dark:border-gray-700">
                 {loading ? (
                   <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                     Loading...
                   </div>
-                ) : hasResults ? (
-                  filteredOptions.map((option) => (
+                ) : filteredOptions.length > 0 ? (
+                  <>
+                    {/* "All Allocations" option */}
                     <button
-                      key={option.value}
-                      onClick={() => handleOptionSelect(option)}
-                      className="w-full px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-50 focus:bg-gray-50 focus:outline-hidden dark:text-white/90 dark:hover:bg-gray-800 dark:focus:bg-gray-800"
+                      onClick={() => {
+                        handleOptionSelect({ value: '', label: 'All Allocations' });
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-hidden dark:hover:bg-gray-800 dark:focus:bg-gray-800 ${
+                        !tempSelection ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-800 dark:text-white/90'
+                      }`}
                     >
-                      {option.label}
+                      All Allocations
                     </button>
-                  ))
+                    
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 dark:border-gray-700"></div>
+                    
+                    {/* User options */}
+                    {filteredOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleOptionSelect(option)}
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-hidden dark:hover:bg-gray-800 dark:focus:bg-gray-800 ${
+                          tempSelection?.value === option.value 
+                            ? 'text-blue-600 dark:text-blue-400 font-medium' 
+                            : 'text-gray-800 dark:text-white/90'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </>
                 ) : (
                   <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                     No allocations found
@@ -240,7 +272,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
 
         <div className="flex space-x-2 pt-4">
           <Button
-            onClick={() => onAllocationChange(selectedOption?.value || null)}
+            onClick={handleApplyFilters}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white"
             disabled={loading}
           >
