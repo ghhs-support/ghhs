@@ -2,8 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
-import { format, parseISO, startOfDay, endOfDay } from "date-fns";
-import { enUS } from "date-fns/locale";
+import { format, parseISO } from "date-fns";
 import DataTable, { SortField } from "../common/DataTable";
 import { useDataTable } from "../../hooks/useDataTable";
 
