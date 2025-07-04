@@ -346,11 +346,11 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
         default_user.save()
         users = [default_user]
     
-    # Generate realistic timestamps from today back to January 1, 2025
+    # Generate realistic timestamps from January 1, 2025 to today
     now = datetime.now()
     start_date = datetime(2025, 1, 1)
     
-    # Calculate total days between now and start date
+    # Calculate total days between start date and now
     total_days = (now - start_date).days
     
     alarms_created = 0
@@ -378,56 +378,13 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
             is_completed = False
             is_cancelled = False
         
-        # Generate realistic timestamps from January 1, 2025 to today
-        # 70% of alarms created in the last 30 days, 20% in last 3 months, 10% older
-        if random.random() < 0.7:
-            # Recent (last 30 days)
-            created_at = now - timedelta(
-                days=random.randint(0, min(30, total_days)),
-                hours=random.randint(0, 23),
-                minutes=random.randint(0, 59)
-            )
-        elif random.random() < 0.9:
-            # Medium (last 3 months or up to available range)
-            min_days = min(31, total_days)
-            max_days = min(90, total_days)
-            if min_days >= max_days:
-                # If we don't have enough days, use the full range
-                created_at = now - timedelta(
-                    days=random.randint(0, total_days),
-                    hours=random.randint(0, 23),
-                    minutes=random.randint(0, 59)
-                )
-            else:
-                created_at = now - timedelta(
-                    days=random.randint(min_days, max_days),
-                    hours=random.randint(0, 23),
-                    minutes=random.randint(0, 59)
-                )
-        else:
-            # Older (up to the full available range back to January 1, 2025)
-            min_days = min(91, total_days)
-            if min_days >= total_days:
-                # If we don't have enough days, use the full range
-                created_at = now - timedelta(
-                    days=random.randint(0, total_days),
-                    hours=random.randint(0, 23),
-                    minutes=random.randint(0, 59)
-                )
-            else:
-                created_at = now - timedelta(
-                    days=random.randint(min_days, total_days),
-                    hours=random.randint(0, 23),
-                    minutes=random.randint(0, 59)
-                )
-        
-        # Ensure created_at is not before our start date
-        if created_at < start_date:
-            created_at = start_date + timedelta(
-                days=random.randint(0, total_days),
-                hours=random.randint(0, 23),
-                minutes=random.randint(0, 59)
-            )
+        # Generate random timestamp between January 1, 2025 and today
+        random_days = random.randint(0, total_days)
+        created_at = start_date + timedelta(
+            days=random_days,
+            hours=random.randint(0, 23),
+            minutes=random.randint(0, 59)
+        )
         
         # Updated at is usually within a few days of created_at, but not before
         if status in ['completed', 'cancelled']:
