@@ -65,14 +65,37 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
   className = ""
 }) => {
   const [localValues, setLocalValues] = useState<FilterValue>(values);
-  const [appliedValues, setAppliedValues] = useState<FilterValue>(values);
+  // Initialize appliedValues as empty - only set when user actually applies
+  const [appliedValues, setAppliedValues] = useState<FilterValue>({});
   const [datePickerKey, setDatePickerKey] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Sync with external values when they change
+  // Sync with external values when they change, but only for localValues
   useEffect(() => {
     setLocalValues(values);
-    setAppliedValues(values);
-  }, [values]);
+    // Only set appliedValues if this is the first initialization and there are actual values
+    if (!isInitialized) {
+      setIsInitialized(true);
+      // Only set as applied if there are meaningful filter values
+      const hasInitialFilters = Object.values(values).some(value => {
+        if (value === null || value === undefined) return false;
+        
+        // For date filters
+        if (typeof value === 'object' && ('mode' in value || 'from' in value || 'single' in value)) {
+          const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
+          return !!(dateValue.single || dateValue.from || dateValue.to);
+        }
+        
+        // For other filters
+        return true;
+      });
+      
+      // If there are initial filters (e.g., from URL), treat them as applied
+      if (hasInitialFilters) {
+        setAppliedValues(values);
+      }
+    }
+  }, [values, isInitialized]);
 
   const handleFilterChange = (filterId: string, value: Option | null | { mode?: 'single' | 'range'; single?: string; from?: string; to?: string }, autoApply: boolean = false) => {
     const newValues = { ...localValues, [filterId]: value };
