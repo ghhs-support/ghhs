@@ -354,7 +354,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
     for i in range(200):
         # Randomly select related objects
         property_obj = random.choice(properties)
-        tenant = random.choice(tenants)
         issue_type = random.choice(issue_types)
         status = random.choice(status_choices)
         
@@ -452,7 +451,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
             is_agency=is_agency,  # True only if agency is set
             is_private_owner=is_private_owner,  # True only if private_owner is set
             property=property_obj,
-            tenant=tenant,
             is_customer_contacted=random.choice([True, False]),
             is_completed=is_completed,  # Set based on status
             is_cancelled=is_cancelled,  # Set based on status
@@ -460,9 +458,36 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
             updated_at=updated_at,
         )
         
-        # Add random allocation
-        allocated_users = random.sample(users, min(random.randint(1, 3), len(users)))
-        alarm.allocation.set(allocated_users)
+        # Add random tenants (up to 2 tenants per alarm)
+        # 10% chance of no tenants, 60% chance of 1 tenant, 30% chance of 2 tenants
+        tenant_choice = random.random()
+        if tenant_choice < 0.1:
+            # No tenants (10%)
+            pass
+        elif tenant_choice < 0.7:
+            # 1 tenant (60%)
+            selected_tenants = random.sample(tenants, 1)
+            alarm.tenant.set(selected_tenants)
+        else:
+            # 2 tenants (30%)
+            selected_tenants = random.sample(tenants, min(2, len(tenants)))
+            alarm.tenant.set(selected_tenants)
+        
+        # Add random allocation (sometimes keep blank)
+        # 20% chance of no allocation, 50% chance of 1 user, 30% chance of 2-3 users
+        allocation_choice = random.random()
+        if allocation_choice < 0.2:
+            # No allocation (20%)
+            pass
+        elif allocation_choice < 0.7:
+            # 1 user (50%)
+            allocated_users = random.sample(users, 1)
+            alarm.allocation.set(allocated_users)
+        else:
+            # 2-3 users (30%)
+            num_users = random.randint(2, min(3, len(users)))
+            allocated_users = random.sample(users, num_users)
+            alarm.allocation.set(allocated_users)
         
         alarms_created += 1
         if alarms_created % 50 == 0:

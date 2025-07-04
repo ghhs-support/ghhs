@@ -17,7 +17,7 @@ class TenantSerializer(serializers.ModelSerializer):
 class BeepingAlarmSerializer(serializers.ModelSerializer):
     allocation = UserSerializer(many=True, read_only=True)
     property = PropertySerializer(read_only=True)
-    tenant = TenantSerializer(read_only=True)
+    tenant = TenantSerializer(many=True, read_only=True)
     
     class Meta:
         model = BeepingAlarm

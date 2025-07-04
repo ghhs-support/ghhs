@@ -31,8 +31,8 @@ def beeping_alarms(request):
         created_at_from = request.query_params.get('created_at_from', None)
         created_at_to = request.query_params.get('created_at_to', None)
         
-        # Start with all alarms
-        queryset = BeepingAlarm.objects.select_related('property', 'agency', 'private_owner', 'tenant').prefetch_related('allocation')
+        # Start with all alarms - Fixed: moved tenant to prefetch_related since it's now ManyToManyField
+        queryset = BeepingAlarm.objects.select_related('property', 'agency', 'private_owner').prefetch_related('allocation', 'tenant')
         
         # Exclude completed and cancelled alarms from table load UNLESS specifically searching for them
         if status_filter not in ['completed', 'cancelled']:
@@ -111,10 +111,10 @@ def beeping_alarms(request):
         if allocation_id:
             queryset = queryset.filter(allocation__id=allocation_id)
         
-        # Get tenant filter
+        # Get tenant filter - Fixed: updated for ManyToManyField
         tenant_id = request.query_params.get('tenant', None)
         if tenant_id:
-            queryset = queryset.filter(tenant_id=tenant_id)
+            queryset = queryset.filter(tenant__id=tenant_id)
         
         # Apply ordering
         if ordering:
@@ -164,7 +164,8 @@ def tenant_suggestions(request):
     print(f"Search query: '{search}'")
     
     # Get tenants that are actually used in active BeepingAlarms (exclude completed and cancelled)
-    used_tenant_ids = BeepingAlarm.objects.filter(is_completed=False, is_cancelled=False).values_list('tenant_id', flat=True).distinct()
+    # Fixed: changed tenant_id to tenant for ManyToManyField
+    used_tenant_ids = BeepingAlarm.objects.filter(is_completed=False, is_cancelled=False).values_list('tenant', flat=True).distinct()
     
     # If no search query, return all used tenants (limited)
     if len(search) == 0:

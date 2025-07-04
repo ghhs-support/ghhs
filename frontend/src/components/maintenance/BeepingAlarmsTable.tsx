@@ -213,8 +213,17 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
           bValue = b.is_agency ? 'Agency' : 'Private';
           break;
         case 'tenant':
-          aValue = `${a.tenant?.first_name || ''} ${a.tenant?.last_name || ''}`.trim();
-          bValue = `${b.tenant?.first_name || ''} ${b.tenant?.last_name || ''}`.trim();
+          // Sort by first tenant's name, or by tenant count if names are equal
+          const aFirstTenant = a.tenant?.[0];
+          const bFirstTenant = b.tenant?.[0];
+          aValue = aFirstTenant ? `${aFirstTenant.first_name || ''} ${aFirstTenant.last_name || ''}`.trim() : '';
+          bValue = bFirstTenant ? `${bFirstTenant.first_name || ''} ${bFirstTenant.last_name || ''}`.trim() : '';
+          
+          // If names are the same, sort by tenant count
+          if (aValue === bValue) {
+            aValue = a.tenant?.length || 0;
+            bValue = b.tenant?.length || 0;
+          }
           break;
         case 'customer_contacted':
           aValue = a.is_customer_contacted;
@@ -314,22 +323,47 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       .join(', ');
   };
 
-  const formatTenant = (tenant: BeepingAlarm['tenant']) => {
-    if (!tenant) return 'No tenant data';
+  const formatTenant = (tenants: BeepingAlarm['tenant']) => {
+    if (!tenants || tenants.length === 0) return 'No tenants';
     
-    const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
-    const phone = tenant.phone;
+    // If there's only one tenant, show name and phone in a column
+    if (tenants.length === 1) {
+      const tenant = tenants[0];
+      const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
+      const phone = tenant.phone;
+      
+      if (!name && !phone) return 'No tenant data';
+      
+      return (
+        <div className="flex flex-col items-center">
+          <span className="font-medium text-gray-800 dark:text-white/90">
+            {name || 'No name'}
+          </span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {phone || 'No phone'}
+          </span>
+        </div>
+      );
+    }
     
-    if (!name && !phone) return 'No tenant data';
-    
+    // If there are multiple tenants, show them in a compact format
     return (
       <div className="flex flex-col items-center">
-        <span className="font-medium text-gray-800 dark:text-white/90">
-          {name || 'No name'}
+        <span className="font-medium text-gray-800 dark:text-white/90 text-xs">
+          {tenants.length} Tenants
         </span>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {phone || 'No phone'}
-        </span>
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
+          {tenants.map((tenant, index) => {
+            const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
+            const displayName = name || 'No name';
+            return (
+              <div key={tenant.id} className="truncate">
+                {displayName}
+                {tenant.phone && <span className="block">{tenant.phone}</span>}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };

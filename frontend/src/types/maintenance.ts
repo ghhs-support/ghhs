@@ -32,13 +32,13 @@ export interface BeepingAlarm {
     postcode: string;
     country: string;
   };
-  tenant: {
+  tenant: Array<{
     id: number;
     first_name: string;
     last_name: string | null;
     email: string | null;
     phone: string;
-  };
+  }>;
   is_customer_contacted: boolean;
   created_at: string;
   updated_at: string;
