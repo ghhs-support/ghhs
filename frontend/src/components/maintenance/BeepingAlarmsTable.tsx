@@ -318,9 +318,31 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       return 'Unassigned';
     }
     
-    return allocation
-      .map(user => `${user.first_name} ${user.last_name}`.trim() || user.username)
-      .join(', ');
+    // If there's only one allocation, return the name as a string
+    if (allocation.length === 1) {
+      const user = allocation[0];
+      return `${user.first_name} ${user.last_name}`.trim() || user.username;
+    }
+    
+    // If there are multiple allocations, show them in a vertical format
+    return (
+      <div className="flex flex-col items-center">
+        <span className="font-medium text-gray-800 dark:text-white/90 text-xs">
+          {allocation.length} Assigned
+        </span>
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
+          {allocation.map((user, index) => {
+            const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            const displayName = name || user.username;
+            return (
+              <div key={user.id || index} className="truncate">
+                {displayName}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const formatTenant = (tenants: BeepingAlarm['tenant']) => {
@@ -375,9 +397,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
     >
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-        <span className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
+        <div className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
           {formatAllocation(alarm.allocation)}
-        </span>
+        </div>
       </TableCell>
       <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="mx-auto whitespace-nowrap">
