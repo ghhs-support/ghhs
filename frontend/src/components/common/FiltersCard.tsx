@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ComponentCard from './ComponentCard';
 import SearchableDropdown from './SearchableDropdown';
 import Button from '../ui/button/Button';
@@ -203,8 +203,37 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
     handleFilterChange(filterId, null, true);
   };
 
-  // Check if there are any pending changes (selected but not applied)
-  const hasPendingChanges = JSON.stringify(localValues) !== JSON.stringify(appliedValues);
+  // Replace the simple hasPendingChanges check with a smarter one
+  const hasPendingChanges = useMemo(() => {
+    // Create copies to compare, but normalize date filters to ignore mode-only changes
+    const normalizeFilterValue = (value: any, filterId: string) => {
+      const filter = filters.find(f => f.id === filterId);
+      
+      if (filter?.type === 'date-filter' && value && typeof value === 'object') {
+        const dateValue = value as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string };
+        
+        // If there are no actual date values, normalize to null
+        if (!dateValue.single && !dateValue.from && !dateValue.to) {
+          return null;
+        }
+      }
+      
+      return value;
+    };
+
+    const normalizedLocal: FilterValue = {};
+    const normalizedApplied: FilterValue = {};
+
+    Object.keys(localValues).forEach(filterId => {
+      normalizedLocal[filterId] = normalizeFilterValue(localValues[filterId], filterId);
+    });
+
+    Object.keys(appliedValues).forEach(filterId => {
+      normalizedApplied[filterId] = normalizeFilterValue(appliedValues[filterId], filterId);
+    });
+
+    return JSON.stringify(normalizedLocal) !== JSON.stringify(normalizedApplied);
+  }, [localValues, appliedValues, filters]);
 
   // Check applied filters (not local values) for active filters display
   const hasActiveFilters = Object.values(appliedValues).some(value => {
@@ -398,16 +427,10 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
         <div className="flex space-x-2 pt-4">
           <Button
             onClick={handleApply}
-            className={`px-4 py-2 ${hasPendingChanges 
-              ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
-            }`}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white"
             disabled={loading}
           >
             Apply Filters
-            {hasPendingChanges && (
-              <span className="ml-2 w-2 h-2 bg-orange-400 rounded-full inline-block animate-pulse"></span>
-            )}
           </Button>
           <Button
             onClick={handleClear}
