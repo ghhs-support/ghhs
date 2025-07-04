@@ -37,7 +37,7 @@ class BeepingAlarm(models.Model):
     tenant = models.ManyToManyField(Tenant, related_name='alarm_issues', blank=True)
     is_customer_contacted = models.BooleanField(default=False, verbose_name="Customer Contacted")
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     is_completed = models.BooleanField(default=False)
     is_cancelled = models.BooleanField(default=False)
 

@@ -365,9 +365,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
         is_private_owner = property_obj.private_owner is not None
         
         # Set is_completed and is_cancelled based on status
-        # Rule: if status = 'completed' then is_completed = True, is_cancelled = False
-        # Rule: if status = 'cancelled' then is_cancelled = True, is_completed = False
-        # Rule: for all other statuses, both are False
         if status == 'completed':
             is_completed = True
             is_cancelled = False
@@ -388,14 +385,12 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
         
         # Updated at is usually within a few days of created_at, but not before
         if status in ['completed', 'cancelled']:
-            # Completed/cancelled alarms have been updated recently
             updated_at = created_at + timedelta(
                 days=random.randint(1, 7),
                 hours=random.randint(0, 23),
                 minutes=random.randint(0, 59)
             )
         elif status in ['new', 'requires_call_back']:
-            # New alarms might not have been updated yet (50% chance)
             if random.random() < 0.5:
                 updated_at = created_at
             else:
@@ -404,14 +399,13 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
                     minutes=random.randint(0, 59)
                 )
         else:
-            # Other statuses have been updated within a few days
             updated_at = created_at + timedelta(
                 days=random.randint(0, 5),
                 hours=random.randint(0, 23),
                 minutes=random.randint(0, 59)
             )
         
-        # Create alarm with custom timestamps
+        # Create alarm WITHOUT custom timestamps first
         alarm = BeepingAlarm.objects.create(
             status=status,
             issue_type=issue_type,
@@ -432,21 +426,30 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
                 'Door contact sensor faulty',
                 'Glass break sensor needs calibration',
             ]),
-            agency=property_obj.agency,  # Will be null if private owner property
-            private_owner=property_obj.private_owner,  # Will be null if agency property
-            is_active=random.choice([True, True, True, False]),  # 75% active
-            is_agency=is_agency,  # True only if agency is set
-            is_private_owner=is_private_owner,  # True only if private_owner is set
+            agency=property_obj.agency,
+            private_owner=property_obj.private_owner,
+            is_active=random.choice([True, True, True, False]),
+            is_agency=is_agency,
+            is_private_owner=is_private_owner,
             property=property_obj,
             is_customer_contacted=random.choice([True, False]),
-            is_completed=is_completed,  # Set based on status
-            is_cancelled=is_cancelled,  # Set based on status
-            created_at=created_at,
-            updated_at=updated_at,
+            is_completed=is_completed,
+            is_cancelled=is_cancelled,
         )
         
+        # NOW update the timestamps using raw SQL to bypass auto_now restrictions
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE maintenance_beepingalarm 
+                SET created_at = %s, updated_at = %s 
+                WHERE id = %s
+                """,
+                [created_at, updated_at, alarm.id]
+            )
+        
         # Add random tenants (up to 2 tenants per alarm)
-        # 10% chance of no tenants, 60% chance of 1 tenant, 30% chance of 2 tenants
         tenant_choice = random.random()
         if tenant_choice < 0.1:
             # No tenants (10%)
@@ -461,7 +464,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
             alarm.tenant.set(selected_tenants)
         
         # Add random allocation (sometimes keep blank)
-        # 20% chance of no allocation, 50% chance of 1 user, 30% chance of 2-3 users
         allocation_choice = random.random()
         if allocation_choice < 0.2:
             # No allocation (20%)
