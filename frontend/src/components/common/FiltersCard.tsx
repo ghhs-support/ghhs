@@ -12,7 +12,7 @@ export interface Option {
 
 export interface FilterConfig {
   id: string;
-  type: 'searchable-dropdown' | 'dropdown' | 'text' | 'date-filter'; // Changed from date-range to date-filter
+  type: 'searchable-dropdown' | 'dropdown' | 'text' | 'date-filter';
   label: string;
   placeholder?: string;
   allOptionLabel?: string;

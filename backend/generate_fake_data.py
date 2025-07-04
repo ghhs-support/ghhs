@@ -362,6 +362,20 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
         is_agency = property_obj.agency is not None
         is_private_owner = property_obj.private_owner is not None
         
+        # Set is_completed and is_cancelled based on status
+        # Rule: if status = 'completed' then is_completed = True, is_cancelled = False
+        # Rule: if status = 'cancelled' then is_cancelled = True, is_completed = False
+        # Rule: for all other statuses, both are False
+        if status == 'completed':
+            is_completed = True
+            is_cancelled = False
+        elif status == 'cancelled':
+            is_completed = False
+            is_cancelled = True
+        else:
+            is_completed = False
+            is_cancelled = False
+        
         # Generate realistic timestamps
         # 70% of alarms created in the last 30 days, 20% in last 3 months, 10% older
         if random.random() < 0.7:
@@ -440,6 +454,8 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
             property=property_obj,
             tenant=tenant,
             is_customer_contacted=random.choice([True, False]),
+            is_completed=is_completed,  # Set based on status
+            is_cancelled=is_cancelled,  # Set based on status
             created_at=created_at,
             updated_at=updated_at,
         )

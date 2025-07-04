@@ -34,6 +34,10 @@ def beeping_alarms(request):
         # Start with all alarms
         queryset = BeepingAlarm.objects.select_related('property', 'agency', 'private_owner', 'tenant').prefetch_related('allocation')
         
+        # Exclude completed and cancelled alarms from table load UNLESS specifically searching for them
+        if status_filter not in ['completed', 'cancelled']:
+            queryset = queryset.filter(is_completed=False, is_cancelled=False)
+        
         # Apply date filters if provided
         if created_at_from:
             try:
@@ -159,8 +163,8 @@ def tenant_suggestions(request):
     search = request.query_params.get('q', '').strip()
     print(f"Search query: '{search}'")
     
-    # Get tenants that are actually used in BeepingAlarms
-    used_tenant_ids = BeepingAlarm.objects.values_list('tenant_id', flat=True).distinct()
+    # Get tenants that are actually used in active BeepingAlarms (exclude completed and cancelled)
+    used_tenant_ids = BeepingAlarm.objects.filter(is_completed=False, is_cancelled=False).values_list('tenant_id', flat=True).distinct()
     
     # If no search query, return all used tenants (limited)
     if len(search) == 0:
@@ -259,8 +263,8 @@ def tenant_suggestions(request):
 def property_suggestions(request):
     search = request.query_params.get('q', '').strip()
     
-    # Get properties that are actually used in BeepingAlarms
-    used_property_ids = BeepingAlarm.objects.values_list('property_id', flat=True).distinct()
+    # Get properties that are actually used in active BeepingAlarms (exclude completed and cancelled)
+    used_property_ids = BeepingAlarm.objects.filter(is_completed=False, is_cancelled=False).values_list('property_id', flat=True).distinct()
     
     # If no search query, return all used properties (limited)
     if len(search) == 0:
