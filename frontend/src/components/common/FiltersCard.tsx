@@ -175,7 +175,20 @@ const FiltersCard: React.FC<FiltersCardProps> = ({
   const handleClear = () => {
     const clearedValues: FilterValue = {};
     filters.forEach(filter => {
-      clearedValues[filter.id] = null;
+      if (filter.type === 'date-filter') {
+        // Preserve the current mode but clear the date values
+        const currentDateValue = localValues[filter.id] as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } || { mode: 'single' };
+        const currentMode = currentDateValue.mode || 'single';
+        
+        clearedValues[filter.id] = { 
+          mode: currentMode,
+          single: undefined,
+          from: undefined,
+          to: undefined
+        };
+      } else {
+        clearedValues[filter.id] = null;
+      }
     });
     setLocalValues(clearedValues);
     setAppliedValues(clearedValues);
