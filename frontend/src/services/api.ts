@@ -16,4 +16,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Beeping Alarms API Functions
+export const beepingAlarmsApi = {
+  getBeepingAlarms: async (getToken: () => Promise<string | null>) => {
+    const token = await getToken();
+    const response = await api.get('/beeping_alarms', {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : '',
+      },
+    });
+    return response.data;
+  },
+}
+
 export default api;

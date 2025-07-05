@@ -280,6 +280,14 @@ layer(base);
   background-color: #344054;
 }
 
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #fff; /* or your light background */
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-corner {
+  background: #1a2231; /* or your dark background */
+}
+
 @layer utilities {
   /* For Remove Date Icon */
   input[type="date"]::-webkit-inner-spin-button,

@@ -19,6 +19,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AdminAccess from "./pages/AdminAccess";
+import BeepingAlarms from "./pages/Maintenance/BeepingAlarms";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -39,8 +40,8 @@ if (import.meta.env.DEV) {
 export default function App() {
   return (
     <KindeProvider
-      clientId={import.meta.env.VITE_KINDE_CLIENT_ID}
-      domain={import.meta.env.VITE_KINDE_DOMAIN}
+      clientId="9b6e7df3e3ec46beb2d09a89565da00b"
+      domain="https://ghhs.kinde.com"
       redirectUri="http://localhost:5173"
       logoutUri="http://localhost:5173"
     >
@@ -61,6 +62,9 @@ export default function App() {
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />
+
+            {/* Maintenance */}
+            <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
 
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />
