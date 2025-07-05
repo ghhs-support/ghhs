@@ -27,7 +27,10 @@ class BeepingAlarmSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = BeepingAlarm
-        fields = '__all__'
+        fields = [
+            'id', 'allocation', 'property', 'issue_type', 'status', 'notes',
+            'is_customer_contacted', 'created_at', 'updated_at'
+        ]
 
 class BeepingAlarmCreateSerializer(serializers.ModelSerializer):
     allocation = serializers.PrimaryKeyRelatedField(
