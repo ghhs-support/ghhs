@@ -1,4 +1,5 @@
 import { useRef, useEffect, ReactNode, FC } from "react";
+import { Toaster } from 'react-hot-toast';
 
 interface ModalProps {
   isOpen: boolean;
@@ -133,6 +134,15 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
       >
         <div className="flex flex-col flex-1 min-h-0 h-full">{children}</div>
       </div>
+      {/* Toaster inside modal to ensure it appears above the modal */}
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          style: {
+            zIndex: 999999,
+          },
+        }}
+      />
     </div>
   );
 };

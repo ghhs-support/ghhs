@@ -237,19 +237,23 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
         await authenticatedPatch(`/properties/tenants/${editingTenant.id}/`, {
           data: tenantForm
         });
+        toast.success(`Tenant ${tenantForm.first_name} ${tenantForm.last_name} updated successfully!`);
       } else {
         // Add new tenant to property
         console.log('Adding tenant to property with data:', tenantForm); // Debug log
         await authenticatedPost(`/properties/properties/${selectedProperty?.id}/add_tenant/`, {
           data: tenantForm
         });
+        toast.success(`Tenant ${tenantForm.first_name} ${tenantForm.last_name} added successfully!`);
       }
       await refreshPropertyTenants();
       closeTenantForm();
     } catch (error: any) {
       console.error('Tenant operation error:', error); // Debug log
       console.error('Tenant error response data:', error.data); // Debug log
-      setTenantFormError(error?.data?.detail || 'Failed to save tenant.');
+      const errorMessage = error?.data?.detail || 'Failed to save tenant.';
+      setTenantFormError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setTenantLoading(false);
     }
@@ -268,8 +272,11 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
         data: { tenant_id: tenantToDelete.id }
       });
       await refreshPropertyTenants();
-    } catch (error) {
-      // ignore
+      toast.success(`Tenant ${tenantToDelete.first_name} ${tenantToDelete.last_name} removed successfully!`);
+    } catch (error: any) {
+      console.error('Error removing tenant:', error);
+      const errorMessage = error?.data?.detail || 'Failed to remove tenant.';
+      toast.error(errorMessage);
     } finally {
       setTenantLoading(false);
       setShowDeleteModal(false);
