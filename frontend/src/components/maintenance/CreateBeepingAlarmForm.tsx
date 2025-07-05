@@ -287,9 +287,9 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal.Header onClose={onClose}>Create Beeping Alarm</Modal.Header>
       <Modal.Body>
-        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
-          <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Create Beeping Alarm</h2>
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl custom-scrollbar">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Property Selection */}
             <div>
