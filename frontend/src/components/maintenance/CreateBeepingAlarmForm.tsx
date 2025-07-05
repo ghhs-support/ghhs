@@ -52,7 +52,7 @@ interface FormData {
 }
 
 export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmFormProps) {
-  const { authenticatedGet, authenticatedPost } = useAuthenticatedApi();
+  const { authenticatedGet, authenticatedPost, authenticatedPatch } = useAuthenticatedApi();
   const searchService = useSearchService();
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -82,7 +82,6 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const loadInitialData = async () => {
     try {
       setLoading(true);
-
       // Load properties with tenants, agency, and private owner
       try {
         const propertiesResponse = await authenticatedGet('/properties/properties/');
@@ -91,7 +90,6 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
         console.log('Properties endpoint not available, using empty array');
         setProperties([]);
       }
-      
     } catch (error) {
       console.error('Error loading initial data:', error);
     } finally {
@@ -125,43 +123,36 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.property) {
       newErrors.property = 'Property is required';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
-
     try {
       setLoading(true);
-      
       const payload = {
         ...formData,
       };
-
-      await authenticatedPost('/maintenance/beeping_alarms/', { data: payload });
-      
-      // Reset form
+      console.log('Creating beeping alarm with payload:', payload); // Debug log
+      const response = await authenticatedPost('/maintenance/beeping_alarms/', { data: payload });
+      console.log('Beeping alarm created successfully:', response); // Debug log
       setFormData({
         property: null,
       });
-      
       setSelectedProperty(null);
       setErrors({});
       onSuccess();
       onClose();
-      
     } catch (error: any) {
       console.error('Error creating beeping alarm:', error);
+      console.error('Error response data:', error.data); // Debug log
       if (error.data) {
         setErrors(error.data);
       }
@@ -238,13 +229,14 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     try {
       setTenantLoading(true);
       if (editingTenant) {
-        // Edit existing tenant
-        await authenticatedPost(`/properties/tenants/${editingTenant.id}/`, {
-          method: 'PATCH',
+        // Edit existing tenant - use authenticatedPatch instead of authenticatedPost with method
+        console.log('Updating tenant with data:', tenantForm); // Debug log
+        await authenticatedPatch(`/properties/tenants/${editingTenant.id}/`, {
           data: tenantForm
         });
       } else {
         // Add new tenant to property
+        console.log('Adding tenant to property with data:', tenantForm); // Debug log
         await authenticatedPost(`/properties/properties/${selectedProperty?.id}/add_tenant/`, {
           data: tenantForm
         });
@@ -252,6 +244,8 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       await refreshPropertyTenants();
       closeTenantForm();
     } catch (error: any) {
+      console.error('Tenant operation error:', error); // Debug log
+      console.error('Tenant error response data:', error.data); // Debug log
       setTenantFormError(error?.data?.detail || 'Failed to save tenant.');
     } finally {
       setTenantLoading(false);
@@ -290,7 +284,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       <Modal.Header onClose={onClose}>Create Beeping Alarm</Modal.Header>
       <Modal.Body>
         <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl custom-scrollbar">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="beeping-alarm-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Property Selection */}
             <div>
               <Label htmlFor="property" className="text-gray-900 dark:text-gray-100">Property *</Label>
@@ -351,7 +345,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                   )}
                   {selectedProperty.tenants.map(tenant => (
                     editingTenant && editingTenant.id === tenant.id && showTenantForm ? (
-                      <form key={tenant.id} onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                      <div key={tenant.id} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
                         <input
                           type="text"
                           className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -377,11 +371,11 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                           required
                         />
                         <div className="flex gap-2">
-                          <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Save</button>
+                          <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handleTenantFormSubmit}>Save</button>
                           <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
                         </div>
                         {tenantFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{tenantFormError}</div>}
-                      </form>
+                      </div>
                     ) : (
                       <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                         <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
@@ -399,7 +393,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                   ))}
                   {/* Inline add form */}
                   {showTenantForm && !editingTenant && (
-                    <form onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                    <div className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
                       <input
                         type="text"
                         className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -425,11 +419,11 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                         required
                       />
                       <div className="flex gap-2">
-                        <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Add</button>
+                        <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handleTenantFormSubmit}>Add</button>
                         <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
                       </div>
                       {tenantFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{tenantFormError}</div>}
-                    </form>
+                    </div>
                   )}
                 </div>
               </div>
