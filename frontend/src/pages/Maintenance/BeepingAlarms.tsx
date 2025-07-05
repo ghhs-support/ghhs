@@ -3,6 +3,7 @@ import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import PageMeta from "../../components/common/PageMeta";
 import BeepingAlarmsTable from "../../components/maintenance/BeepingAlarmsTable";
 import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarmsFiltersCard";
+import CreateBeepingAlarmForm from "../../components/maintenance/CreateBeepingAlarmForm";
 
 export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
@@ -17,6 +18,9 @@ export default function BeepingAlarms() {
   const [createdAtFromFilter, setCreatedAtFromFilter] = useState<string | null>(null);
   const [createdAtToFilter, setCreatedAtToFilter] = useState<string | null>(null);
   const [createdAtMode, setCreatedAtMode] = useState<'single' | 'range'>('single');
+
+  // Form modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleAllocationChange = useCallback((allocationId: string | null) => {
     setAllocationFilter(allocationId);
@@ -54,6 +58,12 @@ export default function BeepingAlarms() {
     setCreatedAtMode(mode);
   }, []);
 
+  const handleCreateSuccess = useCallback(() => {
+    // Refresh the table data
+    // This could trigger a refetch of the table data
+    console.log('Beeping alarm created successfully');
+  }, []);
+
   return (
     <div>
       <PageMeta
@@ -69,8 +79,7 @@ export default function BeepingAlarms() {
           <div></div>
           <button
             className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:pointer-events-none transition-colors duration-200"
-            onClick={() => {
-            }}
+            onClick={() => setIsCreateModalOpen(true)}
           >
             <svg
               className="mr-2 h-4 w-4"
@@ -128,6 +137,13 @@ export default function BeepingAlarms() {
             createdAtMode={createdAtMode}
           />
         </div>
+
+        {/* Create Beeping Alarm Modal */}
+        <CreateBeepingAlarmForm
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
+        />
       </div>
     </div>
   );

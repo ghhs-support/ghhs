@@ -8,6 +8,7 @@ class IssueType(models.Model):
     uid = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     description = models.TextField(max_length=1000, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

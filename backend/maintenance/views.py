@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import BeepingAlarm, Tenant
-from .serializers import BeepingAlarmSerializer
+from .models import BeepingAlarm, Tenant, IssueType
+from .serializers import BeepingAlarmSerializer, BeepingAlarmCreateSerializer, IssueTypeSerializer
 from rest_framework import status
 from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
@@ -11,6 +11,14 @@ from django.utils.dateparse import parse_datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
+@api_view(['GET'])
+@validate_kinde_token
+def issue_types(request):
+    """Get all issue types for creating beeping alarms"""
+    issue_types = IssueType.objects.filter(is_active=True).order_by('name')
+    serializer = IssueTypeSerializer(issue_types, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET', 'POST'])
 @validate_kinde_token
@@ -148,10 +156,12 @@ def beeping_alarms(request):
         return paginator.get_paginated_response(serializer.data)
         
     elif request.method == 'POST':
-        serializer = BeepingAlarmSerializer(data=request.data)
+        serializer = BeepingAlarmCreateSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            beeping_alarm = serializer.save()
+            # Return the created alarm with full details
+            response_serializer = BeepingAlarmSerializer(beeping_alarm)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])

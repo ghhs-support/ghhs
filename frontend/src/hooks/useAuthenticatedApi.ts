@@ -5,6 +5,10 @@ interface ApiOptions {
   params?: Record<string, string>;
 }
 
+interface PostOptions {
+  data?: any;
+}
+
 export const useAuthenticatedApi = () => {
   const { getToken, isAuthenticated } = useKindeAuth();
 
@@ -25,7 +29,7 @@ export const useAuthenticatedApi = () => {
       requestUrl += `?${searchParams.toString()}`;
     }
     
-    console.log('Making API request to:', requestUrl); // Debug log
+    console.log('Making GET request to:', requestUrl); // Debug log
     
     const response = await fetch(requestUrl, {
       method: 'GET',
@@ -36,11 +40,47 @@ export const useAuthenticatedApi = () => {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const error = new Error(`HTTP error! status: ${response.status}`);
+      (error as any).data = errorData;
+      throw error;
     }
 
     return response.json();
   }, [isAuthenticated, getToken]);
 
-  return { authenticatedGet };
+  const authenticatedPost = useCallback(async (url: string, options?: PostOptions) => {
+    if (!isAuthenticated) {
+      throw new Error('User not authenticated');
+    }
+
+    const token = await getToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
+    const requestUrl = `http://localhost:8000/api${url}`;
+    
+    console.log('Making POST request to:', requestUrl); // Debug log
+    
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: options?.data ? JSON.stringify(options.data) : undefined,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const error = new Error(`HTTP error! status: ${response.status}`);
+      (error as any).data = errorData;
+      throw error;
+    }
+
+    return response.json();
+  }, [isAuthenticated, getToken]);
+
+  return { authenticatedGet, authenticatedPost };
 }; 
