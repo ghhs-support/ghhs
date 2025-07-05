@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FiltersCard, { FilterConfig, FilterValue, Option } from '../common/FiltersCard';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
+import { useSearchService } from '../../services/search';
 
 // Define a proper User type based on the backend serializer
 interface User {
@@ -54,6 +55,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { authenticatedGet } = useAuthenticatedApi();
+  const searchService = useSearchService();
 
   const getUserDisplayName = (user: User): string => {
     const fullName = `${user.first_name} ${user.last_name}`.trim();
@@ -162,19 +164,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       label: 'Tenant',
       placeholder: 'Search by tenant name or mobile...',
       allOptionLabel: 'All Tenants',
-      onSearch: async (query: string) => {
-        console.log('Searching for tenant with query:', query);
-        try {
-          const response = await authenticatedGet('/maintenance/tenant-suggestions/', {
-            params: { q: query }
-          });
-          console.log('Tenant search response:', response);
-          return response || [];
-        } catch (error) {
-          console.error('Error fetching tenant suggestions:', error);
-          return [];
-        }
-      }
+      onSearch: searchService.searchTenants
     },
     {
       id: 'status',
@@ -198,19 +188,7 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
       label: 'Property Address',
       placeholder: 'Search by address...',
       allOptionLabel: 'All Properties',
-      onSearch: async (query: string) => {
-        console.log('Searching for property with query:', query);
-        try {
-          const response = await authenticatedGet('/maintenance/property-suggestions/', {
-            params: { q: query }
-          });
-          console.log('Property search response:', response);
-          return response || [];
-        } catch (error) {
-          console.error('Error fetching property suggestions:', error);
-          return [];
-        }
-      }
+      onSearch: searchService.searchProperties
     },
     {
       id: 'agencyPrivate',
@@ -239,12 +217,17 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
   };
 
   const handleApply = (values: FilterValue) => {
-    onAllocationChange(values.allocation?.value || null);
-    onTenantChange(values.tenant?.value || null);
-    onStatusChange(values.status?.value || null);
-    onCustomerContactedChange(values.customerContacted?.value || null);
-    onPropertyChange(values.property?.value || null);
-    onAgencyPrivateChange(values.agencyPrivate?.value || null);
+    // Type guard to check if a value is an Option
+    const isOption = (value: any): value is Option => {
+      return value && typeof value === 'object' && 'value' in value && 'label' in value;
+    };
+
+    onAllocationChange(isOption(values.allocation) ? values.allocation.value : null);
+    onTenantChange(isOption(values.tenant) ? values.tenant.value : null);
+    onStatusChange(isOption(values.status) ? values.status.value : null);
+    onCustomerContactedChange(isOption(values.customerContacted) ? values.customerContacted.value : null);
+    onPropertyChange(isOption(values.property) ? values.property.value : null);
+    onAgencyPrivateChange(isOption(values.agencyPrivate) ? values.agencyPrivate.value : null);
     
     // Handle created at date filter
     const createdAtValue = values.createdAt as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } | null;
