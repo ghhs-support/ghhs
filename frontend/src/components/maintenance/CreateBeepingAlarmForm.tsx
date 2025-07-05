@@ -19,13 +19,24 @@ interface Property {
   postcode: string;
   tenants: Tenant[];
   agency?: Agency;
-  private_owner?: PrivateOwner;
+  private_owners: PrivateOwner[];
+}
+
+interface PropertyManager {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  notes?: string;
 }
 
 interface Agency {
   id: number;
   name: string;
   email: string;
+  phone: string;
+  property_managers: PropertyManager[];
 }
 
 interface PrivateOwner {
@@ -33,6 +44,7 @@ interface PrivateOwner {
   first_name: string;
   last_name: string;
   email: string;
+  phone: string;
 }
 
 interface Tenant {
@@ -323,15 +335,45 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Agency</span>
                     <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
                     <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
+                    <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.phone}</div>
+                    
+                    {/* Property Managers */}
+                    {selectedProperty.agency.property_managers && selectedProperty.agency.property_managers.length > 0 && (
+                      <div className="mt-3">
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Property Managers:</span>
+                        <div className="mt-1 space-y-1">
+                          {selectedProperty.agency.property_managers.map((pm) => (
+                            <div key={pm.id} className="text-xs bg-white dark:bg-gray-800 rounded p-2 border border-blue-200 dark:border-blue-700">
+                              <div className="font-medium text-gray-800 dark:text-gray-100">
+                                {pm.first_name} {pm.last_name}
+                              </div>
+                              <div className="text-gray-600 dark:text-gray-300">{pm.email}</div>
+                              <div className="text-gray-600 dark:text-gray-300">{pm.phone}</div>
+                              {pm.notes && (
+                                <div className="text-gray-500 dark:text-gray-400 italic">{pm.notes}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-                {selectedProperty.private_owner && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/40 rounded border border-green-200 dark:border-green-700">
-                    <span className="text-sm font-medium text-green-800 dark:text-green-200">Private Owner</span>
-                    <div className="text-sm text-gray-800 dark:text-gray-100">
-                      {selectedProperty.private_owner.first_name} {selectedProperty.private_owner.last_name}
-                    </div>
-                    <div className="text-gray-600 dark:text-gray-300">{selectedProperty.private_owner.email}</div>
+                {selectedProperty.private_owners && selectedProperty.private_owners.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedProperty.private_owners.map(po => (
+                      <div
+                        key={po.id}
+                        className="bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md px-4 py-2 flex flex-col gap-0.5"
+                      >
+                        <span className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Private Owner</span>
+                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                          {po.first_name} {po.last_name}
+                        </span>
+                        <span className="text-xs text-gray-600 dark:text-gray-300">{po.email}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-300">{po.phone}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

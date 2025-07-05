@@ -25,7 +25,7 @@ def private_owners(request):
 @api_view(['GET'])
 def properties(request):
     """Get all properties with their tenants, agency, and private owner"""
-    properties = Property.objects.prefetch_related('tenants', 'agency', 'private_owner').all()
+    properties = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()
     serializer = PropertySerializer(properties, many=True)
     return Response(serializer.data)
 
@@ -33,7 +33,7 @@ def properties(request):
 def property_detail(request, property_id):
     """Get a specific property with its tenants, agency, and private owner"""
     try:
-        property_obj = Property.objects.prefetch_related('tenants', 'agency', 'private_owner').get(id=property_id)
+        property_obj = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').get(id=property_id)
         serializer = PropertySerializer(property_obj)
         return Response(serializer.data)
     except Property.DoesNotExist:

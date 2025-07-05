@@ -10,6 +10,7 @@ import django
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
+from django.core.exceptions import ValidationError
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
@@ -202,8 +203,8 @@ def create_fake_private_owners():
     
     return owners
 
-def create_fake_properties(agencies, private_owners):
-    """Create fake QLD properties - either agency OR private owner, never both"""
+def create_fake_properties(agencies, all_private_owners):
+    """Create fake QLD properties - either agency OR private owners, never both"""
     qld_suburbs = [
         # Brisbane
         ('Brisbane', '4000', 153.0251, -27.4698),
@@ -246,17 +247,8 @@ def create_fake_properties(agencies, private_owners):
     
     properties = []
     for i, (suburb, postcode, lon, lat) in enumerate(qld_suburbs):
-        # Create multiple properties per suburb
         for j in range(3):
-            # Randomly decide property type: agency OR private owner (never both)
             property_type = random.choice(['agency', 'private'])
-            
-            if property_type == 'agency':
-                agency = random.choice(agencies)
-                private_owner = None
-            else:  # private
-                agency = None
-                private_owner = random.choice(private_owners)
             
             # Calculate coordinates with proper decimal precision
             # max_digits=9, decimal_places=6 means total digits <= 9, up to 6 decimal places
@@ -282,8 +274,6 @@ def create_fake_properties(agencies, private_owners):
             final_lat = Decimal(str(final_lat)).quantize(Decimal('0.000001'), rounding=ROUND_DOWN)
 
             property_data = {
-                'agency': agency,
-                'private_owner': private_owner,
                 'unit_number': str(random.randint(1, 50)) if random.choice([True, False]) else None,
                 'street_number': str(random.randint(1, 999)),
                 'street_name': random.choice([
@@ -299,7 +289,22 @@ def create_fake_properties(agencies, private_owners):
                 'latitude': final_lat,
             }
             
-            property_obj = Property.objects.create(**property_data)
+            if property_type == 'agency':
+                agency = random.choice(agencies)
+                property_obj = Property.objects.create(agency=agency, **property_data)
+            else:
+                agency = None
+                if len(all_private_owners) == 0:
+                    # No private owners to assign, skip this property
+                    continue
+                num_owners = random.randint(1, min(2, len(all_private_owners)))
+                selected_owners = random.sample(all_private_owners, num_owners)
+                property_obj = Property(**property_data)
+                property_obj.save(_skip_full_clean=True)
+                property_obj.private_owners.set(selected_owners)
+                property_obj.full_clean()
+                property_obj.save()
+            
             print(f"Created property: {property_obj.street_number} {property_obj.street_name}, {property_obj.suburb}")
             properties.append(property_obj)
     
@@ -487,6 +492,74 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
     print(f"Successfully created {alarms_created} beeping alarms!")
     return alarms_created
 
+def create_fake_property_managers():
+    """Create fake QLD property managers"""
+    property_managers_data = [
+        {'first_name': 'Sarah', 'last_name': 'Mitchell', 'email': 'sarah.mitchell@brisbanepm.com', 'phone': '07 3123 4568', 'notes': 'Specializes in residential properties'},
+        {'first_name': 'David', 'last_name': 'Chen', 'email': 'david.chen@brisbanepm.com', 'phone': '07 3123 4569', 'notes': 'Commercial property expert'},
+        {'first_name': 'Emma', 'last_name': 'Wilson', 'email': 'emma.wilson@brisbanepm.com', 'phone': '07 3123 4570', 'notes': 'Strata management specialist'},
+        {'first_name': 'Michael', 'last_name': 'Brown', 'email': 'michael.brown@brisbanepm.com', 'phone': '07 3123 4571', 'notes': 'New property developments'},
+        {'first_name': 'Lisa', 'last_name': 'Anderson', 'email': 'lisa.anderson@goldcoastreal.com', 'phone': '07 5567 8902', 'notes': 'Luxury property portfolio'},
+        {'first_name': 'James', 'last_name': 'Taylor', 'email': 'james.taylor@goldcoastreal.com', 'phone': '07 5567 8903', 'notes': 'Investment properties'},
+        {'first_name': 'Rachel', 'last_name': 'Garcia', 'email': 'rachel.garcia@goldcoastreal.com', 'phone': '07 5567 8904', 'notes': 'Holiday rentals specialist'},
+        {'first_name': 'Thomas', 'last_name': 'Martinez', 'email': 'thomas.martinez@goldcoastreal.com', 'phone': '07 5567 8905', 'notes': 'Beachfront properties'},
+        {'first_name': 'Amanda', 'last_name': 'Johnson', 'email': 'amanda.johnson@sunshinecoastproperty.com', 'phone': '07 5432 1099', 'notes': 'Coastal properties'},
+        {'first_name': 'Robert', 'last_name': 'Davis', 'email': 'robert.davis@sunshinecoastproperty.com', 'phone': '07 5432 1100', 'notes': 'Rural properties'},
+        {'first_name': 'Jennifer', 'last_name': 'Miller', 'email': 'jennifer.miller@sunshinecoastproperty.com', 'phone': '07 5432 1101', 'notes': 'Retirement villages'},
+        {'first_name': 'Christopher', 'last_name': 'Garcia', 'email': 'christopher.garcia@sunshinecoastproperty.com', 'phone': '07 5432 1102', 'notes': 'New developments'},
+        {'first_name': 'Nicole', 'last_name': 'Rodriguez', 'email': 'nicole.rodriguez@townsvilleproperty.com', 'phone': '07 4721 3457', 'notes': 'Mining town properties'},
+        {'first_name': 'Andrew', 'last_name': 'Wilson', 'email': 'andrew.wilson@townsvilleproperty.com', 'phone': '07 4721 3458', 'notes': 'University area properties'},
+        {'first_name': 'Stephanie', 'last_name': 'Anderson', 'email': 'stephanie.anderson@townsvilleproperty.com', 'phone': '07 4721 3459', 'notes': 'Industrial properties'},
+        {'first_name': 'Daniel', 'last_name': 'Thomas', 'email': 'daniel.thomas@cairnsproperty.com', 'phone': '07 4031 2346', 'notes': 'Tourism properties'},
+        {'first_name': 'Lauren', 'last_name': 'Jackson', 'email': 'lauren.jackson@cairnsproperty.com', 'phone': '07 4031 2347', 'notes': 'Tropical properties'},
+        {'first_name': 'Kevin', 'last_name': 'White', 'email': 'kevin.white@cairnsproperty.com', 'phone': '07 4031 2348', 'notes': 'Cairns CBD properties'},
+        {'first_name': 'Michelle', 'last_name': 'Harris', 'email': 'michelle.harris@cairnsproperty.com', 'phone': '07 4031 2349', 'notes': 'Port area properties'},
+    ]
+    
+    property_managers = []
+    for pm_data in property_managers_data:
+        property_manager = PropertyManager.objects.create(**pm_data)
+        print(f"Created property manager: {property_manager}")
+        property_managers.append(property_manager)
+    
+    return property_managers
+
+def assign_property_managers_to_agencies(agencies, property_managers):
+    """Assign property managers to agencies (1-4 per agency)"""
+    print("\n4a. Assigning property managers to agencies...")
+    
+    # Group property managers by agency (based on email domain)
+    agency_pm_groups = {
+        'brisbanepm.com': [],
+        'goldcoastreal.com': [],
+        'sunshinecoastproperty.com': [],
+        'townsvilleproperty.com': [],
+        'cairnsproperty.com': [],
+    }
+    
+    for pm in property_managers:
+        domain = pm.email.split('@')[1]
+        if domain in agency_pm_groups:
+            agency_pm_groups[domain].append(pm)
+    
+    # Assign property managers to agencies
+    for agency in agencies:
+        # Find matching property managers by email domain
+        agency_domain = agency.email.split('@')[1]
+        available_pms = agency_pm_groups.get(agency_domain, [])
+        
+        if available_pms:
+            # Assign 1-4 property managers to each agency
+            num_pms = random.randint(1, min(4, len(available_pms)))
+            selected_pms = random.sample(available_pms, num_pms)
+            
+            agency.property_managers.set(selected_pms)
+            print(f"Assigned {num_pms} property managers to {agency.name}")
+        else:
+            print(f"No property managers found for {agency.name}")
+    
+    print(f"✅ Property managers assigned to agencies!")
+
 def main():
     """Main function to generate all fake data"""
     print("🚀 Starting fresh fake data generation...")
@@ -506,12 +579,19 @@ def main():
     print("\n3. Creating properties...")
     properties = create_fake_properties(agencies, private_owners)
     
+    # Create property managers
+    print("\n4. Creating property managers...")
+    property_managers = create_fake_property_managers()
+    
+    # Assign property managers to agencies
+    assign_property_managers_to_agencies(agencies, property_managers)
+    
     # Create tenants
-    print("\n4. Creating tenants...")
+    print("\n5. Creating tenants...")
     tenants = create_fake_tenants()
 
     # Assign tenants to properties
-    print("\n4b. Assigning tenants to properties...")
+    print("\n5b. Assigning tenants to properties...")
     for property_obj in properties:
         num_tenants = random.randint(1, 3)
         assigned_tenants = random.sample(tenants, num_tenants)
@@ -520,16 +600,17 @@ def main():
     print(f"Assigned tenants to {len(properties)} properties.")
 
     # Create issue types
-    print("\n5. Creating issue types...")
+    print("\n6. Creating issue types...")
     issue_types = create_fake_issue_types()
     
     # Create beeping alarms
-    print("\n6. Creating beeping alarms...")
+    print("\n7. Creating beeping alarms...")
     alarms_created = create_fake_beeping_alarms(properties, tenants, issue_types)
     
     print(f"\n✅ Fake data generation complete!")
     print(f"📊 Summary:")
     print(f"   - Agencies: {len(agencies)}")
+    print(f"   - Property Managers: {len(property_managers)}")
     print(f"   - Private Owners: {len(private_owners)}")
     print(f"   - Properties: {len(properties)}")
     print(f"   - Tenants: {len(tenants)}")
