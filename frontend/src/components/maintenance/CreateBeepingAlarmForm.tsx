@@ -287,70 +287,119 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
-        <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Create Beeping Alarm</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Property Selection */}
-          <div>
-            <Label htmlFor="property" className="text-gray-900 dark:text-gray-100">Property *</Label>
-            <SearchableDropdown
-              value={getSelectedPropertyOption()}
-              onChange={(option) => handleInputChange('property', option ? parseInt(option.value) : null)}
-              onSearch={searchService.searchProperties}
-              placeholder="Search by address..."
-              loading={loading}
-              showApplyButton={false}
-              showClearButton={true}
-            />
-            {errors.property && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.property}</p>
-            )}
-          </div>
-
-          {/* Property Owner Information */}
-          {selectedProperty && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-              <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Owner</Label>
-              {selectedProperty.agency && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-700">
-                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Agency</span>
-                  <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
-                  <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
-                </div>
-              )}
-              {selectedProperty.private_owner && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/40 rounded border border-green-200 dark:border-green-700">
-                  <span className="text-sm font-medium text-green-800 dark:text-green-200">Private Owner</span>
-                  <div className="text-sm text-gray-800 dark:text-gray-100">
-                    {selectedProperty.private_owner.first_name} {selectedProperty.private_owner.last_name}
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-300">{selectedProperty.private_owner.email}</div>
-                </div>
+      <Modal.Body>
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
+          <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Create Beeping Alarm</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Property Selection */}
+            <div>
+              <Label htmlFor="property" className="text-gray-900 dark:text-gray-100">Property *</Label>
+              <SearchableDropdown
+                value={getSelectedPropertyOption()}
+                onChange={(option) => handleInputChange('property', option ? parseInt(option.value) : null)}
+                onSearch={searchService.searchProperties}
+                placeholder="Search by address..."
+                loading={loading}
+                showApplyButton={false}
+                showClearButton={true}
+              />
+              {errors.property && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.property}</p>
               )}
             </div>
-          )}
 
-          {/* Tenants for Selected Property */}
-          {selectedProperty && selectedProperty.tenants && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/40">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-medium text-blue-800 dark:text-blue-200">Property Tenants</Label>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700"
-                  onClick={openAddTenantForm}
-                  disabled={tenantLoading || !selectedProperty}
-                >
-                  <PlusIcon className="w-4 h-4" /> Add Tenant
-                </button>
-              </div>
-              <div className="mt-2 space-y-2">
-                {selectedProperty.tenants.length === 0 && (
-                  <div className="text-gray-500 dark:text-gray-300 text-sm">No tenants</div>
+            {/* Property Owner Information */}
+            {selectedProperty && (
+              <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Owner</Label>
+                {selectedProperty.agency && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-700">
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Agency</span>
+                    <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
+                    <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
+                  </div>
                 )}
-                {selectedProperty.tenants.map(tenant => (
-                  editingTenant && editingTenant.id === tenant.id && showTenantForm ? (
-                    <form key={tenant.id} onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                {selectedProperty.private_owner && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/40 rounded border border-green-200 dark:border-green-700">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">Private Owner</span>
+                    <div className="text-sm text-gray-800 dark:text-gray-100">
+                      {selectedProperty.private_owner.first_name} {selectedProperty.private_owner.last_name}
+                    </div>
+                    <div className="text-gray-600 dark:text-gray-300">{selectedProperty.private_owner.email}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tenants for Selected Property */}
+            {selectedProperty && selectedProperty.tenants && (
+              <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/40">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-base font-medium text-blue-800 dark:text-blue-200">Property Tenants</Label>
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700"
+                    onClick={openAddTenantForm}
+                    disabled={tenantLoading || !selectedProperty}
+                  >
+                    <PlusIcon className="w-4 h-4" /> Add Tenant
+                  </button>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {selectedProperty.tenants.length === 0 && (
+                    <div className="text-gray-500 dark:text-gray-300 text-sm">No tenants</div>
+                  )}
+                  {selectedProperty.tenants.map(tenant => (
+                    editingTenant && editingTenant.id === tenant.id && showTenantForm ? (
+                      <form key={tenant.id} onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="First Name"
+                          value={tenantForm.first_name}
+                          onChange={e => handleTenantFormChange('first_name', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Last Name"
+                          value={tenantForm.last_name}
+                          onChange={e => handleTenantFormChange('last_name', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Phone"
+                          value={tenantForm.phone}
+                          onChange={e => handleTenantFormChange('phone', e.target.value)}
+                          required
+                        />
+                        <div className="flex gap-2">
+                          <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Save</button>
+                          <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
+                        </div>
+                        {tenantFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{tenantFormError}</div>}
+                      </form>
+                    ) : (
+                      <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                        <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-300">{tenant.phone}</span>
+                        <div className="flex gap-2 ml-2">
+                          <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => openEditTenantForm(tenant)}>
+                            <PencilIcon className="w-4 h-4 text-blue-500" />
+                          </button>
+                          <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => requestDeleteTenant(tenant)}>
+                            <TrashIcon className="w-4 h-4 text-red-500" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  ))}
+                  {/* Inline add form */}
+                  {showTenantForm && !editingTenant && (
+                    <form onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
                       <input
                         type="text"
                         className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -376,84 +425,36 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                         required
                       />
                       <div className="flex gap-2">
-                        <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Save</button>
+                        <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Add</button>
                         <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
                       </div>
                       {tenantFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{tenantFormError}</div>}
                     </form>
-                  ) : (
-                    <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-300">{tenant.phone}</span>
-                      <div className="flex gap-2 ml-2">
-                        <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => openEditTenantForm(tenant)}>
-                          <PencilIcon className="w-4 h-4 text-blue-500" />
-                        </button>
-                        <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => requestDeleteTenant(tenant)}>
-                          <TrashIcon className="w-4 h-4 text-red-500" />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                ))}
-                {/* Inline add form */}
-                {showTenantForm && !editingTenant && (
-                  <form onSubmit={handleTenantFormSubmit} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
-                    <input
-                      type="text"
-                      className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                      placeholder="First Name"
-                      value={tenantForm.first_name}
-                      onChange={e => handleTenantFormChange('first_name', e.target.value)}
-                      required
-                    />
-                    <input
-                      type="text"
-                      className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                      placeholder="Last Name"
-                      value={tenantForm.last_name}
-                      onChange={e => handleTenantFormChange('last_name', e.target.value)}
-                      required
-                    />
-                    <input
-                      type="text"
-                      className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                      placeholder="Phone"
-                      value={tenantForm.phone}
-                      onChange={e => handleTenantFormChange('phone', e.target.value)}
-                      required
-                    />
-                    <div className="flex gap-2">
-                      <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs">Add</button>
-                      <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
-                    </div>
-                    {tenantFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{tenantFormError}</div>}
-                  </form>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3 pt-6">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-              className="text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              Cancel
-            </Button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
-            >
-              {loading ? 'Creating...' : 'Create Beeping Alarm'}
-            </button>
-          </div>
-        </form>
-      </div>
+            )}
+          </form>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={loading}
+          className="text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          Cancel
+        </Button>
+        <button
+          type="submit"
+          form="beeping-alarm-form"
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
+        >
+          {loading ? 'Creating...' : 'Create Beeping Alarm'}
+        </button>
+      </Modal.Footer>
       {/* Confirm Delete Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
