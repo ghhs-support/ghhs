@@ -60,6 +60,7 @@ class Property(models.Model):
     uid = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
     agency = models.ForeignKey(Agency, on_delete=models.CASCADE, null=True, blank=True)
     private_owner = models.ForeignKey(PrivateOwner, on_delete=models.CASCADE, null=True, blank=True)
+    tenants = models.ManyToManyField(Tenant, related_name='properties', blank=True)
     unit_number = models.CharField(max_length=100, null=True, blank=True)
     street_number = models.CharField(max_length=100)
     street_name = models.CharField(max_length=100)
@@ -71,14 +72,15 @@ class Property(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def clean(self):
+        super().clean()
         if not self.agency and not self.private_owner:
             raise ValidationError("Property must have an agency or private owner")
         
         if self.agency and self.private_owner:
             raise ValidationError("Property cannot have both agency and private owner")
-        
-        def save(self, *args, **kwargs):
-            self.full_clean()
-            super().save(*args, **kwargs)
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 

@@ -85,4 +85,5 @@ urlpatterns = [
     path('api/beeping_alarms/', beeping_alarms, name='beeping_alarms'),
     path('api/maintenance/', include('maintenance.urls')),
     path('api/common/', include('common.urls')),
+    path('api/properties/', include('properties.urls')),
 ]

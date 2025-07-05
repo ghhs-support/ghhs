@@ -208,20 +208,19 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
           bValue = b.status || '';
           break;
         case 'agency_private':
-          aValue = a.is_agency ? 'Agency' : 'Private';
-          bValue = b.is_agency ? 'Agency' : 'Private';
+          aValue = a.property?.agency ? 'Agency' : 'Private';
+          bValue = b.property?.agency ? 'Agency' : 'Private';
           break;
         case 'tenant':
           // Sort by first tenant's name, or by tenant count if names are equal
-          const aFirstTenant = a.tenant?.[0];
-          const bFirstTenant = b.tenant?.[0];
+          const aFirstTenant = a.property?.tenants?.[0];
+          const bFirstTenant = b.property?.tenants?.[0];
           aValue = aFirstTenant ? `${aFirstTenant.first_name || ''} ${aFirstTenant.last_name || ''}`.trim() : '';
           bValue = bFirstTenant ? `${bFirstTenant.first_name || ''} ${bFirstTenant.last_name || ''}`.trim() : '';
-          
           // If names are the same, sort by tenant count
           if (aValue === bValue) {
-            aValue = a.tenant?.length || 0;
-            bValue = b.tenant?.length || 0;
+            aValue = a.property?.tenants?.length || 0;
+            bValue = b.property?.tenants?.length || 0;
           }
           break;
         case 'customer_contacted':
@@ -288,7 +287,8 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       <Badge size="sm" color="error">No</Badge>;
   };
 
-  const getAgencyPrivateBadge = (isAgency: boolean) => {
+  const getAgencyPrivateBadge = (alarm: BeepingAlarm) => {
+    const isAgency = !!alarm.property.agency;
     return isAgency ? 
       <Badge size="sm" color="info">Agency</Badge> : 
       <Badge size="sm" color="warning">Private</Badge>;
@@ -344,17 +344,14 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
     );
   };
 
-  const formatTenant = (tenants: BeepingAlarm['tenant']) => {
+  const formatTenant = (tenants: Array<{id: number; first_name: string; last_name: string; phone: string;}>) => {
     if (!tenants || tenants.length === 0) return 'No tenants';
-    
     // If there's only one tenant, show name and phone in a column
     if (tenants.length === 1) {
       const tenant = tenants[0];
       const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
       const phone = tenant.phone;
-      
       if (!name && !phone) return 'No tenant data';
-      
       return (
         <div className="flex flex-col items-center">
           <span className="font-medium text-gray-800 dark:text-white/90">
@@ -366,7 +363,6 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         </div>
       );
     }
-    
     // If there are multiple tenants, show them in a compact format
     return (
       <div className="flex flex-col items-center">
@@ -374,7 +370,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
           {tenants.length} Tenants
         </span>
         <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
-          {tenants.map((tenant, index) => {
+          {tenants.map((tenant: {id: number; first_name: string; last_name: string; phone: string;}, index: number) => {
             const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
             const displayName = name || 'No name';
             return (
@@ -407,12 +403,12 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       </TableCell>
       <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="mx-auto whitespace-nowrap">
-          {getAgencyPrivateBadge(alarm.is_agency)}
+          {getAgencyPrivateBadge(alarm)}
         </div>
       </TableCell>
       <TableCell className="w-48 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="whitespace-nowrap">
-          {formatTenant(alarm.tenant)}
+          {formatTenant(alarm.property.tenants)}
         </div>
       </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">

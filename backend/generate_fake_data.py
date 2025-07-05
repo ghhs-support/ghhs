@@ -9,6 +9,7 @@ import sys
 import django
 import random
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_DOWN
 
 # Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
@@ -257,6 +258,29 @@ def create_fake_properties(agencies, private_owners):
                 agency = None
                 private_owner = random.choice(private_owners)
             
+            # Calculate coordinates with proper decimal precision
+            # max_digits=9, decimal_places=6 means total digits <= 9, up to 6 decimal places
+            # For coordinates like 153.025123, we have 9 digits total (3 before + 6 after)
+            lon_offset = random.uniform(-0.0001, 0.0001)  # Much smaller offset
+            lat_offset = random.uniform(-0.0001, 0.0001)  # Much smaller offset
+            final_lon = lon + lon_offset
+            final_lat = lat + lat_offset
+            
+            # Ensure we don't exceed the field constraints
+            # max_digits=9, decimal_places=6 means max value is 999.999999
+            final_lon = round(final_lon, 6)
+            final_lat = round(final_lat, 6)
+            
+            # Additional validation to ensure we don't exceed max_digits
+            if abs(final_lon) >= 1000 or abs(final_lat) >= 1000:
+                # If we exceed, use the original coordinates
+                final_lon = round(lon, 6)
+                final_lat = round(lat, 6)
+
+            # Use Decimal and quantize to 6 decimal places
+            final_lon = Decimal(str(final_lon)).quantize(Decimal('0.000001'), rounding=ROUND_DOWN)
+            final_lat = Decimal(str(final_lat)).quantize(Decimal('0.000001'), rounding=ROUND_DOWN)
+
             property_data = {
                 'agency': agency,
                 'private_owner': private_owner,
@@ -271,8 +295,8 @@ def create_fake_properties(agencies, private_owners):
                 'state': 'QLD',
                 'postcode': postcode,
                 'country': 'Australia',
-                'longitude': lon + random.uniform(-0.01, 0.01),
-                'latitude': lat + random.uniform(-0.01, 0.01),
+                'longitude': final_lon,
+                'latitude': final_lat,
             }
             
             property_obj = Property.objects.create(**property_data)
@@ -360,10 +384,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
         issue_type = random.choice(issue_types)
         status = random.choice(status_choices)
         
-        # Determine if this is an agency or private owner alarm based on property
-        is_agency = property_obj.agency is not None
-        is_private_owner = property_obj.private_owner is not None
-        
         # Set is_completed and is_cancelled based on status
         if status == 'completed':
             is_completed = True
@@ -426,11 +446,7 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
                 'Door contact sensor faulty',
                 'Glass break sensor needs calibration',
             ]),
-            agency=property_obj.agency,
-            private_owner=property_obj.private_owner,
             is_active=random.choice([True, True, True, False]),
-            is_agency=is_agency,
-            is_private_owner=is_private_owner,
             property=property_obj,
             is_customer_contacted=random.choice([True, False]),
             is_completed=is_completed,
@@ -448,20 +464,6 @@ def create_fake_beeping_alarms(properties, tenants, issue_types):
                 """,
                 [created_at, updated_at, alarm.id]
             )
-        
-        # Add random tenants (up to 2 tenants per alarm)
-        tenant_choice = random.random()
-        if tenant_choice < 0.1:
-            # No tenants (10%)
-            pass
-        elif tenant_choice < 0.7:
-            # 1 tenant (60%)
-            selected_tenants = random.sample(tenants, 1)
-            alarm.tenant.set(selected_tenants)
-        else:
-            # 2 tenants (30%)
-            selected_tenants = random.sample(tenants, min(2, len(tenants)))
-            alarm.tenant.set(selected_tenants)
         
         # Add random allocation (sometimes keep blank)
         allocation_choice = random.random()
@@ -507,7 +509,16 @@ def main():
     # Create tenants
     print("\n4. Creating tenants...")
     tenants = create_fake_tenants()
-    
+
+    # Assign tenants to properties
+    print("\n4b. Assigning tenants to properties...")
+    for property_obj in properties:
+        num_tenants = random.randint(1, 3)
+        assigned_tenants = random.sample(tenants, num_tenants)
+        property_obj.tenants.set(assigned_tenants)
+        property_obj.save()
+    print(f"Assigned tenants to {len(properties)} properties.")
+
     # Create issue types
     print("\n5. Creating issue types...")
     issue_types = create_fake_issue_types()
