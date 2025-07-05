@@ -8,6 +8,7 @@ interface ModalProps {
   showCloseButton?: boolean;
   isFullscreen?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  compact?: boolean;
 }
 
 interface ModalBodyProps {
@@ -72,6 +73,7 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
   showCloseButton = true,
   isFullscreen = false,
   size = 'lg',
+  compact = false,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -126,7 +128,7 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
       )}
       <div
         ref={modalRef}
-        className={`${contentClasses} min-h-[75vh] max-h-[90vh] h-full flex flex-col ${className}`}
+        className={`${contentClasses} ${compact ? '' : 'min-h-[75vh] h-full'} max-h-[90vh] flex flex-col ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col flex-1 min-h-0 h-full">{children}</div>

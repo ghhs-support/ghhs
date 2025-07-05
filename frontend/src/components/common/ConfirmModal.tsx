@@ -30,8 +30,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       : 'bg-brand-500 hover:bg-brand-600 text-white';
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} size="sm">
-      <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md">
+    <Modal isOpen={isOpen} onClose={onCancel} size="sm" compact>
+      <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
         <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{title}</h3>
         <div className="mb-6 text-gray-700 dark:text-gray-200">{message}</div>
         <div className="flex justify-end gap-3">
