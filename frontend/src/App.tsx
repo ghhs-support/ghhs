@@ -18,6 +18,7 @@ import AdminAccess from "./pages/AdminAccess";
 import BeepingAlarms from "./pages/Maintenance/BeepingAlarms";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { Toaster } from 'react-hot-toast';
 
 // Suppress Kinde SDK error logs in development
 if (import.meta.env.DEV) {
@@ -35,55 +36,58 @@ if (import.meta.env.DEV) {
 
 export default function App() {
   return (
-    <KindeProvider
-      clientId="9b6e7df3e3ec46beb2d09a89565da00b"
-      domain="https://ghhs.kinde.com"
-      redirectUri="http://localhost:5173"
-      logoutUri="http://localhost:5173"
-    >
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Protected Dashboard Layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index path="/" element={<Home />} />
+    <>
+      <Toaster position="top-right" />
+      <KindeProvider
+        clientId="9b6e7df3e3ec46beb2d09a89565da00b"
+        domain="https://ghhs.kinde.com"
+        redirectUri="http://localhost:5173"
+        logoutUri="http://localhost:5173"
+      >
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            {/* Protected Dashboard Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index path="/" element={<Home />} />
 
-            {/* Others Page */}
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
+              {/* Others Page */}
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/blank" element={<Blank />} />
 
-            {/* Maintenance */}
-            <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
+              {/* Maintenance */}
+              <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
 
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
+              {/* Forms */}
+              <Route path="/form-elements" element={<FormElements />} />
 
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
-          </Route>
+              {/* Ui Elements */}
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/avatars" element={<Avatars />} />
+              <Route path="/badge" element={<Badges />} />
+              <Route path="/buttons" element={<Buttons />} />
+              <Route path="/images" element={<Images />} />
+              <Route path="/videos" element={<Videos />} />
+            </Route>
 
-          {/* Admin Access - Protected */}
-          <Route path="/admin" element={<AdminAccess />} />
+            {/* Admin Access - Protected */}
+            <Route path="/admin" element={<AdminAccess />} />
 
-          {/* Auth Layout - Not Protected */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+            {/* Auth Layout - Not Protected */}
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
 
-          {/* Fallback Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </KindeProvider>
+            {/* Fallback Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </KindeProvider>
+    </>
   );
 }

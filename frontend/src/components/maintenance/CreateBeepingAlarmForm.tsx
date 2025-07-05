@@ -7,6 +7,7 @@ import { Modal } from '../ui/modal';
 import { useSearchService } from '../../services/search';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ConfirmModal from '../common/ConfirmModal';
+import toast from 'react-hot-toast';
 
 interface Property {
   id: number;
@@ -150,12 +151,14 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       setErrors({});
       onSuccess();
       onClose();
+      toast.success('Beeping alarm created!');
     } catch (error: any) {
       console.error('Error creating beeping alarm:', error);
       console.error('Error response data:', error.data); // Debug log
       if (error.data) {
         setErrors(error.data);
       }
+      toast.error('Failed to create beeping alarm.');
     } finally {
       setLoading(false);
     }
