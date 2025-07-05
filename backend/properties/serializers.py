@@ -14,7 +14,7 @@ class PrivateOwnerSerializer(serializers.ModelSerializer):
 class TenantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
-        fields = ['id', 'first_name', 'last_name', 'phone']
+        fields = ['id', 'first_name', 'last_name', 'phone', 'email']
 
 class PropertySerializer(serializers.ModelSerializer):
     tenants = TenantSerializer(many=True, read_only=True)

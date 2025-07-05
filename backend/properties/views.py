@@ -51,7 +51,7 @@ def add_tenant_to_property(request, property_id):
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     phone = request.data.get('phone')
-    
+    email = request.data.get('email')
     if not all([first_name, last_name, phone]):
         return Response({'detail': 'First name, last name, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -59,7 +59,8 @@ def add_tenant_to_property(request, property_id):
     tenant = Tenant.objects.create(
         first_name=first_name,
         last_name=last_name,
-        phone=phone
+        phone=phone,
+        email=email
     )
     
     # Add tenant to property
@@ -108,14 +109,15 @@ def update_tenant(request, tenant_id):
     first_name = request.data.get('first_name')
     last_name = request.data.get('last_name')
     phone = request.data.get('phone')
-    
+    email = request.data.get('email')
     if first_name:
         tenant.first_name = first_name
     if last_name:
         tenant.last_name = last_name
     if phone:
         tenant.phone = phone
-    
+    if email is not None:
+        tenant.email = email
     tenant.save()
     
     # Return the updated tenant

@@ -40,6 +40,7 @@ interface Tenant {
   first_name: string;
   last_name: string;
   phone: string;
+  email?: string;
 }
 
 interface CreateBeepingAlarmFormProps {
@@ -67,7 +68,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
   const [showTenantForm, setShowTenantForm] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
-  const [tenantForm, setTenantForm] = useState({ first_name: '', last_name: '', phone: '' });
+  const [tenantForm, setTenantForm] = useState({ first_name: '', last_name: '', phone: '', email: '' });
   const [tenantFormError, setTenantFormError] = useState<string | null>(null);
   const [tenantLoading, setTenantLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -180,7 +181,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   // Inline tenant form handlers
   const openAddTenantForm = () => {
     setEditingTenant(null);
-    setTenantForm({ first_name: '', last_name: '', phone: '' });
+    setTenantForm({ first_name: '', last_name: '', phone: '', email: '' });
     setTenantFormError(null);
     setShowTenantForm(true);
   };
@@ -190,7 +191,8 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     setTenantForm({
       first_name: tenant.first_name,
       last_name: tenant.last_name,
-      phone: tenant.phone || ''
+      phone: tenant.phone || '',
+      email: tenant.email || ''
     });
     setTenantFormError(null);
     setShowTenantForm(true);
@@ -199,7 +201,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const closeTenantForm = () => {
     setShowTenantForm(false);
     setEditingTenant(null);
-    setTenantForm({ first_name: '', last_name: '', phone: '' });
+    setTenantForm({ first_name: '', last_name: '', phone: '', email: '' });
     setTenantFormError(null);
   };
 
@@ -226,7 +228,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     e.preventDefault();
     setTenantFormError(null);
     if (!tenantForm.first_name.trim() || !tenantForm.last_name.trim() || !tenantForm.phone.trim()) {
-      setTenantFormError('All fields are required.');
+      setTenantFormError('First name, last name, and phone are required.');
       return;
     }
     try {
@@ -355,7 +357,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                   )}
                   {selectedProperty.tenants.map(tenant => (
                     editingTenant && editingTenant.id === tenant.id && showTenantForm ? (
-                      <div key={tenant.id} className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                      <div key={tenant.id} className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
                         <input
                           type="text"
                           className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -380,6 +382,13 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                           onChange={e => handleTenantFormChange('phone', e.target.value)}
                           required
                         />
+                        <input
+                          type="email"
+                          className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Email (optional)"
+                          value={tenantForm.email}
+                          onChange={e => handleTenantFormChange('email', e.target.value)}
+                        />
                         <div className="flex gap-2">
                           <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handleTenantFormSubmit}>Save</button>
                           <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeTenantForm}>Cancel</button>
@@ -388,8 +397,13 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                       </div>
                     ) : (
                       <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                        <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-300">{tenant.phone}</span>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-300">{tenant.phone}</span>
+                          {tenant.email && (
+                            <span className="text-xs text-blue-400 dark:text-blue-300">{tenant.email}</span>
+                          )}
+                        </div>
                         <div className="flex gap-2 ml-2">
                           <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => openEditTenantForm(tenant)}>
                             <PencilIcon className="w-4 h-4 text-blue-500" />
@@ -403,7 +417,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                   ))}
                   {/* Inline add form */}
                   {showTenantForm && !editingTenant && (
-                    <div className="flex flex-col md:flex-row gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
+                    <div className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 p-2">
                       <input
                         type="text"
                         className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
@@ -427,6 +441,13 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                         value={tenantForm.phone}
                         onChange={e => handleTenantFormChange('phone', e.target.value)}
                         required
+                      />
+                      <input
+                        type="email"
+                        className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                        placeholder="Email (optional)"
+                        value={tenantForm.email}
+                        onChange={e => handleTenantFormChange('email', e.target.value)}
                       />
                       <div className="flex gap-2">
                         <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handleTenantFormSubmit}>Add</button>
