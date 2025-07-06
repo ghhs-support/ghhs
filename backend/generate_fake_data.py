@@ -275,7 +275,15 @@ def create_fake_properties(agencies, all_private_owners):
             }
             if property_type == 'agency':
                 agency = random.choice(agencies)
-                property_obj = Property.objects.create(agency=agency, **property_data)
+                property_obj = Property(
+                    agency=agency, 
+                    is_agency=True,
+                    is_private=False,
+                    **property_data
+                )
+                property_obj.is_agency = True
+                property_obj.is_private = False
+                property_obj.save(_skip_full_clean=True)
                 # Make sure there are NO private owners
                 property_obj.private_owners.clear()
             else:
@@ -283,12 +291,17 @@ def create_fake_properties(agencies, all_private_owners):
                     continue
                 num_owners = random.randint(1, min(2, len(all_private_owners)))
                 selected_owners = random.sample(all_private_owners, num_owners)
-                property_obj = Property(**property_data)
+                property_obj = Property(
+                    is_agency=False,
+                    is_private=True,
+                    **property_data
+                )
+                property_obj.is_agency = False
+                property_obj.is_private = True
                 property_obj.save(_skip_full_clean=True)
                 property_obj.private_owners.set(selected_owners)
                 # Make sure there is NO agency
                 property_obj.agency = None
-                property_obj.full_clean()
                 property_obj.save()
             print(f"Created property: {property_obj.street_number} {property_obj.street_name}, {property_obj.suburb}")
             properties.append(property_obj)

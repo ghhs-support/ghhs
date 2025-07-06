@@ -75,9 +75,9 @@ def beeping_alarms(request):
 
         if agency_private_filter:
             if agency_private_filter.lower() == 'agency':
-                queryset = queryset.filter(property__agency__isnull=False)
+                queryset = queryset.filter(property__is_agency=True)
             elif agency_private_filter.lower() == 'private':
-                queryset = queryset.filter(property__private_owner__isnull=False)
+                queryset = queryset.filter(property__is_private=True)
 
         if search:
             search_terms = search.split()

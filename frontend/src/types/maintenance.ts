@@ -37,6 +37,8 @@ export interface BeepingAlarm {
       last_name: string;
       phone: string;
     }>;
+    is_agency: boolean;
+    is_private: boolean;
   };
   is_customer_contacted: boolean;
   created_at: string;

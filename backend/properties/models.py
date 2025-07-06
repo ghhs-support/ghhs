@@ -70,23 +70,45 @@ class Property(models.Model):
     country = models.CharField(max_length=100)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    is_agency = models.BooleanField(default=False, help_text="True if property is managed by an agency")
+    is_private = models.BooleanField(default=False, help_text="True if property is managed by private owners")
 
     def clean(self):
         super().clean()
         has_agency = bool(self.agency)
         # Only check private_owners if the object is saved (has pk)
         has_private_owners = self.pk and self.private_owners.exists()
+        
+        # Update the boolean fields based on actual relationships
+        self.is_agency = has_agency
+        self.is_private = has_private_owners
+        
+        # For validation, we need to ensure at least one is True
         if not has_agency and not has_private_owners:
             raise ValidationError("Property must have an agency or private owners")
         if has_agency and has_private_owners:
             raise ValidationError("Property cannot have both agency and private owners")
 
     def save(self, *args, **kwargs):
+        # Update boolean fields before saving
+        has_agency = bool(self.agency)
+        has_private_owners = self.pk and self.private_owners.exists()
+        self.is_agency = has_agency if has_agency is not None else False
+        self.is_private = has_private_owners if has_private_owners is not None else False
+        # Fallback: ensure booleans are never None
+        if self.is_agency is None:
+            self.is_agency = False
+        if self.is_private is None:
+            self.is_private = False
         # Only run full_clean if not using raw save (e.g., during initial creation for M2M)
         if kwargs.pop('_skip_full_clean', False):
             super().save(*args, **kwargs)
         else:
-            self.full_clean()
-            super().save(*args, **kwargs)
+            # For initial creation, skip validation to avoid circular dependency
+            if not self.pk:
+                super().save(*args, **kwargs)
+            else:
+                self.full_clean()
+                super().save(*args, **kwargs)
 
 

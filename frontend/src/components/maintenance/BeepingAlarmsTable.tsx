@@ -208,8 +208,8 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
           bValue = b.status || '';
           break;
         case 'agency_private':
-          aValue = a.property?.agency ? 'Agency' : 'Private';
-          bValue = b.property?.agency ? 'Agency' : 'Private';
+          aValue = a.property?.is_agency ? 'Agency' : 'Private';
+          bValue = b.property?.is_agency ? 'Agency' : 'Private';
           break;
         case 'tenant':
           // Sort by first tenant's name, or by tenant count if names are equal
@@ -288,7 +288,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   };
 
   const getAgencyPrivateBadge = (alarm: BeepingAlarm) => {
-    const isAgency = !!alarm.property.agency;
+    const isAgency = alarm.property.is_agency;
     return isAgency ? 
       <Badge size="sm" color="info">Agency</Badge> : 
       <Badge size="sm" color="warning">Private</Badge>;
