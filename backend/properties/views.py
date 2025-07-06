@@ -124,3 +124,93 @@ def update_tenant(request, tenant_id):
     from .serializers import TenantSerializer
     serializer = TenantSerializer(tenant)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@validate_kinde_token
+def add_private_owner_to_property(request, property_id):
+    """Add a private owner to a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    phone = request.data.get('phone')
+    email = request.data.get('email')
+    if not all([first_name, last_name, phone]):
+        return Response({'detail': 'First name, last name, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Create new private owner
+    private_owner = PrivateOwner.objects.create(
+        first_name=first_name,
+        last_name=last_name,
+        phone=phone,
+        email=email
+    )
+
+    # Add private owner to property
+    property_obj.private_owners.add(private_owner)
+    property_obj.save()
+
+    # Return updated property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+@validate_kinde_token
+def remove_private_owner_from_property(request, property_id):
+    """Remove a private owner from a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    private_owner_id = request.data.get('private_owner_id')
+    if not private_owner_id:
+        return Response({'detail': 'Private owner ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        private_owner = PrivateOwner.objects.get(id=private_owner_id)
+    except PrivateOwner.DoesNotExist:
+        return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Remove private owner from property
+    property_obj.private_owners.remove(private_owner)
+    property_obj.save()
+
+    # Optionally, delete the private owner if not attached to any other property
+    if private_owner.properties.count() == 0:
+        private_owner.delete()
+
+    # Return updated property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
+    return Response(serializer.data)
+
+@api_view(['PATCH'])
+@validate_kinde_token
+def update_private_owner(request, owner_id):
+    """Update a private owner's information"""
+    try:
+        private_owner = PrivateOwner.objects.get(id=owner_id)
+    except PrivateOwner.DoesNotExist:
+        return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    phone = request.data.get('phone')
+    email = request.data.get('email')
+    if first_name:
+        private_owner.first_name = first_name
+    if last_name:
+        private_owner.last_name = last_name
+    if phone:
+        private_owner.phone = phone
+    if email is not None:
+        private_owner.email = email
+    private_owner.save()
+
+    serializer = PrivateOwnerSerializer(private_owner)
+    return Response(serializer.data)

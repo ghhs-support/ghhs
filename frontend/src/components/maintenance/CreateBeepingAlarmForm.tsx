@@ -86,6 +86,15 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
 
+  // --- Private Owner State ---
+  const [showPrivateOwnerForm, setShowPrivateOwnerForm] = useState(false);
+  const [editingPrivateOwner, setEditingPrivateOwner] = useState<PrivateOwner | null>(null);
+  const [privateOwnerForm, setPrivateOwnerForm] = useState({ first_name: '', last_name: '', phone: '', email: '' });
+  const [privateOwnerFormError, setPrivateOwnerFormError] = useState<string | null>(null);
+  const [privateOwnerLoading, setPrivateOwnerLoading] = useState(false);
+  const [showDeletePrivateOwnerModal, setShowDeletePrivateOwnerModal] = useState(false);
+  const [privateOwnerToDelete, setPrivateOwnerToDelete] = useState<PrivateOwner | null>(null);
+
   // Load initial data
   useEffect(() => {
     if (isOpen) {
@@ -303,6 +312,119 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     setTenantToDelete(null);
   };
 
+  // --- Private Owner Handlers ---
+  const openAddPrivateOwnerForm = () => {
+    setEditingPrivateOwner(null);
+    setPrivateOwnerForm({ first_name: '', last_name: '', phone: '', email: '' });
+    setPrivateOwnerFormError(null);
+    setShowPrivateOwnerForm(true);
+  };
+
+  const openEditPrivateOwnerForm = (owner: PrivateOwner) => {
+    setEditingPrivateOwner(owner);
+    setPrivateOwnerForm({
+      first_name: owner.first_name,
+      last_name: owner.last_name,
+      phone: owner.phone || '',
+      email: owner.email || ''
+    });
+    setPrivateOwnerFormError(null);
+    setShowPrivateOwnerForm(true);
+  };
+
+  const closePrivateOwnerForm = () => {
+    setShowPrivateOwnerForm(false);
+    setEditingPrivateOwner(null);
+    setPrivateOwnerForm({ first_name: '', last_name: '', phone: '', email: '' });
+    setPrivateOwnerFormError(null);
+  };
+
+  const handlePrivateOwnerFormChange = (field: keyof typeof privateOwnerForm, value: string) => {
+    setPrivateOwnerForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const refreshPropertyPrivateOwners = async () => {
+    if (!selectedProperty) return;
+    try {
+      setPrivateOwnerLoading(true);
+      const property = await authenticatedGet(`/properties/properties/${selectedProperty.id}/`);
+      setSelectedProperty(property);
+      setProperties(prev => prev.map(p => (p.id === property.id ? property : p)));
+    } catch (error) {
+      // ignore
+    } finally {
+      setPrivateOwnerLoading(false);
+    }
+  };
+
+  const handlePrivateOwnerFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPrivateOwnerFormError(null);
+    if (!privateOwnerForm.first_name.trim() || !privateOwnerForm.last_name.trim() || !privateOwnerForm.phone.trim()) {
+      setPrivateOwnerFormError('First name, last name, and phone are required.');
+      return;
+    }
+    try {
+      setPrivateOwnerLoading(true);
+      if (editingPrivateOwner) {
+        // Edit existing private owner
+        await authenticatedPatch(`/properties/private_owners/${editingPrivateOwner.id}/`, {
+          data: privateOwnerForm
+        });
+        toast.success(`Private owner ${privateOwnerForm.first_name} ${privateOwnerForm.last_name} updated successfully!`);
+      } else {
+        // Add new private owner to property
+        await authenticatedPost(`/properties/properties/${selectedProperty?.id}/add_private_owner/`, {
+          data: privateOwnerForm
+        });
+        toast.success(`Private owner ${privateOwnerForm.first_name} ${privateOwnerForm.last_name} added successfully!`);
+      }
+      await refreshPropertyPrivateOwners();
+      closePrivateOwnerForm();
+    } catch (error: any) {
+      console.error('Private owner operation error:', error);
+      const errorMessage = error?.data?.detail || 'Failed to save private owner.';
+      setPrivateOwnerFormError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setPrivateOwnerLoading(false);
+    }
+  };
+
+  const handleEditPrivateOwner = (owner: PrivateOwner) => {
+    openEditPrivateOwnerForm(owner);
+  };
+
+  const requestDeletePrivateOwner = (owner: PrivateOwner) => {
+    setPrivateOwnerToDelete(owner);
+    setShowDeletePrivateOwnerModal(true);
+  };
+
+  const handleConfirmDeletePrivateOwner = async () => {
+    if (!selectedProperty || !privateOwnerToDelete) return;
+    setPrivateOwnerLoading(true);
+    try {
+      await authenticatedPost(`/properties/properties/${selectedProperty.id}/remove_private_owner/`, {
+        data: { private_owner_id: privateOwnerToDelete.id }
+      });
+      await refreshPropertyPrivateOwners();
+      toast.success(`Private owner ${privateOwnerToDelete.first_name} ${privateOwnerToDelete.last_name} removed successfully!`);
+    } catch (error: any) {
+      console.error('Error removing private owner:', error);
+      const errorMessage = error?.data?.detail || 'Failed to remove private owner.';
+      toast.error(errorMessage);
+    } finally {
+      setPrivateOwnerLoading(false);
+      setShowDeletePrivateOwnerModal(false);
+      setPrivateOwnerToDelete(null);
+    }
+  };
+
+  const handleCancelDeletePrivateOwner = () => {
+    setShowDeletePrivateOwnerModal(false);
+    setPrivateOwnerToDelete(null);
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <Modal.Header onClose={onClose}>Create Beeping Alarm</Modal.Header>
@@ -361,19 +483,141 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                 )}
                 {selectedProperty.private_owners && selectedProperty.private_owners.length > 0 && (
                   <div className="space-y-2">
-                    {selectedProperty.private_owners.map(po => (
-                      <div
-                        key={po.id}
-                        className="bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md px-4 py-2 flex flex-col gap-0.5"
+                    <div className="flex justify-end mb-2">
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-700"
+                        onClick={openAddPrivateOwnerForm}
+                        disabled={privateOwnerLoading || !selectedProperty}
                       >
-                        <span className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Private Owner</span>
-                        <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
-                          {po.first_name} {po.last_name}
-                        </span>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{po.email}</span>
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{po.phone}</span>
-                      </div>
+                        <PlusIcon className="w-4 h-4" /> Add Private Owner
+                      </button>
+                    </div>
+                    {selectedProperty.private_owners.map(po => (
+                      editingPrivateOwner && editingPrivateOwner.id === po.id && showPrivateOwnerForm ? (
+                        <div key={po.id} className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 p-2">
+                          <input
+                            type="text"
+                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                            placeholder="First Name"
+                            value={privateOwnerForm.first_name}
+                            onChange={e => handlePrivateOwnerFormChange('first_name', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="text"
+                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                            placeholder="Last Name"
+                            value={privateOwnerForm.last_name}
+                            onChange={e => handlePrivateOwnerFormChange('last_name', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="text"
+                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                            placeholder="Phone"
+                            value={privateOwnerForm.phone}
+                            onChange={e => handlePrivateOwnerFormChange('phone', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="email"
+                            className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                            placeholder="Email (optional)"
+                            value={privateOwnerForm.email}
+                            onChange={e => handlePrivateOwnerFormChange('email', e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePrivateOwnerFormSubmit}>Save</button>
+                            <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePrivateOwnerForm}>Cancel</button>
+                          </div>
+                          {privateOwnerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{privateOwnerFormError}</div>}
+                        </div>
+                      ) : (
+                        <div
+                          key={po.id}
+                          className="bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md px-4 py-2 flex flex-col gap-0.5 relative"
+                        >
+                          <span className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Private Owner</span>
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                            {po.first_name} {po.last_name}
+                          </span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300">{po.email}</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300">{po.phone}</span>
+                          <div className="absolute top-2 right-2 flex gap-2">
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => handleEditPrivateOwner(po)}
+                              title="Edit"
+                            >
+                              <PencilIcon className="w-4 h-4 text-blue-500" />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => requestDeletePrivateOwner(po)}
+                              title="Delete"
+                            >
+                              <TrashIcon className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
+                        </div>
+                      )
                     ))}
+                    {/* Inline add form */}
+                    {showPrivateOwnerForm && !editingPrivateOwner && (
+                      <div className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 p-2">
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="First Name"
+                          value={privateOwnerForm.first_name}
+                          onChange={e => handlePrivateOwnerFormChange('first_name', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Last Name"
+                          value={privateOwnerForm.last_name}
+                          onChange={e => handlePrivateOwnerFormChange('last_name', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Phone"
+                          value={privateOwnerForm.phone}
+                          onChange={e => handlePrivateOwnerFormChange('phone', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="email"
+                          className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Email (optional)"
+                          value={privateOwnerForm.email}
+                          onChange={e => handlePrivateOwnerFormChange('email', e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                          <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePrivateOwnerFormSubmit}>Add</button>
+                          <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePrivateOwnerForm}>Cancel</button>
+                        </div>
+                        {privateOwnerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{privateOwnerFormError}</div>}
+                      </div>
+                    )}
+                    {/* Confirm Delete Modal */}
+                    <ConfirmModal
+                      isOpen={showDeletePrivateOwnerModal}
+                      onConfirm={handleConfirmDeletePrivateOwner}
+                      onCancel={handleCancelDeletePrivateOwner}
+                      title="Remove Private Owner?"
+                      message={`Are you sure you want to remove ${privateOwnerToDelete?.first_name || ''} ${privateOwnerToDelete?.last_name || ''} from this property?`}
+                      confirmLabel="Remove Private Owner"
+                      cancelLabel="Cancel"
+                      confirmColor="red"
+                      loading={privateOwnerLoading}
+                    />
                   </div>
                 )}
               </div>
@@ -522,18 +766,6 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
           {loading ? 'Creating...' : 'Create Beeping Alarm'}
         </button>
       </Modal.Footer>
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onConfirm={handleConfirmDeleteTenant}
-        onCancel={handleCancelDeleteTenant}
-        title="Remove Tenant?"
-        message={`Are you sure you want to remove ${tenantToDelete?.first_name || ''} ${tenantToDelete?.last_name || ''} from this property?`}
-        confirmLabel="Remove Tenant"
-        cancelLabel="Cancel"
-        confirmColor="red"
-        loading={tenantLoading}
-      />
     </Modal>
   );
 }
