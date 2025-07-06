@@ -24,13 +24,13 @@ export interface BeepingAlarm {
       email: string;
       phone: string;
     } | null;
-    private_owner?: {
+    private_owners: Array<{
       id: number;
       first_name: string;
       last_name: string;
       email: string;
       phone: string;
-    } | null;
+    }>;
     tenants: Array<{
       id: number;
       first_name: string;

@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from .models import BeepingAlarm, IssueType
 from properties.models import Property, Tenant
 from common.serializer import UserSerializer
+from properties.serializers import PropertySerializer
 
 class IssueTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,12 +14,6 @@ class TenantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
         fields = ['id', 'first_name', 'last_name', 'phone']
-
-class PropertySerializer(serializers.ModelSerializer):
-    tenants = TenantSerializer(many=True, read_only=True)
-    class Meta:
-        model = Property
-        fields = ['id', 'unit_number', 'street_number', 'street_name', 'suburb', 'state', 'postcode', 'tenants']
 
 class BeepingAlarmSerializer(serializers.ModelSerializer):
     allocation = UserSerializer(many=True, read_only=True)
