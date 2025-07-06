@@ -48,12 +48,24 @@ def add_tenant_to_property(request, property_id):
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    first_name = request.data.get('first_name')
-    last_name = request.data.get('last_name')
-    phone = request.data.get('phone')
-    email = request.data.get('email')
-    if not all([first_name, last_name, phone]):
-        return Response({'detail': 'First name, last name, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
+    # Get data from request.data (frontend sends data in 'data' field)
+    data = request.data.get('data', request.data)
+    
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    phone = data.get('phone')
+    email = data.get('email', '')
+    
+    # Validate required fields
+    if not first_name or not last_name or not phone:
+        errors = {}
+        if not first_name:
+            errors['first_name'] = 'First name is required'
+        if not last_name:
+            errors['last_name'] = 'Last name is required'
+        if not phone:
+            errors['phone'] = 'Phone number is required'
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
     # Create new tenant
     tenant = Tenant.objects.create(
@@ -71,18 +83,14 @@ def add_tenant_to_property(request, property_id):
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @validate_kinde_token
-def remove_tenant_from_property(request, property_id):
+def remove_tenant_from_property(request, property_id, tenant_id):
     """Remove a tenant from a property"""
     try:
         property_obj = Property.objects.get(id=property_id)
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    tenant_id = request.data.get('tenant_id')
-    if not tenant_id:
-        return Response({'detail': 'Tenant ID is required'}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
         tenant = Tenant.objects.get(id=tenant_id)
@@ -91,6 +99,10 @@ def remove_tenant_from_property(request, property_id):
     
     # Remove tenant from property
     property_obj.tenants.remove(tenant)
+    
+    # Optionally, delete the tenant if not attached to any other property
+    if tenant.properties.count() == 0:
+        tenant.delete()
     
     # Return updated property
     property_obj.refresh_from_db()
@@ -106,23 +118,84 @@ def update_tenant(request, tenant_id):
     except Tenant.DoesNotExist:
         return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    first_name = request.data.get('first_name')
-    last_name = request.data.get('last_name')
-    phone = request.data.get('phone')
-    email = request.data.get('email')
-    if first_name:
-        tenant.first_name = first_name
-    if last_name:
-        tenant.last_name = last_name
-    if phone:
-        tenant.phone = phone
-    if email is not None:
-        tenant.email = email
+    # Get data from request.data (frontend sends data in 'data' field)
+    data = request.data.get('data', request.data)
+    
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    phone = data.get('phone')
+    email = data.get('email')
+    
+    # Validate required fields
+    if not first_name or not last_name or not phone:
+        errors = {}
+        if not first_name:
+            errors['first_name'] = 'First name is required'
+        if not last_name:
+            errors['last_name'] = 'Last name is required'
+        if not phone:
+            errors['phone'] = 'Phone number is required'
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update tenant fields
+    tenant.first_name = first_name
+    tenant.last_name = last_name
+    tenant.phone = phone
+    tenant.email = email
     tenant.save()
     
     # Return the updated tenant
     from .serializers import TenantSerializer
     serializer = TenantSerializer(tenant)
+    return Response(serializer.data)
+
+@api_view(['PATCH'])
+@validate_kinde_token
+def update_tenant_in_property(request, property_id, tenant_id):
+    """Update a tenant's information within a property context"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+    except Tenant.DoesNotExist:
+        return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Verify tenant belongs to this property
+    if not property_obj.tenants.filter(id=tenant_id).exists():
+        return Response({'detail': 'Tenant does not belong to this property'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get data from request.data (frontend sends data in 'data' field)
+    data = request.data.get('data', request.data)
+    
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    phone = data.get('phone')
+    email = data.get('email')
+    
+    # Validate required fields
+    if not first_name or not last_name or not phone:
+        errors = {}
+        if not first_name:
+            errors['first_name'] = 'First name is required'
+        if not last_name:
+            errors['last_name'] = 'Last name is required'
+        if not phone:
+            errors['phone'] = 'Phone number is required'
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update tenant fields
+    tenant.first_name = first_name
+    tenant.last_name = last_name
+    tenant.phone = phone
+    tenant.email = email
+    tenant.save()
+    
+    # Return updated property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
 
 @api_view(['POST'])
@@ -446,40 +519,74 @@ def update_property(request, property_id):
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    unit_number = request.data.get('unit_number')
-    street_number = request.data.get('street_number')
-    street_name = request.data.get('street_name')
-    suburb = request.data.get('suburb')
-    state = request.data.get('state')
-    postcode = request.data.get('postcode')
-    agency_id = request.data.get('agency_id')
+    # Get data from request.data (frontend sends data in 'data' field)
+    data = request.data.get('data', request.data)
     
-    # Update fields if provided
-    if unit_number is not None:
-        property_obj.unit_number = unit_number if unit_number else None
-    if street_number:
-        property_obj.street_number = street_number
-    if street_name:
-        property_obj.street_name = street_name
-    if suburb:
-        property_obj.suburb = suburb
-    if state:
-        property_obj.state = state
-    if postcode:
-        property_obj.postcode = postcode
+    unit_number = data.get('unit_number')
+    street_number = data.get('street_number')
+    street_name = data.get('street_name')
+    suburb = data.get('suburb')
+    state = data.get('state')
+    postcode = data.get('postcode')
+    agency_id = data.get('agency_id')
+    private_owner_id = data.get('private_owner_id')
     
-    # Update agency if provided
+    # Validate required fields
+    if not street_number or not street_name or not suburb or not state or not postcode:
+        errors = {}
+        if not street_number:
+            errors['street_number'] = 'Street number is required'
+        if not street_name:
+            errors['street_name'] = 'Street name is required'
+        if not suburb:
+            errors['suburb'] = 'Suburb is required'
+        if not state:
+            errors['state'] = 'State is required'
+        if not postcode:
+            errors['postcode'] = 'Postcode is required'
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update fields
+    property_obj.unit_number = unit_number if unit_number else None
+    property_obj.street_number = street_number
+    property_obj.street_name = street_name
+    property_obj.suburb = suburb
+    property_obj.state = state
+    property_obj.postcode = postcode
+    
+    # Handle agency changes
     if agency_id is not None:
         if agency_id:
             try:
                 agency = Agency.objects.get(id=agency_id)
                 property_obj.agency = agency
+                # Clear private owners when setting agency
+                property_obj.private_owners.clear()
             except Agency.DoesNotExist:
                 return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
         else:
             property_obj.agency = None
     
-    property_obj.save()
+    # Handle private owner changes
+    if private_owner_id is not None:
+        if private_owner_id:
+            try:
+                private_owner = PrivateOwner.objects.get(id=private_owner_id)
+                # Clear agency when setting private owner
+                property_obj.agency = None
+                # Clear existing private owners and add the new one
+                property_obj.private_owners.clear()
+                property_obj.private_owners.add(private_owner)
+            except PrivateOwner.DoesNotExist:
+                return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            property_obj.private_owners.clear()
+    
+    # Save with validation
+    try:
+        property_obj.save()
+    except Exception as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     # Return the updated property
     property_obj.refresh_from_db()

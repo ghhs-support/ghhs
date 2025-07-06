@@ -2,15 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import Button from '../../components/ui/button/Button';
-import { Modal } from '../../components/ui/modal';
-import SearchableDropdown from '../../components/common/SearchableDropdown';
-import Label from '../../components/form/Label';
-import InputField from '../../components/form/input/InputField';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Badge from '../../components/ui/badge/Badge';
+import EditPropertyForm from '../../components/properties/EditPropertyForm';
 import toast from 'react-hot-toast';
 import { 
-  PlusIcon, 
   PencilIcon, 
   TrashIcon, 
   ArrowLeftIcon,
@@ -57,47 +53,24 @@ interface PrivateOwner {
   phone: string;
 }
 
-interface PropertyFormData {
-  unit_number: string;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  agency_id?: number | null;
-}
-
 export default function PropertyDetails() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
-  const { authenticatedGet, authenticatedPost, authenticatedPatch, authenticatedDelete } = useAuthenticatedApi();
+  const { authenticatedGet, authenticatedDelete } = useAuthenticatedApi();
   
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
   
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
-  // Form states
-  const [formData, setFormData] = useState<PropertyFormData>({
-    unit_number: '',
-    street_number: '',
-    street_name: '',
-    suburb: '',
-    state: '',
-    postcode: '',
-    agency_id: null,
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
 
   // Load property data
   useEffect(() => {
     if (propertyId) {
       loadProperty();
-      loadAgencies();
     }
   }, [propertyId]);
 
@@ -115,94 +88,8 @@ export default function PropertyDetails() {
     }
   };
 
-  const loadAgencies = async () => {
-    try {
-      const response = await authenticatedGet('/properties/agencies/');
-      setAgencies(response);
-    } catch (error) {
-      console.error('Error loading agencies:', error);
-    }
-  };
-
-  // Form handlers
-  const resetForm = () => {
-    if (property) {
-      setFormData({
-        unit_number: property.unit_number || '',
-        street_number: property.street_number,
-        street_name: property.street_name,
-        suburb: property.suburb,
-        state: property.state,
-        postcode: property.postcode,
-        agency_id: property.agency?.id || null,
-      });
-    }
-    setFormErrors({});
-  };
-
-  const handleFormChange = (field: keyof PropertyFormData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error for this field
-    if (formErrors[field]) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.street_number.trim()) {
-      newErrors.street_number = 'Street number is required';
-    }
-    if (!formData.street_name.trim()) {
-      newErrors.street_name = 'Street name is required';
-    }
-    if (!formData.suburb.trim()) {
-      newErrors.suburb = 'Suburb is required';
-    }
-    if (!formData.state.trim()) {
-      newErrors.state = 'State is required';
-    }
-    if (!formData.postcode.trim()) {
-      newErrors.postcode = 'Postcode is required';
-    }
-    
-    setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const openEditModal = () => {
-    resetForm();
     setShowEditModal(true);
-  };
-
-  const handleEditProperty = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || !property) return;
-
-    try {
-      setFormLoading(true);
-      await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data: formData });
-      toast.success('Property updated successfully!');
-      setShowEditModal(false);
-      loadProperty(); // Reload property data
-    } catch (error: any) {
-      console.error('Error updating property:', error);
-      if (error.data) {
-        setFormErrors(error.data);
-      }
-      toast.error('Failed to update property');
-    } finally {
-      setFormLoading(false);
-    }
   };
 
   const openDeleteModal = () => {
@@ -225,14 +112,8 @@ export default function PropertyDetails() {
     }
   };
 
-  const getSelectedAgencyOption = () => {
-    if (!formData.agency_id) return null;
-    const agency = agencies.find(a => a.id === formData.agency_id);
-    if (!agency) return null;
-    return {
-      value: agency.id.toString(),
-      label: agency.name
-    };
+  const handleEditSuccess = () => {
+    loadProperty(); // Reload property data after successful edit
   };
 
   const formatAddress = (property: Property) => {
@@ -421,116 +302,12 @@ export default function PropertyDetails() {
       </div>
 
       {/* Edit Property Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
-        <Modal.Header onClose={() => setShowEditModal(false)}>Edit Property</Modal.Header>
-        <Modal.Body>
-          <form onSubmit={handleEditProperty} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_unit_number">Unit Number</Label>
-                <InputField
-                  id="edit_unit_number"
-                  value={formData.unit_number}
-                  onChange={(e) => handleFormChange('unit_number', e.target.value)}
-                  placeholder="e.g., 1A"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_street_number">Street Number *</Label>
-                <InputField
-                  id="edit_street_number"
-                  value={formData.street_number}
-                  onChange={(e) => handleFormChange('street_number', e.target.value)}
-                  placeholder="e.g., 123"
-                  error={!!formErrors.street_number}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit_street_name">Street Name *</Label>
-              <InputField
-                id="edit_street_name"
-                value={formData.street_name}
-                onChange={(e) => handleFormChange('street_name', e.target.value)}
-                placeholder="e.g., Main Street"
-                error={!!formErrors.street_name}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="edit_suburb">Suburb *</Label>
-                <InputField
-                  id="edit_suburb"
-                  value={formData.suburb}
-                  onChange={(e) => handleFormChange('suburb', e.target.value)}
-                  placeholder="e.g., Sydney"
-                  error={!!formErrors.suburb}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_state">State *</Label>
-                <InputField
-                  id="edit_state"
-                  value={formData.state}
-                  onChange={(e) => handleFormChange('state', e.target.value)}
-                  placeholder="e.g., NSW"
-                  error={!!formErrors.state}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_postcode">Postcode *</Label>
-                <InputField
-                  id="edit_postcode"
-                  value={formData.postcode}
-                  onChange={(e) => handleFormChange('postcode', e.target.value)}
-                  placeholder="e.g., 2000"
-                  error={!!formErrors.postcode}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="edit_agency">Agency (Optional)</Label>
-              <SearchableDropdown
-                value={getSelectedAgencyOption()}
-                onChange={(option) => handleFormChange('agency_id', option ? parseInt(option.value) : null)}
-                onSearch={async (query) => {
-                  const filtered = agencies.filter(agency => 
-                    agency.name.toLowerCase().includes(query.toLowerCase())
-                  );
-                  return filtered.map(agency => ({
-                    value: agency.id.toString(),
-                    label: agency.name
-                  }));
-                }}
-                placeholder="Search agencies..."
-                showApplyButton={false}
-                showClearButton={true}
-              />
-            </div>
-          </form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="outline"
-            onClick={() => setShowEditModal(false)}
-            disabled={formLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-              handleEditProperty(fakeEvent);
-            }}
-            disabled={formLoading}
-          >
-            {formLoading ? 'Updating...' : 'Update Property'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <EditPropertyForm
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        property={property}
+        onSuccess={handleEditSuccess}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

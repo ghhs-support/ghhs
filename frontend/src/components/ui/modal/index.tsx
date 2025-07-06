@@ -30,7 +30,7 @@ interface ModalHeaderProps {
 }
 
 const ModalBody: FC<ModalBodyProps> = ({ children, className = "" }) => (
-  <div className={`flex-1 min-h-0 overflow-y-auto custom-scrollbar ${className}`}>{children}</div>
+  <div className={`flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 bg-white dark:bg-gray-900 rounded-2xl ${className}`}>{children}</div>
 );
 
 const ModalFooter: FC<ModalFooterProps> = ({ children, className = "" }) => (

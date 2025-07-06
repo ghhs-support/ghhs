@@ -9,8 +9,9 @@ urlpatterns = [
     path('properties/<int:property_id>/', views.property_detail, name='property_detail'),
     path('properties/<int:property_id>/update/', views.update_property, name='update_property'),
     path('properties/<int:property_id>/delete/', views.delete_property, name='delete_property'),
-    path('properties/<int:property_id>/add_tenant/', views.add_tenant_to_property, name='add_tenant_to_property'),
-    path('properties/<int:property_id>/remove_tenant/', views.remove_tenant_from_property, name='remove_tenant_from_property'),
+    path('properties/<int:property_id>/tenants/', views.add_tenant_to_property, name='add_tenant_to_property'),
+    path('properties/<int:property_id>/tenants/<int:tenant_id>/', views.update_tenant_in_property, name='update_tenant_in_property'),
+    path('properties/<int:property_id>/tenants/<int:tenant_id>/delete/', views.remove_tenant_from_property, name='remove_tenant_from_property'),
     path('properties/<int:property_id>/change_agency/', views.change_property_agency, name='change_property_agency'),
     path('tenants/<int:tenant_id>/', views.update_tenant, name='update_tenant'),
     # --- Private Owner Endpoints ---

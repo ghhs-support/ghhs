@@ -209,8 +209,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     <Modal isOpen={isOpen} onClose={onClose}>
       <Modal.Header onClose={onClose}>Create Beeping Alarm</Modal.Header>
       <Modal.Body>
-        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl custom-scrollbar">
-          <form id="beeping-alarm-form" onSubmit={handleSubmit} className="space-y-6">
+        <form id="beeping-alarm-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Property Selection */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -339,7 +338,6 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
               </div>
             )}
           </form>
-        </div>
       </Modal.Body>
       <Modal.Footer>
         <Button
