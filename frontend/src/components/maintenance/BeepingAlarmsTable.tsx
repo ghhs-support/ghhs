@@ -295,7 +295,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       return <Badge size="sm" color="info">Agency</Badge>;
     }
     if (isPrivate) {
-      return <Badge size="sm" color="warning">Private</Badge>;
+      return <Badge size="sm" color="success">Private</Badge>;
     }
     return <Badge size="sm" color="error">Unknown</Badge>;
   };
