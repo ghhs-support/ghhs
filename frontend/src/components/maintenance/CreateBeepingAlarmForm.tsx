@@ -109,6 +109,9 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const [agencyForm, setAgencyForm] = useState({ name: '', email: '', phone: '', unit_number: '', street_number: '', street_name: '', suburb: '', state: '', postcode: '', country: '', longitude: '', latitude: '' });
   const [agencyFormError, setAgencyFormError] = useState<string | null>(null);
   const [agencyLoading, setAgencyLoading] = useState(false);
+  const [showChangeAgencyForm, setShowChangeAgencyForm] = useState(false);
+  const [changeAgencyLoading, setChangeAgencyLoading] = useState(false);
+  const [selectedAgencyId, setSelectedAgencyId] = useState<number | null>(null);
 
   // --- Property Manager State ---
   const [showPropertyManagerForm, setShowPropertyManagerForm] = useState(false);
@@ -497,6 +500,45 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     }
   };
 
+  // --- Change Agency Handlers ---
+  const openChangeAgencyForm = () => {
+    setShowChangeAgencyForm(true);
+    setSelectedAgencyId(null);
+  };
+
+  const closeChangeAgencyForm = () => {
+    setShowChangeAgencyForm(false);
+    setSelectedAgencyId(null);
+  };
+
+  const handleAgencySelection = (agencyId: number | null) => {
+    setSelectedAgencyId(agencyId);
+  };
+
+  const handleChangeAgency = async () => {
+    if (!selectedProperty) return;
+    
+    try {
+      setChangeAgencyLoading(true);
+      
+      // Call API to change the property's agency
+      await authenticatedPost(`/properties/properties/${selectedProperty.id}/change_agency/`, {
+        data: { agency_id: selectedAgencyId }
+      });
+      
+      // Refresh the property data
+      await refreshPropertyPrivateOwners();
+      
+      toast.success('Agency changed successfully!');
+      closeChangeAgencyForm();
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || 'Failed to change agency.';
+      toast.error(errorMessage);
+    } finally {
+      setChangeAgencyLoading(false);
+    }
+  };
+
   // --- Property Manager Handlers ---
   const openAddPropertyManagerForm = () => {
     setEditingPropertyManager(null);
@@ -608,14 +650,26 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
                     <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
                     <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.phone}</div>
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={openEditAgencyForm}
-                      title="Edit Agency"
-                    >
-                      <PencilIcon className="w-4 h-4 text-blue-500" />
-                    </button>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button
+                        type="button"
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={openEditAgencyForm}
+                        title="Edit Agency"
+                      >
+                        <PencilIcon className="w-4 h-4 text-blue-500" />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={openChangeAgencyForm}
+                        title="Change Agency"
+                      >
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                      </button>
+                    </div>
                     {/* Agency Edit Form */}
                     {showAgencyForm && (
                       <div className="mt-2 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded p-3">
@@ -657,6 +711,40 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                             <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeAgencyForm}>Cancel</button>
                           </div>
                           {agencyFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{agencyFormError}</div>}
+                        </div>
+                      </div>
+                    )}
+                    {/* Change Agency Form */}
+                    {showChangeAgencyForm && (
+                      <div className="mt-2 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded p-3">
+                        <div className="flex flex-col gap-2">
+                          <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">Select New Agency</Label>
+                          <SearchableDropdown
+                            value={null}
+                            onChange={(option) => handleAgencySelection(option ? parseInt(option.value) : null)}
+                            onSearch={searchService.searchAgencies}
+                            placeholder="Search agencies..."
+                            loading={false}
+                            showApplyButton={false}
+                            showClearButton={true}
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleChangeAgency}
+                              className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs"
+                              disabled={changeAgencyLoading}
+                            >
+                              {changeAgencyLoading ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={closeChangeAgencyForm}
+                              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

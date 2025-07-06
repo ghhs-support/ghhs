@@ -9,6 +9,7 @@ export interface SearchService {
   searchProperties: (query: string) => Promise<SearchOption[]>;
   searchTenants: (query: string) => Promise<SearchOption[]>;
   searchUsers: (query: string) => Promise<SearchOption[]>;
+  searchAgencies: (query: string) => Promise<SearchOption[]>;
 }
 
 /**
@@ -85,6 +86,29 @@ export const createSearchService = (authenticatedGet: any): SearchService => {
         return [];
       } catch (error) {
         console.error('Error fetching user suggestions:', error);
+        return [];
+      }
+    },
+
+    searchAgencies: async (query: string): Promise<SearchOption[]> => {
+      console.log('Searching for agencies with query:', query);
+      try {
+        const response = await authenticatedGet('/properties/agencies/', {
+          params: { q: query }
+        });
+        console.log('Agencies search response:', response);
+        
+        // Transform agency data to SearchOption format
+        if (Array.isArray(response)) {
+          return response.map((agency: any) => ({
+            value: agency.id.toString(),
+            label: agency.name
+          }));
+        }
+        
+        return [];
+      } catch (error) {
+        console.error('Error fetching agency suggestions:', error);
         return [];
       }
     }

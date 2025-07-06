@@ -189,6 +189,34 @@ def remove_private_owner_from_property(request, property_id):
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
 
+@api_view(['POST'])
+@validate_kinde_token
+def change_property_agency(request, property_id):
+    """Change the agency of a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    agency_id = request.data.get('agency_id')
+    
+    if agency_id is None:
+        # Remove agency from property
+        property_obj.agency = None
+        property_obj.save()
+    else:
+        try:
+            agency = Agency.objects.get(id=agency_id)
+            property_obj.agency = agency
+            property_obj.save()
+        except Agency.DoesNotExist:
+            return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Return updated property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
+    return Response(serializer.data)
+
 @api_view(['PATCH'])
 @validate_kinde_token
 def update_private_owner(request, owner_id):
