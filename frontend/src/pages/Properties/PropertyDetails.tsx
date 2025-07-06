@@ -17,6 +17,7 @@ import {
   PhoneIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
+import InfoCard from '../../components/common/InfoCard';
 
 interface PropertyManager {
   id: number;
@@ -251,104 +252,58 @@ export default function PropertyDetails() {
             </h2>
           </div>
           
-          {property.agency ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">Agency</span>
-              </div>
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex flex-col space-y-1">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {property.agency.name}
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                    <span>📞</span>
-                    <span className="text-red-600 dark:text-red-400">{property.agency.phone}</span>
-                  </div>
-                  {property.agency.email && (
-                    <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                      <span>✉️</span>
-                      {property.agency.email}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Property Managers Display */}
+          {property.agency && (
+            <InfoCard
+              icon={<BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+              title={property.agency.name}
+              subtitle="Agency"
+              phone={property.agency.phone}
+              email={property.agency.email}
+              color="blue"
+            >
               {property.agency.property_managers && property.agency.property_managers.length > 0 && (
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">
-                      {property.agency.property_managers.length} manager{property.agency.property_managers.length === 1 ? '' : 's'}
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
+                      {property.agency.property_managers.length} {property.agency.property_managers.length === 1 ? 'manager' : 'managers'}
                     </span>
                   </div>
-                  
                   <div className="space-y-2">
                     {property.agency.property_managers.map((manager) => (
-                      <div key={manager.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col space-y-1">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {manager.first_name} {manager.last_name}
-                            </span>
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                              <span>📞</span>
-                              <span className="text-red-600 dark:text-red-400">{manager.phone}</span>
-                            </div>
-                            {manager.email && (
-                              <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                                <span>✉️</span>
-                                {manager.email}
-                              </div>
-                            )}
-                            {manager.notes && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                {manager.notes}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <InfoCard
+                        key={manager.id}
+                        title={`${manager.first_name} ${manager.last_name}`}
+                        phone={manager.phone}
+                        email={manager.email}
+                        notes={manager.notes}
+                        color="blue"
+                      />
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          ) : property.private_owners.length > 0 ? (
+            </InfoCard>
+          )}
+          {property.private_owners.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-green-700 dark:text-green-300 font-semibold">Private Owner</span>
-                </div>
+                <span className="text-sm text-green-700 dark:text-green-300 font-semibold">Private Owner</span>
                 <span className="text-sm text-green-600 dark:text-green-400 font-medium">
                   {property.private_owners.length} {property.private_owners.length === 1 ? 'Private Owner' : 'Private Owners'}
                 </span>
               </div>
-              {property.private_owners.map((owner, index) => (
-                <div key={owner.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col space-y-1">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {owner.first_name} {owner.last_name}
-                    </span>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                      <span>📞</span>
-                      <span className="text-red-600 dark:text-red-400">{owner.phone}</span>
-                    </div>
-                    {owner.email && (
-                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                        <span>✉️</span>
-                        {owner.email}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {property.private_owners.map((owner) => (
+                <InfoCard
+                  key={owner.id}
+                  icon={<UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />}
+                  title={`${owner.first_name} ${owner.last_name}`}
+                  subtitle="Private Owner"
+                  phone={owner.phone}
+                  email={owner.email}
+                  color="green"
+                />
               ))}
-            </div>
-          ) : (
-            <div className="text-gray-500 dark:text-gray-400">
-              <span className="text-sm text-red-700 dark:text-red-300 font-semibold">No Owner</span>
-              <div className="mt-2">No owner assigned to this property</div>
             </div>
           )}
         </div>
@@ -374,21 +329,15 @@ export default function PropertyDetails() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {tenants.map((tenant) => (
-                <div key={tenant.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    {tenant.first_name} {tenant.last_name}
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                    <span>📞</span>
-                    <span className="text-red-600 dark:text-red-400">{tenant.phone}</span>
-                  </div>
-                  {tenant.email && (
-                    <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
-                      <span>✉️</span>
-                      {tenant.email}
-                    </div>
-                  )}
-                </div>
+                <InfoCard
+                  key={tenant.id}
+                  icon={<UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+                  title={`${tenant.first_name} ${tenant.last_name}`}
+                  subtitle="Tenant"
+                  phone={tenant.phone}
+                  email={tenant.email}
+                  color="purple"
+                />
               ))}
             </div>
           )}

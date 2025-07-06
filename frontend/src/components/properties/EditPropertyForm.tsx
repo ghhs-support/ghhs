@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import InfoCard from '../common/InfoCard';
 
 interface Property {
   id: number;
@@ -702,51 +703,22 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       })()}
                     </span>
                   </div>
-                  
-                  {(() => {
-                    const selectedAgency = agencies.find(a => a.id === formData.agency_id);
-                    const managers = selectedAgency?.property_managers || [];
-                    
-                    if (managers.length === 0) {
-                      return (
-                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                          <div className="text-sm">No property managers assigned to this agency</div>
-                          <div className="text-xs mt-1">Property managers can be added in the agency management page</div>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div className="space-y-2">
-                        {managers.map((manager) => (
-                          <div key={manager.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start">
-                              <div className="flex flex-col space-y-1">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  {manager.first_name} {manager.last_name}
-                                </span>
-                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                  <span>📞</span>
-                                  <span className="text-red-600 dark:text-red-400">{manager.phone}</span>
-                                </div>
-                                {manager.email && (
-                                  <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-                                    <span>✉️</span>
-                                    {manager.email}
-                                  </div>
-                                )}
-                                {manager.notes && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                    {manager.notes}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  <div className="space-y-2">
+                    {(() => {
+                      const selectedAgency = agencies.find(a => a.id === formData.agency_id);
+                      const managers = selectedAgency?.property_managers || [];
+                      return managers.map((manager) => (
+                        <InfoCard
+                          key={manager.id}
+                          title={`${manager.first_name} ${manager.last_name}`}
+                          phone={manager.phone}
+                          email={manager.email}
+                          notes={manager.notes}
+                          color="blue"
+                        />
+                      ));
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
@@ -840,38 +812,24 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       if (!owner) return null;
                       
                       return (
-                        <div key={owner.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex justify-between items-start">
-                            <div className="flex flex-col space-y-1">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                {owner.first_name} {owner.last_name}
-                              </span>
-                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                <span>📞</span>
-                                <span className="text-red-600 dark:text-red-400">{owner.phone}</span>
-                              </div>
-                              {owner.email && (
-                                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                                  <span>✉️</span>
-                                  {owner.email}
-                                </div>
-                              )}
-                              {owner.notes && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                  {owner.notes}
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => openDeleteOwnerModal(selectedOwner)}
-                              className="inline-flex items-center justify-center p-1.5 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
-                              title="Remove owner"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
+                        <InfoCard
+                          key={owner.id}
+                          icon={<UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />}
+                          title={`${owner.first_name} ${owner.last_name}`}
+                          subtitle="Private Owner"
+                          phone={owner.phone}
+                          email={owner.email}
+                          notes={owner.notes}
+                          color="green"
+                          actions={[
+                            {
+                              icon: <TrashIcon className="w-4 h-4" />,
+                              onClick: () => openDeleteOwnerModal(selectedOwner),
+                              title: 'Remove owner',
+                              className: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20',
+                            },
+                          ]}
+                        />
                       );
                     })}
                   </div>
@@ -987,132 +945,41 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                   No tenants assigned to this property
                 </div>
               ) : (
-                localTenants.map((tenant) => (
-                  <div key={tenant.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                    {editingTenant === tenant.id ? (
-                      // Edit Mode
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
-                            <InputField
-                              value={editingTenantData.first_name}
-                              onChange={(e) => setEditingTenantData(prev => ({ ...prev, first_name: e.target.value }))}
-                              placeholder="First name"
-                              error={!!tenantErrors.first_name}
-                              className="mt-1 text-sm"
-                            />
-                            {tenantErrors.first_name && (
-                              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
-                            )}
-                          </div>
-                          <div>
-                            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
-                            <InputField
-                              value={editingTenantData.last_name}
-                              onChange={(e) => setEditingTenantData(prev => ({ ...prev, last_name: e.target.value }))}
-                              placeholder="Last name"
-                              error={!!tenantErrors.last_name}
-                              className="mt-1 text-sm"
-                            />
-                            {tenantErrors.last_name && (
-                              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
-                          <InputField
-                            value={editingTenantData.phone}
-                            onChange={(e) => setEditingTenantData(prev => ({ ...prev, phone: e.target.value }))}
-                            placeholder="Phone number"
-                            error={!!tenantErrors.phone}
-                            className="mt-1 text-sm"
-                          />
-                          {tenantErrors.phone && (
-                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
-                          )}
-                        </div>
-                        <div>
-                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                          <InputField
-                            value={editingTenantData.email}
-                            onChange={(e) => setEditingTenantData(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="Email (optional)"
-                            type="email"
-                            className="mt-1 text-sm"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleEditTenant}
-                            disabled={formLoading}
-                            className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <PencilIcon className="w-3 h-3" />
-                            {formLoading ? 'Updating...' : 'Update Tenant'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEditTenant}
-                            disabled={formLoading}
-                            className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View Mode
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col space-y-1">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {tenant.first_name} {tenant.last_name}
-                          </span>
-                          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                            <span>📞</span>
-                            <span className="text-red-600 dark:text-red-400">{tenant.phone}</span>
-                          </div>
-                          {tenant.email && (
-                            <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
-                              <span>✉️</span>
-                              {tenant.email}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              startEditTenant(tenant);
-                            }}
-                            disabled={formLoading}
-                            className="inline-flex items-center justify-center p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20 transition-colors"
-                            title="Edit tenant"
-                          >
-                            <PencilIcon className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { 
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openDeleteTenantModal(tenant); 
-                            }}
-                            disabled={formLoading}
-                            className="inline-flex items-center justify-center p-1.5 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
-                            title="Delete tenant"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
+                <div className="space-y-2">
+                  {localTenants.map((tenant) => (
+                    <InfoCard
+                      key={tenant.id}
+                      icon={<UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+                      title={`${tenant.first_name} ${tenant.last_name}`}
+                      subtitle="Tenant"
+                      phone={tenant.phone}
+                      email={tenant.email}
+                      color="purple"
+                      actions={[
+                        {
+                          icon: <PencilIcon className="w-4 h-4" />,
+                          onClick: (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            startEditTenant(tenant);
+                          },
+                          title: 'Edit tenant',
+                          className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20',
+                        },
+                        {
+                          icon: <TrashIcon className="w-4 h-4" />,
+                          onClick: (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeleteTenantModal(tenant);
+                          },
+                          title: 'Delete tenant',
+                          className: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20',
+                        },
+                      ]}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           </div>
