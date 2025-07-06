@@ -99,6 +99,10 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const [ownerType, setOwnerType] = useState<'agency' | 'private'>('agency');
   const [selectedPrivateOwners, setSelectedPrivateOwners] = useState<{ value: string; label: string }[]>([]);
   const [tempSelectedOwner, setTempSelectedOwner] = useState<{ value: string; label: string } | null>(null);
+  
+  // Store selections when switching owner types (for draft mode)
+  const [draftAgencyId, setDraftAgencyId] = useState<number | null>(null);
+  const [draftPrivateOwners, setDraftPrivateOwners] = useState<{ value: string; label: string }[]>([]);
 
   // Tenant management state - local state for modal only
   const [localTenants, setLocalTenants] = useState<Tenant[]>([]);
@@ -190,22 +194,36 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         postcode: property.postcode,
         agency_id: property.agency?.id || null,
       });
+      
+      // Determine owner type and set up the form accordingly
       if (property.agency) {
         setOwnerType('agency');
         setSelectedPrivateOwners([]);
         setTempSelectedOwner(null);
+        // Reset draft selections
+        setDraftAgencyId(property.agency.id);
+        setDraftPrivateOwners([]);
       } else if (property.private_owners.length > 0) {
         setOwnerType('private');
-        setSelectedPrivateOwners(property.private_owners.map(owner => ({
+        const privateOwnersList = property.private_owners.map(owner => ({
           value: owner.id.toString(),
           label: `${owner.first_name} ${owner.last_name}`
-        })));
+        }));
+        setSelectedPrivateOwners(privateOwnersList);
         setTempSelectedOwner(null);
+        // Reset draft selections
+        setDraftAgencyId(null);
+        setDraftPrivateOwners(privateOwnersList);
       } else {
+        // Default to agency if no owner is set
         setOwnerType('agency');
         setSelectedPrivateOwners([]);
         setTempSelectedOwner(null);
+        // Reset draft selections
+        setDraftAgencyId(null);
+        setDraftPrivateOwners([]);
       }
+      
       // Initialize local tenants with current property tenants
       setLocalTenants(property.tenants);
     }
@@ -218,6 +236,11 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       [field]: value
     }));
     
+    // Update draft agency selection when agency changes
+    if (field === 'agency_id') {
+      setDraftAgencyId(value);
+    }
+    
     if (formErrors[field]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -228,10 +251,30 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   };
 
   const handleOwnerTypeChange = (newOwnerType: 'agency' | 'private') => {
+    // Store current selections before switching
+    if (ownerType === 'agency' && formData.agency_id) {
+      setDraftAgencyId(formData.agency_id);
+    }
+    if (ownerType === 'private' && selectedPrivateOwners.length > 0) {
+      setDraftPrivateOwners([...selectedPrivateOwners]);
+    }
+    
     setOwnerType(newOwnerType);
     
-    // Don't clear selections when switching - preserve them for better UX
-    // Only clear the temp selection for the dropdown
+    // Restore previous selections for the new type
+    if (newOwnerType === 'agency') {
+      // Switching to agency - restore agency selection if available
+      const agencyToRestore = draftAgencyId || formData.agency_id;
+      setFormData(prev => ({ ...prev, agency_id: agencyToRestore }));
+      setSelectedPrivateOwners([]);
+    } else {
+      // Switching to private - restore private owners selection if available
+      const privateOwnersToRestore = draftPrivateOwners.length > 0 ? draftPrivateOwners : selectedPrivateOwners;
+      setSelectedPrivateOwners(privateOwnersToRestore);
+      setFormData(prev => ({ ...prev, agency_id: null }));
+    }
+    
+    // Clear the temp selection for the dropdown
     setTempSelectedOwner(null);
   };
 
@@ -354,9 +397,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     if (!ownerToDelete) return;
 
     // Remove owner from local state
-    setSelectedPrivateOwners(prev => 
-      prev.filter(po => po.value !== ownerToDelete.value)
-    );
+    const updatedOwners = selectedPrivateOwners.filter(po => po.value !== ownerToDelete.value);
+    setSelectedPrivateOwners(updatedOwners);
+    setDraftPrivateOwners(updatedOwners);
     
     setShowDeleteOwnerModal(false);
     setOwnerToDelete(null);
@@ -381,6 +424,14 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       newErrors.postcode = 'Postcode is required';
     }
     
+    // Validate owner type selection
+    if (ownerType === 'agency' && !formData.agency_id) {
+      newErrors.agency_id = 'Please select an agency';
+    }
+    if (ownerType === 'private' && selectedPrivateOwners.length === 0) {
+      newErrors.private_owners = 'Please select at least one private owner';
+    }
+    
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -392,11 +443,19 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     try {
       setFormLoading(true);
       let data: any = { ...formData };
+      
+      // Clear all owner data first, then set based on toggle position
+      data.agency_id = null;
+      data.private_owner_ids = [];
+      
+      // Set the correct owner type based on toggle
       if (ownerType === 'agency') {
+        // Toggle is on agency side - set agency and ensure private owners are cleared
         data.agency_id = formData.agency_id;
-        data.private_owner_id = null;
+        data.private_owner_ids = []; // Explicitly clear private owners
       } else if (ownerType === 'private') {
-        data.agency_id = null;
+        // Toggle is on private side - set private owners and ensure agency is cleared
+        data.agency_id = null; // Explicitly clear agency
         data.private_owner_ids = selectedPrivateOwners.map(po => parseInt(po.value));
       }
       
@@ -408,6 +467,8 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         phone: tenant.phone,
         email: tenant.email || ''
       }));
+      
+      console.log('Sending data to backend:', data); // Debug log
       
       const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
       
@@ -622,6 +683,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 showApplyButton={false}
                 showClearButton={true}
               />
+              {formErrors.agency_id && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.agency_id}</p>
+              )}
               
               {/* Property Managers Display */}
               {formData.agency_id && (
@@ -733,7 +797,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       type="button"
                       onClick={() => {
                         if (tempSelectedOwner && !selectedPrivateOwners.find(po => po.value === tempSelectedOwner.value)) {
-                          setSelectedPrivateOwners(prev => [...prev, tempSelectedOwner]);
+                          const updatedOwners = [...selectedPrivateOwners, tempSelectedOwner];
+                          setSelectedPrivateOwners(updatedOwners);
+                          setDraftPrivateOwners(updatedOwners);
                         }
                         setTempSelectedOwner(null);
                       }}
@@ -754,6 +820,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               </div>
               
               {/* Selected Private Owners Display */}
+              {formErrors.private_owners && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.private_owners}</p>
+              )}
               {selectedPrivateOwners.length > 0 && (
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">

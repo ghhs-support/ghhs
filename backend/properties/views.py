@@ -559,25 +559,24 @@ def update_property(request, property_id):
     property_obj.state = state
     property_obj.postcode = postcode
     
-    # Handle agency changes
-    if agency_id is not None:
-        if agency_id:
-            try:
-                agency = Agency.objects.get(id=agency_id)
-                property_obj.agency = agency
-                # Clear private owners when setting agency
-                property_obj.private_owners.clear()
-            except Agency.DoesNotExist:
-                return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            property_obj.agency = None
+    # Handle agency vs private owner changes - they are mutually exclusive
+    # Always clear both first, then set the correct one based on the data
+    property_obj.agency = None
+    property_obj.private_owners.clear()
+    
+    # Set agency if provided
+    if agency_id is not None and agency_id:
+        try:
+            agency = Agency.objects.get(id=agency_id)
+            property_obj.agency = agency
+            print(f"Set agency: {agency.name}")
+        except Agency.DoesNotExist:
+            return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
     
     # Handle private owner changes - now supports multiple private owners
     if private_owner_ids is not None:  # Check if the field was sent (even if empty)
         print(f"Processing private_owner_ids: {private_owner_ids}")
-        # Clear existing private owners
-        property_obj.private_owners.clear()
-        # Add the new ones if any
+        # Add the private owners if any
         for owner_id in private_owner_ids:
             try:
                 private_owner = PrivateOwner.objects.get(id=owner_id)
@@ -590,12 +589,10 @@ def update_property(request, property_id):
         if private_owner_id:
             try:
                 private_owner = PrivateOwner.objects.get(id=private_owner_id)
-                property_obj.private_owners.clear()
                 property_obj.private_owners.add(private_owner)
+                print(f"Added private owner {private_owner.first_name} {private_owner.last_name} to property")
             except PrivateOwner.DoesNotExist:
                 return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            property_obj.private_owners.clear()
     
     # Handle tenant updates
     if tenants_data is not None:
@@ -627,11 +624,25 @@ def update_property(request, property_id):
                 except Tenant.DoesNotExist:
                     return Response({'detail': f'Tenant with ID {tenant_data["id"]} not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Save with validation
+    # Save the property
     try:
         property_obj.save()
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate that the property has either an agency or private owners after saving
+    has_agency = bool(property_obj.agency)
+    has_private_owners = property_obj.private_owners.count() > 0
+    
+    if has_agency and has_private_owners:
+        return Response({'detail': 'Property cannot have both an agency and private owners. It must be either agency-managed or privately owned.'}, status=status.HTTP_400_BAD_REQUEST)
+    if not has_agency and not has_private_owners:
+        return Response({'detail': 'Property must have either an agency or private owners'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update the boolean fields based on the final state
+    property_obj.is_agency = has_agency
+    property_obj.is_private = has_private_owners
+    property_obj.save(update_fields=['is_agency', 'is_private'])
     
     # Return the updated property
     property_obj.refresh_from_db()
