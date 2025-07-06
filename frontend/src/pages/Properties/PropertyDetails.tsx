@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import Button from '../../components/ui/button/Button';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import Badge from '../../components/ui/badge/Badge';
 import EditPropertyForm from '../../components/properties/EditPropertyForm';
 import Label from '../../components/form/Label';
 import toast from 'react-hot-toast';
@@ -13,10 +12,7 @@ import {
   ArrowLeftIcon,
   UserIcon,
   BuildingOfficeIcon,
-  MapPinIcon,
-  PhoneIcon,
-  EnvelopeIcon
-} from '@heroicons/react/24/outline';
+  MapPinIcon} from '@heroicons/react/24/outline';
 import InfoCard from '../../components/common/InfoCard';
 
 interface PropertyManager {
@@ -201,7 +197,7 @@ export default function PropertyDetails() {
         <p className="text-gray-600 dark:text-gray-400">{formatAddress(property)}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex flex-col gap-6">
         {/* Property Information */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -309,7 +305,7 @@ export default function PropertyDetails() {
         </div>
 
         {/* Tenants */}
-        <div className="bg-purple-50 dark:bg-purple-900/40 rounded-xl border border-purple-200 dark:border-purple-700 p-6 lg:col-span-2">
+        <div className="bg-purple-50 dark:bg-purple-900/40 rounded-xl border border-purple-200 dark:border-purple-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
