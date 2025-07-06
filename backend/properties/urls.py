@@ -13,4 +13,9 @@ urlpatterns = [
     path('properties/<int:property_id>/add_private_owner/', views.add_private_owner_to_property, name='add_private_owner_to_property'),
     path('properties/<int:property_id>/remove_private_owner/', views.remove_private_owner_from_property, name='remove_private_owner_from_property'),
     path('private_owners/<int:owner_id>/', views.update_private_owner, name='update_private_owner'),
+    # --- Agency and Property Manager Endpoints ---
+    path('agencies/<int:agency_id>/', views.update_agency, name='update_agency'),
+    path('agencies/<int:agency_id>/add_property_manager/', views.add_property_manager_to_agency, name='add_property_manager_to_agency'),
+    path('agencies/<int:agency_id>/remove_property_manager/', views.remove_property_manager_from_agency, name='remove_property_manager_from_agency'),
+    path('property_managers/<int:manager_id>/', views.update_property_manager, name='update_property_manager'),
 ] 

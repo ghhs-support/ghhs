@@ -37,6 +37,15 @@ interface Agency {
   email: string;
   phone: string;
   property_managers: PropertyManager[];
+  unit_number?: string | null;
+  street_number?: string | null;
+  street_name?: string | null;
+  suburb?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+  longitude?: string | number | null;
+  latitude?: string | number | null;
 }
 
 interface PrivateOwner {
@@ -94,6 +103,21 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const [privateOwnerLoading, setPrivateOwnerLoading] = useState(false);
   const [showDeletePrivateOwnerModal, setShowDeletePrivateOwnerModal] = useState(false);
   const [privateOwnerToDelete, setPrivateOwnerToDelete] = useState<PrivateOwner | null>(null);
+
+  // --- Agency State ---
+  const [showAgencyForm, setShowAgencyForm] = useState(false);
+  const [agencyForm, setAgencyForm] = useState({ name: '', email: '', phone: '', unit_number: '', street_number: '', street_name: '', suburb: '', state: '', postcode: '', country: '', longitude: '', latitude: '' });
+  const [agencyFormError, setAgencyFormError] = useState<string | null>(null);
+  const [agencyLoading, setAgencyLoading] = useState(false);
+
+  // --- Property Manager State ---
+  const [showPropertyManagerForm, setShowPropertyManagerForm] = useState(false);
+  const [editingPropertyManager, setEditingPropertyManager] = useState<PropertyManager | null>(null);
+  const [propertyManagerForm, setPropertyManagerForm] = useState({ first_name: '', last_name: '', email: '', phone: '', notes: '' });
+  const [propertyManagerFormError, setPropertyManagerFormError] = useState<string | null>(null);
+  const [propertyManagerLoading, setPropertyManagerLoading] = useState(false);
+  const [showDeletePropertyManagerModal, setShowDeletePropertyManagerModal] = useState(false);
+  const [propertyManagerToDelete, setPropertyManagerToDelete] = useState<PropertyManager | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -425,6 +449,133 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     setPrivateOwnerToDelete(null);
   };
 
+  // --- Agency Handlers ---
+  const openEditAgencyForm = () => {
+    if (!selectedProperty?.agency) return;
+    setAgencyForm({
+      name: selectedProperty.agency.name || '',
+      email: selectedProperty.agency.email || '',
+      phone: selectedProperty.agency.phone || '',
+      unit_number: selectedProperty.agency.unit_number || '',
+      street_number: selectedProperty.agency.street_number || '',
+      street_name: selectedProperty.agency.street_name || '',
+      suburb: selectedProperty.agency.suburb || '',
+      state: selectedProperty.agency.state || '',
+      postcode: selectedProperty.agency.postcode || '',
+      country: selectedProperty.agency.country || '',
+      longitude: selectedProperty.agency.longitude !== undefined && selectedProperty.agency.longitude !== null ? String(selectedProperty.agency.longitude) : '',
+      latitude: selectedProperty.agency.latitude !== undefined && selectedProperty.agency.latitude !== null ? String(selectedProperty.agency.latitude) : '',
+    });
+    setAgencyFormError(null);
+    setShowAgencyForm(true);
+  };
+  const closeAgencyForm = () => {
+    setShowAgencyForm(false);
+    setAgencyFormError(null);
+  };
+  const handleAgencyFormChange = (field: keyof typeof agencyForm, value: string) => {
+    setAgencyForm(prev => ({ ...prev, [field]: value }));
+  };
+  const handleAgencyFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAgencyFormError(null);
+    if (!agencyForm.name.trim() || !agencyForm.email.trim() || !agencyForm.phone.trim()) {
+      setAgencyFormError('Name, email, and phone are required.');
+      return;
+    }
+    try {
+      setAgencyLoading(true);
+      await authenticatedPatch(`/properties/agencies/${selectedProperty?.agency?.id}/`, { data: agencyForm });
+      toast.success('Agency updated successfully!');
+      await refreshPropertyPrivateOwners(); // refresh property
+      closeAgencyForm();
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || 'Failed to update agency.';
+      setAgencyFormError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setAgencyLoading(false);
+    }
+  };
+
+  // --- Property Manager Handlers ---
+  const openAddPropertyManagerForm = () => {
+    setEditingPropertyManager(null);
+    setPropertyManagerForm({ first_name: '', last_name: '', email: '', phone: '', notes: '' });
+    setPropertyManagerFormError(null);
+    setShowPropertyManagerForm(true);
+  };
+  const openEditPropertyManagerForm = (pm: PropertyManager) => {
+    setEditingPropertyManager(pm);
+    setPropertyManagerForm({
+      first_name: pm.first_name,
+      last_name: pm.last_name,
+      email: pm.email,
+      phone: pm.phone,
+      notes: pm.notes || ''
+    });
+    setPropertyManagerFormError(null);
+    setShowPropertyManagerForm(true);
+  };
+  const closePropertyManagerForm = () => {
+    setShowPropertyManagerForm(false);
+    setEditingPropertyManager(null);
+    setPropertyManagerFormError(null);
+  };
+  const handlePropertyManagerFormChange = (field: keyof typeof propertyManagerForm, value: string) => {
+    setPropertyManagerForm(prev => ({ ...prev, [field]: value }));
+  };
+  const handlePropertyManagerFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPropertyManagerFormError(null);
+    if (!propertyManagerForm.first_name.trim() || !propertyManagerForm.last_name.trim() || !propertyManagerForm.email.trim() || !propertyManagerForm.phone.trim()) {
+      setPropertyManagerFormError('First name, last name, email, and phone are required.');
+      return;
+    }
+    try {
+      setPropertyManagerLoading(true);
+      if (editingPropertyManager) {
+        await authenticatedPatch(`/properties/property_managers/${editingPropertyManager.id}/`, { data: propertyManagerForm });
+        toast.success('Property manager updated successfully!');
+      } else {
+        await authenticatedPost(`/properties/agencies/${selectedProperty?.agency?.id}/add_property_manager/`, { data: propertyManagerForm });
+        toast.success('Property manager added successfully!');
+      }
+      await refreshPropertyPrivateOwners(); // refresh property
+      closePropertyManagerForm();
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || 'Failed to save property manager.';
+      setPropertyManagerFormError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setPropertyManagerLoading(false);
+    }
+  };
+  const requestDeletePropertyManager = (pm: PropertyManager) => {
+    setPropertyManagerToDelete(pm);
+    setShowDeletePropertyManagerModal(true);
+  };
+  const handleConfirmDeletePropertyManager = async () => {
+    if (!selectedProperty?.agency || !propertyManagerToDelete) return;
+    setPropertyManagerLoading(true);
+    try {
+      await authenticatedPost(`/properties/agencies/${selectedProperty.agency?.id}/remove_property_manager/`, { data: { manager_id: propertyManagerToDelete.id } });
+      await refreshPropertyPrivateOwners();
+      toast.success('Property manager removed successfully!');
+    } catch (error: any) {
+      const errorMessage = error?.data?.detail || 'Failed to remove property manager.';
+      toast.error(errorMessage);
+    } finally {
+      setPropertyManagerLoading(false);
+      setShowDeletePropertyManagerModal(false);
+      setPropertyManagerToDelete(null);
+    }
+  };
+  const handleCancelDeletePropertyManager = () => {
+    setShowDeletePropertyManagerModal(false);
+    setPropertyManagerToDelete(null);
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <Modal.Header onClose={onClose}>Create Beeping Alarm</Modal.Header>
@@ -453,171 +604,200 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
               <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                 <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Owner</Label>
                 {selectedProperty.agency && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-700">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-700 relative">
                     <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Agency</span>
                     <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
                     <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
                     <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.phone}</div>
-                    
-                    {/* Property Managers */}
-                    {selectedProperty.agency.property_managers && selectedProperty.agency.property_managers.length > 0 && (
-                      <div className="mt-3">
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Property Managers:</span>
-                        <div className="mt-1 space-y-1">
-                          {selectedProperty.agency.property_managers.map((pm) => (
-                            <div key={pm.id} className="text-xs bg-white dark:bg-gray-800 rounded p-2 border border-blue-200 dark:border-blue-700">
-                              <div className="font-medium text-gray-800 dark:text-gray-100">
-                                {pm.first_name} {pm.last_name}
-                              </div>
-                              <div className="text-gray-600 dark:text-gray-300">{pm.email}</div>
-                              <div className="text-gray-600 dark:text-gray-300">{pm.phone}</div>
-                              {pm.notes && (
-                                <div className="text-gray-500 dark:text-gray-400 italic">{pm.notes}</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {selectedProperty.private_owners && selectedProperty.private_owners.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex justify-end mb-2">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-700"
-                        onClick={openAddPrivateOwnerForm}
-                        disabled={privateOwnerLoading || !selectedProperty}
-                      >
-                        <PlusIcon className="w-4 h-4" /> Add Private Owner
-                      </button>
-                    </div>
-                    {selectedProperty.private_owners.map(po => (
-                      editingPrivateOwner && editingPrivateOwner.id === po.id && showPrivateOwnerForm ? (
-                        <div key={po.id} className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 p-2">
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={openEditAgencyForm}
+                      title="Edit Agency"
+                    >
+                      <PencilIcon className="w-4 h-4 text-blue-500" />
+                    </button>
+                    {/* Agency Edit Form */}
+                    {showAgencyForm && (
+                      <div className="mt-2 bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded p-3">
+                        <form onSubmit={handleAgencyFormSubmit} className="flex flex-col gap-2">
                           <input
                             type="text"
-                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                            placeholder="First Name"
-                            value={privateOwnerForm.first_name}
-                            onChange={e => handlePrivateOwnerFormChange('first_name', e.target.value)}
-                            required
-                          />
-                          <input
-                            type="text"
-                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                            placeholder="Last Name"
-                            value={privateOwnerForm.last_name}
-                            onChange={e => handlePrivateOwnerFormChange('last_name', e.target.value)}
-                            required
-                          />
-                          <input
-                            type="text"
-                            className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                            placeholder="Phone"
-                            value={privateOwnerForm.phone}
-                            onChange={e => handlePrivateOwnerFormChange('phone', e.target.value)}
+                            className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400"
+                            placeholder="Name"
+                            value={agencyForm.name}
+                            onChange={e => handleAgencyFormChange('name', e.target.value)}
                             required
                           />
                           <input
                             type="email"
-                            className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                            placeholder="Email (optional)"
-                            value={privateOwnerForm.email}
-                            onChange={e => handlePrivateOwnerFormChange('email', e.target.value)}
+                            className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400"
+                            placeholder="Email"
+                            value={agencyForm.email}
+                            onChange={e => handleAgencyFormChange('email', e.target.value)}
+                            required
                           />
+                          <input
+                            type="text"
+                            className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400"
+                            placeholder="Phone"
+                            value={agencyForm.phone}
+                            onChange={e => handleAgencyFormChange('phone', e.target.value)}
+                            required
+                          />
+                          {/* Add more fields as needed */}
                           <div className="flex gap-2">
-                            <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePrivateOwnerFormSubmit}>Save</button>
-                            <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePrivateOwnerForm}>Cancel</button>
+                            <button type="submit" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" disabled={agencyLoading}>Save</button>
+                            <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closeAgencyForm}>Cancel</button>
                           </div>
-                          {privateOwnerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{privateOwnerFormError}</div>}
-                        </div>
-                      ) : (
-                        <div
-                          key={po.id}
-                          className="bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md px-4 py-2 flex flex-col gap-0.5 relative"
-                        >
-                          <span className="text-xs font-semibold text-green-800 dark:text-green-200 mb-1">Private Owner</span>
-                          <span className="text-sm text-gray-900 dark:text-gray-100 font-medium">
-                            {po.first_name} {po.last_name}
-                          </span>
-                          <span className="text-xs text-gray-600 dark:text-gray-300">{po.email}</span>
-                          <span className="text-xs text-gray-600 dark:text-gray-300">{po.phone}</span>
-                          <div className="absolute top-2 right-2 flex gap-2">
-                            <button
-                              type="button"
-                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => handleEditPrivateOwner(po)}
-                              title="Edit"
-                            >
-                              <PencilIcon className="w-4 h-4 text-blue-500" />
-                            </button>
-                            <button
-                              type="button"
-                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                              onClick={() => requestDeletePrivateOwner(po)}
-                              title="Delete"
-                            >
-                              <TrashIcon className="w-4 h-4 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    ))}
-                    {/* Inline add form */}
-                    {showPrivateOwnerForm && !editingPrivateOwner && (
-                      <div className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-green-200 dark:border-green-700 p-2">
-                        <input
-                          type="text"
-                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                          placeholder="First Name"
-                          value={privateOwnerForm.first_name}
-                          onChange={e => handlePrivateOwnerFormChange('first_name', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="text"
-                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                          placeholder="Last Name"
-                          value={privateOwnerForm.last_name}
-                          onChange={e => handlePrivateOwnerFormChange('last_name', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="text"
-                          className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                          placeholder="Phone"
-                          value={privateOwnerForm.phone}
-                          onChange={e => handlePrivateOwnerFormChange('phone', e.target.value)}
-                          required
-                        />
-                        <input
-                          type="email"
-                          className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                          placeholder="Email (optional)"
-                          value={privateOwnerForm.email}
-                          onChange={e => handlePrivateOwnerFormChange('email', e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePrivateOwnerFormSubmit}>Add</button>
-                          <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePrivateOwnerForm}>Cancel</button>
-                        </div>
-                        {privateOwnerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{privateOwnerFormError}</div>}
+                          {agencyFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{agencyFormError}</div>}
+                        </form>
                       </div>
                     )}
-                    {/* Confirm Delete Modal */}
-                    <ConfirmModal
-                      isOpen={showDeletePrivateOwnerModal}
-                      onConfirm={handleConfirmDeletePrivateOwner}
-                      onCancel={handleCancelDeletePrivateOwner}
-                      title="Remove Private Owner?"
-                      message={`Are you sure you want to remove ${privateOwnerToDelete?.first_name || ''} ${privateOwnerToDelete?.last_name || ''} from this property?`}
-                      confirmLabel="Remove Private Owner"
-                      cancelLabel="Cancel"
-                      confirmColor="red"
-                      loading={privateOwnerLoading}
-                    />
+                    {/* Property Managers */}
+                    {selectedProperty.agency.property_managers && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Property Managers:</span>
+                          <button
+                            type="button"
+                            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700"
+                            onClick={openAddPropertyManagerForm}
+                            disabled={propertyManagerLoading || !selectedProperty.agency}
+                          >
+                            <PlusIcon className="w-4 h-4" /> Add Property Manager
+                          </button>
+                        </div>
+                        <div className="mt-1 space-y-1">
+                          {selectedProperty.agency.property_managers.map(pm => (
+                            editingPropertyManager && editingPropertyManager.id === pm.id && showPropertyManagerForm ? (
+                              <div key={pm.id} className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 p-2">
+                                <input
+                                  type="text"
+                                  className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                  placeholder="First Name"
+                                  value={propertyManagerForm.first_name}
+                                  onChange={e => handlePropertyManagerFormChange('first_name', e.target.value)}
+                                  required
+                                />
+                                <input
+                                  type="text"
+                                  className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                  placeholder="Last Name"
+                                  value={propertyManagerForm.last_name}
+                                  onChange={e => handlePropertyManagerFormChange('last_name', e.target.value)}
+                                  required
+                                />
+                                <input
+                                  type="email"
+                                  className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                  placeholder="Email"
+                                  value={propertyManagerForm.email}
+                                  onChange={e => handlePropertyManagerFormChange('email', e.target.value)}
+                                  required
+                                />
+                                <input
+                                  type="text"
+                                  className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                  placeholder="Phone"
+                                  value={propertyManagerForm.phone}
+                                  onChange={e => handlePropertyManagerFormChange('phone', e.target.value)}
+                                  required
+                                />
+                                <input
+                                  type="text"
+                                  className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                  placeholder="Notes (optional)"
+                                  value={propertyManagerForm.notes}
+                                  onChange={e => handlePropertyManagerFormChange('notes', e.target.value)}
+                                />
+                                <div className="flex gap-2">
+                                  <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePropertyManagerFormSubmit}>Save</button>
+                                  <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePropertyManagerForm}>Cancel</button>
+                                </div>
+                                {propertyManagerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{propertyManagerFormError}</div>}
+                              </div>
+                            ) : (
+                              <div key={pm.id} className="text-xs bg-white dark:bg-gray-800 rounded p-2 border border-blue-200 dark:border-blue-700 relative">
+                                <div className="font-medium text-gray-800 dark:text-gray-100">{pm.first_name} {pm.last_name}</div>
+                                <div className="text-gray-600 dark:text-gray-300">{pm.email}</div>
+                                <div className="text-gray-600 dark:text-gray-300">{pm.phone}</div>
+                                {pm.notes && <div className="text-gray-500 dark:text-gray-400 italic">{pm.notes}</div>}
+                                <div className="absolute top-2 right-2 flex gap-2">
+                                  <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => openEditPropertyManagerForm(pm)} title="Edit">
+                                    <PencilIcon className="w-4 h-4 text-blue-500" />
+                                  </button>
+                                  <button type="button" className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => requestDeletePropertyManager(pm)} title="Delete">
+                                    <TrashIcon className="w-4 h-4 text-red-500" />
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          ))}
+                          {/* Inline add form */}
+                          {showPropertyManagerForm && !editingPropertyManager && (
+                            <div className="flex flex-col md:flex-row flex-wrap gap-2 items-center bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700 p-2">
+                              <input
+                                type="text"
+                                className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                placeholder="First Name"
+                                value={propertyManagerForm.first_name}
+                                onChange={e => handlePropertyManagerFormChange('first_name', e.target.value)}
+                                required
+                              />
+                              <input
+                                type="text"
+                                className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                placeholder="Last Name"
+                                value={propertyManagerForm.last_name}
+                                onChange={e => handlePropertyManagerFormChange('last_name', e.target.value)}
+                                required
+                              />
+                              <input
+                                type="email"
+                                className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                placeholder="Email"
+                                value={propertyManagerForm.email}
+                                onChange={e => handlePropertyManagerFormChange('email', e.target.value)}
+                                required
+                              />
+                              <input
+                                type="text"
+                                className="w-32 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                placeholder="Phone"
+                                value={propertyManagerForm.phone}
+                                onChange={e => handlePropertyManagerFormChange('phone', e.target.value)}
+                                required
+                              />
+                              <input
+                                type="text"
+                                className="w-40 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                placeholder="Notes (optional)"
+                                value={propertyManagerForm.notes}
+                                onChange={e => handlePropertyManagerFormChange('notes', e.target.value)}
+                              />
+                              <div className="flex gap-2">
+                                <button type="button" className="px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 text-xs" onClick={handlePropertyManagerFormSubmit}>Add</button>
+                                <button type="button" className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs" onClick={closePropertyManagerForm}>Cancel</button>
+                              </div>
+                              {propertyManagerFormError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{propertyManagerFormError}</div>}
+                            </div>
+                          )}
+                          {/* Confirm Delete Modal */}
+                          <ConfirmModal
+                            isOpen={showDeletePropertyManagerModal}
+                            onConfirm={handleConfirmDeletePropertyManager}
+                            onCancel={handleCancelDeletePropertyManager}
+                            title="Remove Property Manager?"
+                            message={`Are you sure you want to remove ${propertyManagerToDelete?.first_name || ''} ${propertyManagerToDelete?.last_name || ''} from this agency?`}
+                            confirmLabel="Remove Property Manager"
+                            cancelLabel="Cancel"
+                            confirmColor="red"
+                            loading={propertyManagerLoading}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
