@@ -32,6 +32,13 @@ const navItems: NavItem[] = [
   },
   {
     icon: <PlugInIcon />,
+    name: "Properties",
+    subItems: [
+      { name: "All Properties", path: "/properties", pro: false },
+    ],
+  },
+  {
+    icon: <PlugInIcon />,
     name: "Admin Settings",
     subItems: [
       { name: "Django Admin", path: "/admin", pro: false },

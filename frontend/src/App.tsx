@@ -16,6 +16,8 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AdminAccess from "./pages/AdminAccess";
 import BeepingAlarms from "./pages/Maintenance/BeepingAlarms";
+import Properties from "./pages/Properties/Properties";
+import PropertyDetails from "./pages/Properties/PropertyDetails";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { Toaster } from 'react-hot-toast';
@@ -63,6 +65,10 @@ export default function App() {
 
               {/* Maintenance */}
               <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
+
+              {/* Properties */}
+              <Route path="/properties" element={<Properties />} />
+              <Route path="/properties/:propertyId" element={<PropertyDetails />} />
 
               {/* Forms */}
               <Route path="/form-elements" element={<FormElements />} />

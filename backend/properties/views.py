@@ -393,3 +393,107 @@ def update_property_manager(request, manager_id):
 
     serializer = PropertyManagerSerializer(manager)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@validate_kinde_token
+def create_property(request):
+    """Create a new property"""
+    unit_number = request.data.get('unit_number')
+    street_number = request.data.get('street_number')
+    street_name = request.data.get('street_name')
+    suburb = request.data.get('suburb')
+    state = request.data.get('state')
+    postcode = request.data.get('postcode')
+    agency_id = request.data.get('agency_id')
+    
+    # Validate required fields
+    if not all([street_number, street_name, suburb, state, postcode]):
+        return Response({
+            'detail': 'Street number, street name, suburb, state, and postcode are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Create property
+    property_data = {
+        'unit_number': unit_number if unit_number else None,
+        'street_number': street_number,
+        'street_name': street_name,
+        'suburb': suburb,
+        'state': state,
+        'postcode': postcode,
+    }
+    
+    # Set agency if provided
+    if agency_id:
+        try:
+            agency = Agency.objects.get(id=agency_id)
+            property_data['agency'] = agency
+        except Agency.DoesNotExist:
+            return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    property_obj = Property.objects.create(**property_data)
+    
+    # Return the created property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['PATCH'])
+@validate_kinde_token
+def update_property(request, property_id):
+    """Update a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    unit_number = request.data.get('unit_number')
+    street_number = request.data.get('street_number')
+    street_name = request.data.get('street_name')
+    suburb = request.data.get('suburb')
+    state = request.data.get('state')
+    postcode = request.data.get('postcode')
+    agency_id = request.data.get('agency_id')
+    
+    # Update fields if provided
+    if unit_number is not None:
+        property_obj.unit_number = unit_number if unit_number else None
+    if street_number:
+        property_obj.street_number = street_number
+    if street_name:
+        property_obj.street_name = street_name
+    if suburb:
+        property_obj.suburb = suburb
+    if state:
+        property_obj.state = state
+    if postcode:
+        property_obj.postcode = postcode
+    
+    # Update agency if provided
+    if agency_id is not None:
+        if agency_id:
+            try:
+                agency = Agency.objects.get(id=agency_id)
+                property_obj.agency = agency
+            except Agency.DoesNotExist:
+                return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            property_obj.agency = None
+    
+    property_obj.save()
+    
+    # Return the updated property
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+@validate_kinde_token
+def delete_property(request, property_id):
+    """Delete a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    property_obj.delete()
+    return Response({'detail': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

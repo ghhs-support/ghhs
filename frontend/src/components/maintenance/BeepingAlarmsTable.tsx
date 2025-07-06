@@ -288,9 +288,9 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   };
 
   const getAgencyPrivateBadge = (alarm: BeepingAlarm) => {
-    // Handle both boolean and string values from backend
-    const isAgency = alarm.property.is_agency === true || alarm.property.is_agency === "true";
-    const isPrivate = alarm.property.is_private === true || alarm.property.is_private === "true";
+    // Handle boolean values from backend
+    const isAgency = alarm.property.is_agency === true;
+    const isPrivate = alarm.property.is_private === true;
     if (isAgency) {
       return <Badge size="sm" color="info">Agency</Badge>;
     }

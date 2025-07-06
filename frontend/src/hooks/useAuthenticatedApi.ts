@@ -105,5 +105,26 @@ export const useAuthenticatedApi = () => {
     return response.json();
   }, [isAuthenticated, getToken]);
 
-  return { authenticatedGet, authenticatedPost, authenticatedPatch };
+  const authenticatedDelete = useCallback(async (url: string) => {
+    if (!isAuthenticated) throw new Error('User not authenticated');
+    const token = await getToken();
+    if (!token) throw new Error('No authentication token available');
+    const requestUrl = `http://localhost:8000/api${url}`;
+    const response = await fetch(requestUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const error = new Error(`HTTP error! status: ${response.status}`);
+      (error as any).data = errorData;
+      throw error;
+    }
+    return response.json();
+  }, [isAuthenticated, getToken]);
+
+  return { authenticatedGet, authenticatedPost, authenticatedPatch, authenticatedDelete };
 }; 
