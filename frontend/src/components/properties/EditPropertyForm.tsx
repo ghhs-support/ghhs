@@ -7,6 +7,7 @@ import Button from '../../components/ui/button/Button';
 import { Modal } from '../../components/ui/modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
+import { BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
 
 interface Property {
   id: number;
@@ -29,11 +30,21 @@ interface Tenant {
   email?: string;
 }
 
+interface PropertyManager {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  notes?: string;
+}
+
 interface Agency {
   id: number;
   name: string;
   email: string;
   phone: string;
+  property_managers: PropertyManager[];
 }
 
 interface PrivateOwner {
@@ -42,6 +53,7 @@ interface PrivateOwner {
   last_name: string;
   email: string;
   phone: string;
+  notes?: string;
 }
 
 interface PropertyFormData {
@@ -176,6 +188,20 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
     }
   };
 
+  const handleOwnerTypeChange = (newOwnerType: 'agency' | 'private') => {
+    setOwnerType(newOwnerType);
+    
+    // Clear the other owner type when switching
+    if (newOwnerType === 'agency') {
+      setSelectedPrivateOwner(null);
+    } else if (newOwnerType === 'private') {
+      setFormData(prev => ({
+        ...prev,
+        agency_id: null
+      }));
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -238,6 +264,16 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
     };
   };
 
+  const getCurrentOwnerDisplay = () => {
+    if (!property) return 'No property loaded';
+    if (ownerType === 'agency' && property.agency) {
+      return property.agency.name;
+    } else if (ownerType === 'private' && property.private_owners && property.private_owners.length > 0) {
+      return `${property.private_owners[0].first_name} ${property.private_owners[0].last_name}`;
+    }
+    return 'No owner assigned';
+  };
+
   if (!property) {
     return null;
   }
@@ -247,6 +283,39 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
       <Modal.Header onClose={onClose}>Edit Property</Modal.Header>
       <Modal.Body>
         <form id="edit-property-form" onSubmit={handleEditProperty} className="space-y-6">
+          {/* Owner Type Toggle */}
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-base font-medium text-gray-900 dark:text-gray-100">Property Owner Type</Label>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Current: {getCurrentOwnerDisplay()}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Agency</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOwnerTypeChange(ownerType === 'agency' ? 'private' : 'agency')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  ownerType === 'private' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    ownerType === 'private' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <div className="flex items-center gap-2">
+                <UserIcon className="w-5 h-5 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Private Owner</span>
+              </div>
+            </div>
+          </div>
+
           {/* Property Address Information */}
           <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
             <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Address</Label>
@@ -338,6 +407,174 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
               </div>
             </div>
           </div>
+
+          {/* Owner Selection */}
+          {ownerType === 'agency' && (
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/40">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-base font-medium text-blue-800 dark:text-blue-200">Agency Selection</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('/agencies', '_blank')}
+                  className="text-xs"
+                >
+                  Manage Agencies
+                </Button>
+              </div>
+              <SearchableDropdown
+                value={getSelectedAgencyOption()}
+                onChange={(option) => handleFormChange('agency_id', option ? parseInt(option.value) : null)}
+                onSearch={async (query) => {
+                  const filtered = agencies.filter(agency => 
+                    agency.name.toLowerCase().includes(query.toLowerCase())
+                  );
+                  return filtered.map(agency => ({
+                    value: agency.id.toString(),
+                    label: agency.name
+                  }));
+                }}
+                placeholder="Search agencies..."
+                showApplyButton={false}
+                showClearButton={true}
+              />
+              
+              {/* Property Managers Display */}
+              {formData.agency_id && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
+                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                      {(() => {
+                        const selectedAgency = agencies.find(a => a.id === formData.agency_id);
+                        return selectedAgency?.property_managers?.length || 0;
+                      })()} manager{(() => {
+                        const selectedAgency = agencies.find(a => a.id === formData.agency_id);
+                        return (selectedAgency?.property_managers?.length || 0) === 1 ? '' : 's';
+                      })()}
+                    </span>
+                  </div>
+                  
+                  {(() => {
+                    const selectedAgency = agencies.find(a => a.id === formData.agency_id);
+                    const managers = selectedAgency?.property_managers || [];
+                    
+                    if (managers.length === 0) {
+                      return (
+                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                          <div className="text-sm">No property managers assigned to this agency</div>
+                          <div className="text-xs mt-1">Property managers can be added in the agency management page</div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="space-y-2">
+                        {managers.map((manager) => (
+                          <div key={manager.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 shadow-sm">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                                  {manager.first_name} {manager.last_name}
+                                </div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                  {manager.email}
+                                </div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  {manager.phone}
+                                </div>
+                                {manager.notes && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                    {manager.notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {ownerType === 'private' && (
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/40">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-base font-medium text-green-800 dark:text-green-200">Private Owner Selection</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open('/private-owners', '_blank')}
+                  className="text-xs"
+                >
+                  Manage Private Owners
+                </Button>
+              </div>
+              <SearchableDropdown
+                value={selectedPrivateOwner}
+                onChange={(option) => setSelectedPrivateOwner(option)}
+                onSearch={async (query) => {
+                  const filtered = privateOwners.filter(owner =>
+                    `${owner.first_name} ${owner.last_name}`.toLowerCase().includes(query.toLowerCase())
+                  );
+                  return filtered.map(owner => ({
+                    value: owner.id.toString(),
+                    label: `${owner.first_name} ${owner.last_name}`
+                  }));
+                }}
+                placeholder="Search private owners..."
+                showApplyButton={false}
+                showClearButton={true}
+              />
+              
+              {/* Private Owner Details Display */}
+              {selectedPrivateOwner && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-green-700 dark:text-green-300">Owner Details</Label>
+                  </div>
+                  
+                  {(() => {
+                    const selectedOwner = privateOwners.find(owner => owner.id.toString() === selectedPrivateOwner.value);
+                    
+                    if (!selectedOwner) {
+                      return (
+                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                          <div className="text-sm">Owner details not found</div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                              {selectedOwner.first_name} {selectedOwner.last_name}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              {selectedOwner.email}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400">
+                              {selectedOwner.phone}
+                            </div>
+                            {selectedOwner.notes && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                {selectedOwner.notes}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </Modal.Body>
       <Modal.Footer>
