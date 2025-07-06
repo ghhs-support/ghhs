@@ -692,13 +692,13 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                    <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
                       {(() => {
                         const selectedAgency = agencies.find(a => a.id === formData.agency_id);
                         return selectedAgency?.property_managers?.length || 0;
-                      })()} manager{(() => {
+                      })()} {(() => {
                         const selectedAgency = agencies.find(a => a.id === formData.agency_id);
-                        return (selectedAgency?.property_managers?.length || 0) === 1 ? '' : 's';
+                        return (selectedAgency?.property_managers?.length || 0) === 1 ? 'manager' : 'managers';
                       })()}
                     </span>
                   </div>
@@ -827,8 +827,11 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium text-green-700 dark:text-green-300">
-                      Selected Owners ({selectedPrivateOwners.length})
+                      Selected Owners
                     </Label>
+                    <span className="text-sm text-green-700 dark:text-green-300 font-semibold">
+                      {selectedPrivateOwners.length} {selectedPrivateOwners.length === 1 ? 'owner' : 'owners'}
+                    </span>
                   </div>
                   
                   <div className="space-y-2">
@@ -879,7 +882,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
           {/* Tenant Management */}
           <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/40">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <Label className="text-base font-medium text-purple-800 dark:text-purple-200">Property Tenants</Label>
               <button
                 type="button"
@@ -889,6 +892,11 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <PlusIcon className="w-3 h-3" />
                 Add Tenant
               </button>
+            </div>
+            <div className="flex justify-end mb-2">
+              <span className="text-sm text-purple-700 dark:text-purple-300 font-semibold">
+                {localTenants.length} {localTenants.length === 1 ? 'tenant' : 'tenants'}
+              </span>
             </div>
             
             <div className="space-y-2">

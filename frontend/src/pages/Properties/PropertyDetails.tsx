@@ -279,7 +279,7 @@ export default function PropertyDetails() {
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
+                    <span className="text-xs text-blue-600 dark:text-blue-400">
                       {property.agency.property_managers.length} manager{property.agency.property_managers.length === 1 ? '' : 's'}
                     </span>
                   </div>
@@ -321,7 +321,7 @@ export default function PropertyDetails() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-green-700 dark:text-green-300 font-semibold">Private Owner</span>
                 </div>
-                <span className="text-sm text-green-700 dark:text-green-300 font-semibold">
+                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
                   {property.private_owners.length} {property.private_owners.length === 1 ? 'Private Owner' : 'Private Owners'}
                 </span>
               </div>
