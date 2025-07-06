@@ -215,7 +215,6 @@ def create_fake_properties(agencies, all_private_owners):
         ('Bulimba', '4171', 153.0550, -27.4500),
         ('Hamilton', '4007', 153.0750, -27.4400),
         ('Ascot', '4007', 153.0650, -27.4300),
-        
         # Gold Coast
         ('Surfers Paradise', '4217', 153.4300, -28.0026),
         ('Broadbeach', '4218', 153.4200, -28.0300),
@@ -224,20 +223,17 @@ def create_fake_properties(agencies, all_private_owners):
         ('Coolangatta', '4225', 153.3900, -28.1700),
         ('Southport', '4215', 153.4400, -27.9700),
         ('Nerang', '4211', 153.3500, -27.9900),
-        
         # Sunshine Coast
         ('Mooloolaba', '4557', 153.1200, -26.6800),
         ('Maroochydore', '4558', 153.1000, -26.6600),
         ('Caloundra', '4551', 153.1300, -26.8000),
         ('Noosa Heads', '4567', 153.0900, -26.4000),
         ('Buderim', '4556', 153.0500, -26.6800),
-        
         # Townsville
         ('Townsville', '4810', 146.8160, -19.2590),
         ('North Ward', '4810', 146.8200, -19.2500),
         ('South Townsville', '4810', 146.8100, -19.2700),
         ('Magnetic Island', '4819', 146.8500, -19.1700),
-        
         # Cairns
         ('Cairns', '4870', 145.7700, -16.9200),
         ('Cairns North', '4870', 145.7800, -16.9100),
@@ -248,31 +244,20 @@ def create_fake_properties(agencies, all_private_owners):
     properties = []
     for i, (suburb, postcode, lon, lat) in enumerate(qld_suburbs):
         for j in range(3):
+            # Randomly decide if this property is agency-managed or private-owner-managed
             property_type = random.choice(['agency', 'private'])
-            
             # Calculate coordinates with proper decimal precision
-            # max_digits=9, decimal_places=6 means total digits <= 9, up to 6 decimal places
-            # For coordinates like 153.025123, we have 9 digits total (3 before + 6 after)
-            lon_offset = random.uniform(-0.0001, 0.0001)  # Much smaller offset
-            lat_offset = random.uniform(-0.0001, 0.0001)  # Much smaller offset
+            lon_offset = random.uniform(-0.0001, 0.0001)
+            lat_offset = random.uniform(-0.0001, 0.0001)
             final_lon = lon + lon_offset
             final_lat = lat + lat_offset
-            
-            # Ensure we don't exceed the field constraints
-            # max_digits=9, decimal_places=6 means max value is 999.999999
             final_lon = round(final_lon, 6)
             final_lat = round(final_lat, 6)
-            
-            # Additional validation to ensure we don't exceed max_digits
             if abs(final_lon) >= 1000 or abs(final_lat) >= 1000:
-                # If we exceed, use the original coordinates
                 final_lon = round(lon, 6)
                 final_lat = round(lat, 6)
-
-            # Use Decimal and quantize to 6 decimal places
             final_lon = Decimal(str(final_lon)).quantize(Decimal('0.000001'), rounding=ROUND_DOWN)
             final_lat = Decimal(str(final_lat)).quantize(Decimal('0.000001'), rounding=ROUND_DOWN)
-
             property_data = {
                 'unit_number': str(random.randint(1, 50)) if random.choice([True, False]) else None,
                 'street_number': str(random.randint(1, 999)),
@@ -288,26 +273,25 @@ def create_fake_properties(agencies, all_private_owners):
                 'longitude': final_lon,
                 'latitude': final_lat,
             }
-            
             if property_type == 'agency':
                 agency = random.choice(agencies)
                 property_obj = Property.objects.create(agency=agency, **property_data)
+                # Make sure there are NO private owners
+                property_obj.private_owners.clear()
             else:
-                agency = None
                 if len(all_private_owners) == 0:
-                    # No private owners to assign, skip this property
                     continue
                 num_owners = random.randint(1, min(2, len(all_private_owners)))
                 selected_owners = random.sample(all_private_owners, num_owners)
                 property_obj = Property(**property_data)
                 property_obj.save(_skip_full_clean=True)
                 property_obj.private_owners.set(selected_owners)
+                # Make sure there is NO agency
+                property_obj.agency = None
                 property_obj.full_clean()
                 property_obj.save()
-            
             print(f"Created property: {property_obj.street_number} {property_obj.street_name}, {property_obj.suburb}")
             properties.append(property_obj)
-    
     return properties
 
 def create_fake_tenants():

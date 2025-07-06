@@ -257,10 +257,20 @@ def update_agency(request, agency_id):
         agency.postcode = postcode
     if country is not None:
         agency.country = country
-    if longitude is not None:
-        agency.longitude = longitude
-    if latitude is not None:
-        agency.latitude = latitude
+    if longitude is not None and longitude != '':
+        try:
+            agency.longitude = float(longitude)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid longitude value'}, status=status.HTTP_400_BAD_REQUEST)
+    elif longitude == '':
+        agency.longitude = None
+    if latitude is not None and latitude != '':
+        try:
+            agency.latitude = float(latitude)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Invalid latitude value'}, status=status.HTTP_400_BAD_REQUEST)
+    elif latitude == '':
+        agency.latitude = None
     agency.save()
 
     serializer = AgencySerializer(agency)
