@@ -351,30 +351,19 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   };
 
   const formatTenant = (tenants: Array<{id: number; first_name: string; last_name: string; phone: string;}>) => {
-    if (!tenants || tenants.length === 0) return 'No tenants';
-    // If there's only one tenant, show name and phone in a column
-    if (tenants.length === 1) {
-      const tenant = tenants[0];
-      const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
-      const phone = tenant.phone;
-      if (!name && !phone) return 'No tenant data';
+    if (!tenants || tenants.length === 0) {
       return (
-        <div className="flex flex-col items-center">
-          <span className="font-medium text-gray-800 dark:text-white/90">
-            {name || 'No name'}
-          </span>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {phone || 'No phone'}
-          </span>
-        </div>
+        <Badge size="sm" className="rounded-full bg-gray-700 text-gray-300 font-semibold border-none shadow-none px-4 py-1 mb-1">
+          No Tenants
+        </Badge>
       );
     }
-    // If there are multiple tenants, show them in a compact format
+    // Always show badge with tenant count, then details below
     return (
       <div className="flex flex-col items-center">
-        <span className="font-medium text-gray-800 dark:text-white/90 text-xs">
-          {tenants.length} Tenants
-        </span>
+        <Badge size="sm" className="rounded-full bg-purple-900/60 text-purple-300 font-semibold border-none shadow-none px-4 py-1 mb-1">
+          {tenants.length} {tenants.length === 1 ? 'Tenant' : 'Tenants'}
+        </Badge>
         <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
           {tenants.map((tenant: {id: number; first_name: string; last_name: string; phone: string;}, index: number) => {
             const name = `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim();
