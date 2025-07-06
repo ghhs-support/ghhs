@@ -17,6 +17,23 @@ import {
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
+interface PropertyManager {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  notes?: string;
+}
+
+interface Agency {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  property_managers: PropertyManager[];
+}
+
 interface Property {
   id: number;
   unit_number: string | null;
@@ -38,13 +55,6 @@ interface Tenant {
   email?: string;
 }
 
-interface Agency {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-}
-
 interface PrivateOwner {
   id: number;
   first_name: string;
@@ -60,6 +70,7 @@ export default function PropertyDetails() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -79,6 +90,7 @@ export default function PropertyDetails() {
       setLoading(true);
       const response = await authenticatedGet(`/properties/properties/${propertyId}/`);
       setProperty(response);
+      setTenants(response.tenants || []);
     } catch (error) {
       console.error('Error loading property:', error);
       toast.error('Failed to load property details');
@@ -114,6 +126,10 @@ export default function PropertyDetails() {
 
   const handleEditSuccess = () => {
     loadProperty(); // Reload property data after successful edit
+  };
+
+  const handleTenantsChange = (updatedTenants: Tenant[]) => {
+    setTenants(updatedTenants);
   };
 
   const formatAddress = (property: Property) => {
@@ -266,12 +282,12 @@ export default function PropertyDetails() {
               <UserIcon className="w-5 h-5 text-gray-500" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tenants</h2>
             </div>
-            <Badge size="sm" color={property.tenants.length > 0 ? "success" : "error"}>
-              {property.tenants.length} {property.tenants.length === 1 ? 'Tenant' : 'Tenants'}
+            <Badge size="sm" color={tenants.length > 0 ? "success" : "error"}>
+              {tenants.length} {tenants.length === 1 ? 'Tenant' : 'Tenants'}
             </Badge>
           </div>
           
-          {property.tenants.length === 0 ? (
+          {tenants.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <UserIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
               <div>No tenants assigned to this property</div>
@@ -279,7 +295,7 @@ export default function PropertyDetails() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {property.tenants.map((tenant) => (
+              {tenants.map((tenant) => (
                 <div key={tenant.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
                     {tenant.first_name} {tenant.last_name}
@@ -306,7 +322,9 @@ export default function PropertyDetails() {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         property={property}
-        onSuccess={handleEditSuccess}
+        onTenantsChange={handleTenantsChange}
+        tenants={tenants}
+        setTenants={setTenants}
       />
 
       {/* Delete Confirmation Modal */}

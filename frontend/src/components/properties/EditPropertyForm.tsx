@@ -7,7 +7,7 @@ import Button from '../../components/ui/button/Button';
 import { Modal } from '../../components/ui/modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
-import { BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface Property {
   id: number;
@@ -70,11 +70,14 @@ interface EditPropertyFormProps {
   isOpen: boolean;
   onClose: () => void;
   property: Property | null;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  onTenantsChange?: (updatedTenants: Tenant[]) => void;
+  tenants: Tenant[];
+  setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
 }
 
-export default function EditPropertyForm({ isOpen, onClose, property, onSuccess }: EditPropertyFormProps) {
-  const { authenticatedGet, authenticatedPost, authenticatedPatch } = useAuthenticatedApi();
+export default function EditPropertyForm({ isOpen, onClose, property, onSuccess, onTenantsChange, tenants, setTenants }: EditPropertyFormProps) {
+  const { authenticatedGet, authenticatedPost, authenticatedPatch, authenticatedDelete } = useAuthenticatedApi();
   
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [privateOwners, setPrivateOwners] = useState<PrivateOwner[]>([]);
@@ -97,7 +100,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
   const [selectedPrivateOwner, setSelectedPrivateOwner] = useState<{ value: string; label: string } | null>(null);
 
   // Tenant management state
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [editingTenant, setEditingTenant] = useState<number | null>(null);
   const [showAddTenant, setShowAddTenant] = useState(false);
   const [showDeleteTenantModal, setShowDeleteTenantModal] = useState(false);
@@ -202,6 +204,175 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
     }
   };
 
+  // Tenant management functions
+  const resetTenantForm = () => {
+    setNewTenant({
+      first_name: '',
+      last_name: '',
+      phone: '',
+      email: ''
+    });
+    setTenantErrors({});
+  };
+
+  const validateTenant = (tenantData: any): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!tenantData.first_name.trim()) {
+      errors.first_name = 'First name is required';
+    }
+    if (!tenantData.last_name.trim()) {
+      errors.last_name = 'Last name is required';
+    }
+    if (!tenantData.phone.trim()) {
+      errors.phone = 'Phone is required';
+    }
+    
+    setTenantErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const fetchLatestTenants = async () => {
+    if (!property) return;
+    const response = await authenticatedGet(`/properties/properties/${property.id}/`);
+    if (onTenantsChange) onTenantsChange(response.tenants || []);
+  };
+
+  const handleAddTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateTenant(newTenant) || !property) return;
+
+    try {
+      setFormLoading(true);
+      const response = await authenticatedPost(`/properties/properties/${property.id}/tenants/`, { data: {
+        first_name: newTenant.first_name,
+        last_name: newTenant.last_name,
+        phone: newTenant.phone,
+        email: newTenant.email || ''
+      }});
+      console.log('Add tenant API response:', response);
+      setShowAddTenant(false);
+      resetTenantForm();
+      if (onSuccess) onSuccess();
+      if (response.tenants) {
+        console.log('API returned property, using tenants:', response.tenants);
+        if (onTenantsChange) {
+          onTenantsChange(response.tenants);
+        }
+      } else {
+        const updated = tenants.map(t => t.id === editingTenant ? response : t);
+        console.log('API returned tenant, updated tenants:', updated);
+        if (onTenantsChange) {
+          onTenantsChange(updated);
+        }
+      }
+      toast.success('Tenant added successfully!');
+    } catch (error: any) {
+      console.error('Error adding tenant:', error);
+      if (error.data) {
+        setTenantErrors(error.data);
+      }
+      toast.error('Failed to add tenant');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const startEditTenant = (tenant: Tenant) => {
+    setEditingTenant(tenant.id);
+    setEditingTenantData({
+      first_name: tenant.first_name,
+      last_name: tenant.last_name,
+      phone: tenant.phone,
+      email: tenant.email || ''
+    });
+    setTenantErrors({});
+  };
+
+  const cancelEditTenant = () => {
+    setEditingTenant(null);
+    setEditingTenantData({
+      first_name: '',
+      last_name: '',
+      phone: '',
+      email: ''
+    });
+    setTenantErrors({});
+  };
+
+  const handleEditTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateTenant(editingTenantData) || !property || !editingTenant) return;
+
+    try {
+      setFormLoading(true);
+      const response = await authenticatedPatch(`/properties/properties/${property.id}/tenants/${editingTenant}/`, { data: {
+        first_name: editingTenantData.first_name,
+        last_name: editingTenantData.last_name,
+        phone: editingTenantData.phone,
+        email: editingTenantData.email || ''
+      }});
+      console.log('Edit tenant API response:', response);
+      setEditingTenant(null);
+      setEditingTenantData({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: ''
+      });
+      if (onSuccess) onSuccess();
+      if (response.tenants) {
+        console.log('API returned property, using tenants:', response.tenants);
+        if (onTenantsChange) {
+          onTenantsChange(response.tenants);
+        }
+      } else {
+        const updated = tenants.map(t => t.id === editingTenant ? response : t);
+        console.log('API returned tenant, updated tenants:', updated);
+        if (onTenantsChange) {
+          onTenantsChange(updated);
+        }
+      }
+      toast.success('Tenant updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating tenant:', error);
+      if (error.data) {
+        setTenantErrors(error.data);
+      }
+      toast.error('Failed to update tenant');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const openDeleteTenantModal = (tenant: Tenant) => {
+    setTenantToDelete(tenant);
+    setShowDeleteTenantModal(true);
+  };
+
+  const handleRemoveTenant = async () => {
+    if (!property || !tenantToDelete) return;
+
+    try {
+      setFormLoading(true);
+      await authenticatedDelete(`/properties/properties/${property.id}/tenants/${tenantToDelete.id}/delete/`);
+      setShowDeleteTenantModal(false);
+      setTenantToDelete(null);
+      if (onSuccess) onSuccess();
+      if (onTenantsChange) {
+        const updated = tenants.filter(t => t.id !== tenantToDelete.id);
+        console.log('Updated tenants after delete:', updated);
+        onTenantsChange(updated);
+      }
+      toast.success('Tenant removed successfully!');
+    } catch (error) {
+      console.error('Error removing tenant:', error);
+      toast.error('Failed to remove tenant');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -242,7 +413,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
       await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
       toast.success('Property updated successfully!');
       onClose();
-      onSuccess();
+      if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Error updating property:', error);
       if (error.data) {
@@ -575,6 +746,228 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
               )}
             </div>
           )}
+
+          {/* Tenant Management */}
+          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/40">
+            <div className="flex items-center justify-between mb-3">
+              <Label className="text-base font-medium text-purple-800 dark:text-purple-200">Property Tenants</Label>
+              <button
+                type="button"
+                onClick={() => setShowAddTenant(true)}
+                className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              >
+                <PlusIcon className="w-3 h-3" />
+                Add Tenant
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {/* Add Tenant Form */}
+              {showAddTenant && (
+                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
+                        <InputField
+                          value={newTenant.first_name}
+                          onChange={(e) => setNewTenant(prev => ({ ...prev, first_name: e.target.value }))}
+                          placeholder="First name"
+                          error={!!tenantErrors.first_name}
+                          className="mt-1 text-sm"
+                        />
+                        {tenantErrors.first_name && (
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
+                        <InputField
+                          value={newTenant.last_name}
+                          onChange={(e) => setNewTenant(prev => ({ ...prev, last_name: e.target.value }))}
+                          placeholder="Last name"
+                          error={!!tenantErrors.last_name}
+                          className="mt-1 text-sm"
+                        />
+                        {tenantErrors.last_name && (
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
+                      <InputField
+                        value={newTenant.phone}
+                        onChange={(e) => setNewTenant(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Phone number"
+                        error={!!tenantErrors.phone}
+                        className="mt-1 text-sm"
+                      />
+                      {tenantErrors.phone && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                      <InputField
+                        value={newTenant.email}
+                        onChange={(e) => setNewTenant(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Email (optional)"
+                        type="email"
+                        className="mt-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddTenant}
+                        disabled={formLoading}
+                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <PlusIcon className="w-3 h-3" />
+                        {formLoading ? 'Adding...' : 'Add Tenant'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddTenant(false);
+                          resetTenantForm();
+                        }}
+                        disabled={formLoading}
+                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing Tenants */}
+              {tenants.length === 0 && !showAddTenant ? (
+                <div className="text-gray-500 dark:text-gray-300 text-sm py-4 text-center">
+                  No tenants assigned to this property
+                </div>
+              ) : (
+                tenants.map((tenant) => (
+                  <div key={tenant.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                    {editingTenant === tenant.id ? (
+                      // Edit Mode
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
+                            <InputField
+                              value={editingTenantData.first_name}
+                              onChange={(e) => setEditingTenantData(prev => ({ ...prev, first_name: e.target.value }))}
+                              placeholder="First name"
+                              error={!!tenantErrors.first_name}
+                              className="mt-1 text-sm"
+                            />
+                            {tenantErrors.first_name && (
+                              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
+                            )}
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
+                            <InputField
+                              value={editingTenantData.last_name}
+                              onChange={(e) => setEditingTenantData(prev => ({ ...prev, last_name: e.target.value }))}
+                              placeholder="Last name"
+                              error={!!tenantErrors.last_name}
+                              className="mt-1 text-sm"
+                            />
+                            {tenantErrors.last_name && (
+                              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
+                          <InputField
+                            value={editingTenantData.phone}
+                            onChange={(e) => setEditingTenantData(prev => ({ ...prev, phone: e.target.value }))}
+                            placeholder="Phone number"
+                            error={!!tenantErrors.phone}
+                            className="mt-1 text-sm"
+                          />
+                          {tenantErrors.phone && (
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                          <InputField
+                            value={editingTenantData.email}
+                            onChange={(e) => setEditingTenantData(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="Email (optional)"
+                            type="email"
+                            className="mt-1 text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleEditTenant}
+                            disabled={formLoading}
+                            className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <PencilIcon className="w-3 h-3" />
+                            {formLoading ? 'Updating...' : 'Update Tenant'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditTenant}
+                            disabled={formLoading}
+                            className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div className="flex justify-between items-start">
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {tenant.first_name} {tenant.last_name}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>📞</span>
+                            {tenant.phone}
+                          </div>
+                          {tenant.email && (
+                            <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
+                              <span>✉️</span>
+                              {tenant.email}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => startEditTenant(tenant)}
+                            disabled={formLoading}
+                            className="inline-flex items-center justify-center p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20 transition-colors"
+                            title="Edit tenant"
+                          >
+                            <PencilIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteTenantModal(tenant)}
+                            disabled={formLoading}
+                            className="inline-flex items-center justify-center p-1.5 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
+                            title="Delete tenant"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </form>
       </Modal.Body>
       <Modal.Footer>
@@ -595,6 +988,22 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess 
           {formLoading ? 'Updating...' : 'Update Property'}
         </button>
       </Modal.Footer>
+
+      {/* Delete Tenant Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteTenantModal}
+        onConfirm={handleRemoveTenant}
+        onCancel={() => {
+          setShowDeleteTenantModal(false);
+          setTenantToDelete(null);
+        }}
+        title="Delete Tenant?"
+        message={`Are you sure you want to delete the tenant ${tenantToDelete?.first_name} ${tenantToDelete?.last_name}? This action cannot be undone.`}
+        confirmLabel="Delete Tenant"
+        cancelLabel="Cancel"
+        confirmColor="red"
+        loading={formLoading}
+      />
     </Modal>
   );
 } 
