@@ -521,6 +521,7 @@ def update_property(request, property_id):
     
     # Get data from request.data (frontend sends data in 'data' field)
     data = request.data.get('data', request.data)
+    print(f"Received data in update_property: {data}")
     
     unit_number = data.get('unit_number')
     street_number = data.get('street_number')
@@ -529,7 +530,11 @@ def update_property(request, property_id):
     state = data.get('state')
     postcode = data.get('postcode')
     agency_id = data.get('agency_id')
-    private_owner_id = data.get('private_owner_id')
+    private_owner_id = data.get('private_owner_id')  # For backward compatibility
+    private_owner_ids = data.get('private_owner_ids', [])  # New field for multiple owners
+    tenants_data = data.get('tenants', [])  # New field for tenant updates
+    print(f"private_owner_ids: {private_owner_ids}")
+    print(f"tenants_data: {tenants_data}")
     
     # Validate required fields
     if not street_number or not street_name or not suburb or not state or not postcode:
@@ -567,20 +572,60 @@ def update_property(request, property_id):
         else:
             property_obj.agency = None
     
-    # Handle private owner changes
-    if private_owner_id is not None:
+    # Handle private owner changes - now supports multiple private owners
+    if private_owner_ids is not None:  # Check if the field was sent (even if empty)
+        print(f"Processing private_owner_ids: {private_owner_ids}")
+        # Clear existing private owners
+        property_obj.private_owners.clear()
+        # Add the new ones if any
+        for owner_id in private_owner_ids:
+            try:
+                private_owner = PrivateOwner.objects.get(id=owner_id)
+                property_obj.private_owners.add(private_owner)
+                print(f"Added private owner {private_owner.first_name} {private_owner.last_name} to property")
+            except PrivateOwner.DoesNotExist:
+                return Response({'detail': f'Private owner with ID {owner_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+    elif private_owner_id is not None:
+        # Backward compatibility for single private owner
         if private_owner_id:
             try:
                 private_owner = PrivateOwner.objects.get(id=private_owner_id)
-                # Clear agency when setting private owner
-                property_obj.agency = None
-                # Clear existing private owners and add the new one
                 property_obj.private_owners.clear()
                 property_obj.private_owners.add(private_owner)
             except PrivateOwner.DoesNotExist:
                 return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
         else:
             property_obj.private_owners.clear()
+    
+    # Handle tenant updates
+    if tenants_data is not None:
+        print(f"Processing tenants_data: {tenants_data}")
+        # Clear existing tenants and add the new ones
+        property_obj.tenants.clear()
+        for tenant_data in tenants_data:
+            if tenant_data.get('id') and tenant_data['id'] > 1000000:  # Temporary ID from frontend
+                # This is a new tenant, create it
+                tenant = Tenant.objects.create(
+                    first_name=tenant_data['first_name'],
+                    last_name=tenant_data['last_name'],
+                    phone=tenant_data['phone'],
+                    email=tenant_data.get('email', '')
+                )
+                property_obj.tenants.add(tenant)
+                print(f"Created new tenant: {tenant.first_name} {tenant.last_name}")
+            else:
+                # This is an existing tenant, update it
+                try:
+                    tenant = Tenant.objects.get(id=tenant_data['id'])
+                    tenant.first_name = tenant_data['first_name']
+                    tenant.last_name = tenant_data['last_name']
+                    tenant.phone = tenant_data['phone']
+                    tenant.email = tenant_data.get('email', '')
+                    tenant.save()
+                    property_obj.tenants.add(tenant)
+                    print(f"Updated existing tenant: {tenant.first_name} {tenant.last_name}")
+                except Tenant.DoesNotExist:
+                    return Response({'detail': f'Tenant with ID {tenant_data["id"]} not found'}, status=status.HTTP_404_NOT_FOUND)
     
     # Save with validation
     try:

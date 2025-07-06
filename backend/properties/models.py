@@ -86,8 +86,7 @@ class Property(models.Model):
         # For validation, we need to ensure at least one is True
         if not has_agency and not has_private_owners:
             raise ValidationError("Property must have an agency or private owners")
-        if has_agency and has_private_owners:
-            raise ValidationError("Property cannot have both agency and private owners")
+        # Removed the mutual exclusivity check to allow both agency and private owners
 
     def save(self, *args, **kwargs):
         # Update boolean fields before saving
