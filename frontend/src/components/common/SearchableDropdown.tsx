@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 interface Option {
   value: string;
   label: string;
+  description?: string;
 }
 
 interface SearchableDropdownProps {
@@ -240,7 +241,14 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                         : 'text-gray-800 dark:text-white/90'
                     }`}
                   >
-                    {option.label}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{option.label}</span>
+                      {option.description && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 ))}
               </>

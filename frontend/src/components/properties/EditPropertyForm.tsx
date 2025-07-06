@@ -108,6 +108,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
   const [showDeleteOwnerModal, setShowDeleteOwnerModal] = useState(false);
   const [ownerToDelete, setOwnerToDelete] = useState<{ value: string; label: string } | null>(null);
+  const [updateSuccessful, setUpdateSuccessful] = useState(false);
   const [newTenant, setNewTenant] = useState({
     first_name: '',
     last_name: '',
@@ -148,8 +149,16 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         email: ''
       });
       setTenantErrors({});
+      
+      // Show toast after modal is fully closed if update was successful
+      if (updateSuccessful) {
+        setTimeout(() => {
+          toast.success('Property updated successfully!');
+          setUpdateSuccessful(false);
+        }, 100);
+      }
     }
-  }, [isOpen, showDeleteTenantModal, showDeleteOwnerModal]);
+  }, [isOpen, showDeleteTenantModal, showDeleteOwnerModal, updateSuccessful]);
 
   const loadAgencies = async () => {
     try {
@@ -221,17 +230,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const handleOwnerTypeChange = (newOwnerType: 'agency' | 'private') => {
     setOwnerType(newOwnerType);
     
-    // Clear the other owner type when switching
-    if (newOwnerType === 'agency') {
-      setSelectedPrivateOwners([]);
-      setTempSelectedOwner(null);
-    } else if (newOwnerType === 'private') {
-      setFormData(prev => ({
-        ...prev,
-        agency_id: null
-      }));
-      setTempSelectedOwner(null);
-    }
+    // Don't clear selections when switching - preserve them for better UX
+    // Only clear the temp selection for the dropdown
+    setTempSelectedOwner(null);
   };
 
   // Tenant management functions
@@ -285,7 +286,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setLocalTenants(prev => [...prev, tempTenant]);
     setShowAddTenant(false);
     resetTenantForm();
-    console.log('Added tenant to local state:', tempTenant);
   };
 
   const startEditTenant = (tenant: Tenant) => {
@@ -328,8 +328,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       phone: '',
       email: ''
     });
-    
-    console.log('Updated tenant in local state:', editingTenantData);
   };
 
   const openDeleteTenantModal = (tenant: Tenant) => {
@@ -345,7 +343,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     
     setShowDeleteTenantModal(false);
     setTenantToDelete(null);
-    console.log('Removed tenant from local state:', tenantToDelete);
   };
 
   const openDeleteOwnerModal = (owner: { value: string; label: string }) => {
@@ -363,7 +360,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     
     setShowDeleteOwnerModal(false);
     setOwnerToDelete(null);
-    console.log('Removed owner from local state:', ownerToDelete);
   };
 
   const validateForm = (): boolean => {
@@ -402,9 +398,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       } else if (ownerType === 'private') {
         data.agency_id = null;
         data.private_owner_ids = selectedPrivateOwners.map(po => parseInt(po.value));
-        console.log('Owner type is private');
-        console.log('selectedPrivateOwners:', selectedPrivateOwners);
-        console.log('Sending private owner data:', data);
       }
       
       // Add tenant data to the update
@@ -416,17 +409,20 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         email: tenant.email || ''
       }));
       
-      console.log('Final form data being sent:', data);
       const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
-      toast.success('Property updated successfully!');
       
       // Update parent's tenant state with the response data
       if (response.tenants && onTenantsChange) {
         onTenantsChange(response.tenants);
       }
       
+      // Set update successful flag and close modal
+      setUpdateSuccessful(true);
       onClose();
-      if (onSuccess) onSuccess();
+      // Call the success callback after modal is closed
+      setTimeout(() => {
+        if (onSuccess) onSuccess();
+      }, 100);
     } catch (error: any) {
       console.error('Error updating property:', error);
       if (error.data) {
@@ -465,8 +461,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   if (!property) {
     return null;
   }
-
-
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -713,11 +707,14 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                   }}
                   onSearch={async (query) => {
                     const filtered = privateOwners.filter(owner =>
-                      `${owner.first_name} ${owner.last_name}`.toLowerCase().includes(query.toLowerCase())
+                      `${owner.first_name} ${owner.last_name}`.toLowerCase().includes(query.toLowerCase()) ||
+                      owner.email.toLowerCase().includes(query.toLowerCase()) ||
+                      owner.phone.includes(query)
                     );
                     return filtered.map(owner => ({
                       value: owner.id.toString(),
-                      label: `${owner.first_name} ${owner.last_name}`
+                      label: `${owner.first_name} ${owner.last_name}`,
+                      description: `${owner.email} • ${owner.phone}`
                     }));
                   }}
                   placeholder="Search private owners..."
@@ -733,7 +730,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       onClick={() => {
                         if (tempSelectedOwner && !selectedPrivateOwners.find(po => po.value === tempSelectedOwner.value)) {
                           setSelectedPrivateOwners(prev => [...prev, tempSelectedOwner]);
-                          console.log('Added owner to local state:', tempSelectedOwner);
                         }
                         setTempSelectedOwner(null);
                       }}

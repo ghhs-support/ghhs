@@ -39,7 +39,15 @@ if (import.meta.env.DEV) {
 export default function App() {
   return (
     <>
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-right" 
+        containerStyle={{
+          zIndex: 999999,
+        }}
+        toastOptions={{
+          duration: 4000,
+        }}
+      />
       <KindeProvider
         clientId="9b6e7df3e3ec46beb2d09a89565da00b"
         domain="https://ghhs.kinde.com"

@@ -192,6 +192,7 @@ export default function PropertyDetails() {
             >
               Delete Property
             </Button>
+
           </div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Property Details</h1>
@@ -322,6 +323,7 @@ export default function PropertyDetails() {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         property={property}
+        onSuccess={handleEditSuccess}
         onTenantsChange={handleTenantsChange}
         tenants={tenants}
         setTenants={setTenants}

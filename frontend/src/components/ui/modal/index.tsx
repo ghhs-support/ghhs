@@ -1,5 +1,4 @@
 import { useRef, useEffect, ReactNode, FC } from "react";
-import { Toaster } from 'react-hot-toast';
 
 interface ModalProps {
   isOpen: boolean;
@@ -78,19 +77,7 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscape);
-    }
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen, onClose]);
+  // Removed escape key handler - modals now only close via explicit buttons
 
   useEffect(() => {
     if (isOpen) {
@@ -124,7 +111,6 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
       {!isFullscreen && (
         <div
           className="fixed inset-0 h-full w-full bg-gray-400/50 backdrop-blur-[32px]"
-          onClick={onClose}
         ></div>
       )}
       <div
@@ -134,15 +120,6 @@ export const Modal: FC<ModalProps> & { Body: typeof ModalBody; Footer: typeof Mo
       >
         <div className="flex flex-col flex-1 min-h-0 h-full">{children}</div>
       </div>
-      {/* Toaster inside modal to ensure it appears above the modal */}
-      <Toaster 
-        position="top-right" 
-        toastOptions={{
-          style: {
-            zIndex: 999999,
-          },
-        }}
-      />
     </div>
   );
 };
