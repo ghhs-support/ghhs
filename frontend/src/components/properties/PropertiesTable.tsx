@@ -229,7 +229,7 @@ const PropertiesTable: React.FC = () => {
       const owner = property.private_owners[0];
       return (
         <div className="flex flex-col">
-          <Badge size="sm" color="warning">Private</Badge>
+          <Badge size="sm" color="success">Private</Badge>
           <span className="text-sm font-medium text-gray-800 dark:text-white/90">
             {owner.first_name} {owner.last_name}
           </span>
@@ -253,39 +253,31 @@ const PropertiesTable: React.FC = () => {
   const formatTenants = (tenants: Tenant[]) => {
     if (tenants.length === 0) {
       return (
-        <div className="flex flex-col items-center">
-          <Badge size="sm" color="error">No Tenants</Badge>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Vacant
-          </span>
+        <div className="flex flex-col items-start">
+          <Badge size="sm" className="rounded-full bg-gray-700 text-gray-300 font-semibold border-none shadow-none px-4 py-1 mb-1">
+            No Tenants
+          </Badge>
+          <span className="text-sm text-gray-400">Vacant</span>
         </div>
       );
     }
-    
-    if (tenants.length === 1) {
-      const tenant = tenants[0];
-      return (
-        <div className="flex flex-col items-center">
-          <Badge size="sm" color="success">1 Tenant</Badge>
-          <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-            {tenant.first_name} {tenant.last_name}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {tenant.phone}
-          </span>
-        </div>
-      );
-    }
-    
+
     return (
-      <div className="flex flex-col items-center">
-        <Badge size="sm" color="success">{tenants.length} Tenants</Badge>
+      <div className="flex flex-col items-start">
+        <Badge
+          size="sm"
+          className="rounded-full bg-purple-900/60 text-purple-300 font-semibold border-none shadow-none px-4 py-1 mb-1"
+        >
+          {tenants.length} {tenants.length === 1 ? 'Tenant' : 'Tenants'}
+        </Badge>
         <span className="text-sm font-medium text-gray-800 dark:text-white/90">
           {tenants[0].first_name} {tenants[0].last_name}
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          +{tenants.length - 1} more
-        </span>
+        {tenants.length > 1 && (
+          <span className="text-sm text-gray-400">
+            +{tenants.length - 1} more
+          </span>
+        )}
       </div>
     );
   };
