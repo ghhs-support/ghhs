@@ -655,20 +655,24 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     return (
                       <div className="space-y-2">
                         {managers.map((manager) => (
-                          <div key={manager.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <div key={manager.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                              <div className="flex flex-col space-y-1">
+                                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                   {manager.first_name} {manager.last_name}
+                                </span>
+                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <span>📞</span>
+                                  <span className="text-red-600 dark:text-red-400">{manager.phone}</span>
                                 </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                  {manager.email}
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {manager.phone}
-                                </div>
+                                {manager.email && (
+                                  <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                                    <span>✉️</span>
+                                    {manager.email}
+                                  </div>
+                                )}
                                 {manager.notes && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic">
                                     {manager.notes}
                                   </div>
                                 )}
@@ -764,20 +768,24 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       if (!owner) return null;
                       
                       return (
-                        <div key={owner.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700 shadow-sm">
+                        <div key={owner.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                            <div className="flex flex-col space-y-1">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                 {owner.first_name} {owner.last_name}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                <span>📞</span>
+                                <span className="text-red-600 dark:text-red-400">{owner.phone}</span>
                               </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                {owner.email}
-                              </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {owner.phone}
-                              </div>
+                              {owner.email && (
+                                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                  <span>✉️</span>
+                                  {owner.email}
+                                </div>
+                              )}
                               {owner.notes && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 italic">
                                   {owner.notes}
                                 </div>
                               )}
@@ -785,7 +793,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                             <button
                               type="button"
                               onClick={() => openDeleteOwnerModal(selectedOwner)}
-                              className="inline-flex items-center justify-center p-1 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
+                              className="inline-flex items-center justify-center p-1.5 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
                               title="Remove owner"
                             >
                               <TrashIcon className="w-4 h-4" />
@@ -987,7 +995,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                           </span>
                           <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                             <span>📞</span>
-                            {tenant.phone}
+                            <span className="text-red-600 dark:text-red-400">{tenant.phone}</span>
                           </div>
                           {tenant.email && (
                             <div className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400">
