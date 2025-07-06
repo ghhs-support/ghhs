@@ -31,14 +31,21 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onCancel} size="sm" compact>
-      <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
+      <div 
+        className="p-6 bg-white dark:bg-gray-900 rounded-2xl" 
+        onClick={(e) => e.stopPropagation()}
+        style={{ zIndex: 999999 }}
+      >
         <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{title}</h3>
         <div className="mb-6 text-gray-700 dark:text-gray-200">{message}</div>
         <div className="flex justify-end gap-3">
           <button
             type="button"
             className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
-            onClick={onCancel}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
             disabled={loading}
           >
             {cancelLabel}
@@ -46,7 +53,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             type="button"
             className={`px-4 py-2 rounded ${confirmBtnClass} disabled:opacity-60`}
-            onClick={onConfirm}
+            onClick={(e) => {
+              e.stopPropagation();
+              onConfirm();
+            }}
             disabled={loading}
           >
             {loading ? 'Processing...' : confirmLabel}

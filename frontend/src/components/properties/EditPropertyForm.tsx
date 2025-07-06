@@ -127,6 +127,23 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     }
   }, [isOpen, property]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      // Only reset delete modal if it's not currently showing
+      if (!showDeleteTenantModal) {
+        setTenantToDelete(null);
+      }
+      setEditingTenant(null);
+      setEditingTenantData({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: ''
+      });
+      setTenantErrors({});
+    }
+  }, [isOpen, showDeleteTenantModal]);
+
   const loadAgencies = async () => {
     try {
       const response = await authenticatedGet('/properties/agencies/');
@@ -355,15 +372,23 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
     try {
       setFormLoading(true);
-      await authenticatedDelete(`/properties/properties/${property.id}/tenants/${tenantToDelete.id}/delete/`);
+      const response = await authenticatedDelete(`/properties/properties/${property.id}/tenants/${tenantToDelete.id}/delete/`);
+      
+      // If API returns updated property, use response.tenants
+      if (response && response.tenants) {
+        if (onTenantsChange) {
+          onTenantsChange(response.tenants);
+        }
+      } else {
+        // Fallback: filter out the deleted tenant
+        if (onTenantsChange) {
+          const updated = tenants.filter(t => t.id !== tenantToDelete.id);
+          onTenantsChange(updated);
+        }
+      }
+      
       setShowDeleteTenantModal(false);
       setTenantToDelete(null);
-      if (onSuccess) onSuccess();
-      if (onTenantsChange) {
-        const updated = tenants.filter(t => t.id !== tenantToDelete.id);
-        console.log('Updated tenants after delete:', updated);
-        onTenantsChange(updated);
-      }
       toast.success('Tenant removed successfully!');
     } catch (error) {
       console.error('Error removing tenant:', error);
@@ -448,6 +473,8 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   if (!property) {
     return null;
   }
+
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -945,7 +972,12 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                         </div>
                         <div className="flex gap-1">
                           <button
-                            onClick={() => startEditTenant(tenant)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              startEditTenant(tenant);
+                            }}
                             disabled={formLoading}
                             className="inline-flex items-center justify-center p-1.5 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20 transition-colors"
                             title="Edit tenant"
@@ -953,7 +985,12 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                             <PencilIcon className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => openDeleteTenantModal(tenant)}
+                            type="button"
+                            onClick={(e) => { 
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openDeleteTenantModal(tenant); 
+                            }}
                             disabled={formLoading}
                             className="inline-flex items-center justify-center p-1.5 rounded-md text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 transition-colors"
                             title="Delete tenant"
