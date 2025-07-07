@@ -8,6 +8,8 @@ import { useSearchService } from '../../services/search';
 import toast from 'react-hot-toast';
 import { Property, Tenant, PrivateOwner, PropertyManager } from '../../types/property';
 import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData } from '../../types/maintenance';
+import { BuildingOfficeIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline';
+import InfoCard from '../common/InfoCard';
 
 export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmProps) {
   const { authenticatedGet, authenticatedPost } = useAuthenticatedApi();
@@ -176,13 +178,57 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
             {/* Property Information Display */}
             {selectedProperty && (
-              <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Details</Label>
-                
-                {/* Property Owner Information */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-medium text-gray-900 dark:text-gray-100">Property Owner</Label>
+              <div className="flex flex-col gap-6">
+                {/* Property Information */}
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Property Information</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <MapPinIcon className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                          {selectedProperty.unit_number ? `Unit ${selectedProperty.unit_number}, ` : ''}
+                          {selectedProperty.street_number} {selectedProperty.street_name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {selectedProperty.suburb}, {selectedProperty.state} {selectedProperty.postcode}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property Owner */}
+                <div className={`rounded-xl border p-6 ${
+                  selectedProperty.agency 
+                    ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700' 
+                    : selectedProperty.private_owners.length > 0 
+                    ? 'bg-green-50 dark:bg-green-900/40 border-green-200 dark:border-green-700'
+                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {selectedProperty.agency ? (
+                        <BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      ) : selectedProperty.private_owners.length > 0 ? (
+                        <UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <UserIcon className="w-5 h-5 text-gray-500" />
+                      )}
+                      <h2 className={`text-lg font-semibold ${
+                        selectedProperty.agency 
+                          ? 'text-blue-800 dark:text-blue-200' 
+                          : selectedProperty.private_owners.length > 0 
+                          ? 'text-green-800 dark:text-green-200'
+                          : 'text-gray-900 dark:text-gray-100'
+                      }`}>
+                        Property Owner
+                      </h2>
+                    </div>
                     {selectedProperty.agency && (
                       <Button
                         variant="outline"
@@ -205,72 +251,95 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     )}
                   </div>
                   
-                  {selectedProperty.agency ? (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/40 rounded border border-blue-200 dark:border-blue-700">
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Agency</span>
-                      <div className="text-sm text-gray-800 dark:text-gray-100">{selectedProperty.agency.name}</div>
-                      <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.email}</div>
-                      <div className="text-gray-600 dark:text-gray-300">{selectedProperty.agency.phone}</div>
-                      
-                      {/* Property Managers */}
+                  {selectedProperty.agency && (
+                    <InfoCard
+                      icon={<BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+                      title={selectedProperty.agency.name}
+                      subtitle="Agency"
+                      phone={selectedProperty.agency.phone}
+                      email={selectedProperty.agency.email}
+                      color="blue"
+                    >
                       {selectedProperty.agency.property_managers && selectedProperty.agency.property_managers.length > 0 && (
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Property Managers:</span>
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
+                            <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
+                              {selectedProperty.agency.property_managers.length} {selectedProperty.agency.property_managers.length === 1 ? 'manager' : 'managers'}
+                            </span>
                           </div>
-                          <div className="mt-1 space-y-1">
-                            {selectedProperty.agency.property_managers.map((pm: PropertyManager) => (
-                              <div key={pm.id} className="text-xs bg-white dark:bg-gray-800 rounded p-2 border border-blue-200 dark:border-blue-700">
-                                <div className="font-medium text-gray-800 dark:text-gray-100">{pm.first_name} {pm.last_name}</div>
-                                <div className="text-gray-600 dark:text-gray-300">{pm.email}</div>
-                                <div className="text-gray-600 dark:text-gray-300">{pm.phone}</div>
-                                {pm.notes && <div className="text-gray-500 dark:text-gray-400 italic">{pm.notes}</div>}
-                              </div>
+                          <div className="space-y-2">
+                            {selectedProperty.agency.property_managers.map((manager: PropertyManager) => (
+                              <InfoCard
+                                key={manager.id}
+                                title={`${manager.first_name} ${manager.last_name}`}
+                                phone={manager.phone}
+                                email={manager.email}
+                                notes={manager.notes}
+                                color="blue"
+                              />
                             ))}
                           </div>
                         </div>
                       )}
-                    </div>
-                  ) : (
-                    selectedProperty.private_owners.length > 0 && (
-                      <div className="p-3 bg-green-50 dark:bg-green-900/40 rounded border border-green-200 dark:border-green-700">
-                        <span className="text-sm font-medium text-green-800 dark:text-green-200">Private Owners</span>
-                        <div className="mt-2 space-y-2">
-                          {selectedProperty.private_owners.map((owner: PrivateOwner) => (
-                            <div key={owner.id} className="text-sm bg-white dark:bg-gray-800 rounded p-2 border border-green-200 dark:border-green-700">
-                              <div className="font-medium text-gray-800 dark:text-gray-100">{owner.first_name} {owner.last_name}</div>
-                              <div className="text-gray-600 dark:text-gray-300">{owner.email}</div>
-                              <div className="text-gray-600 dark:text-gray-300">{owner.phone}</div>
-                            </div>
-                          ))}
-                        </div>
+                    </InfoCard>
+                  )}
+                  {selectedProperty.private_owners.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-green-700 dark:text-green-300 font-semibold">Private Owner</span>
+                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          {selectedProperty.private_owners.length} {selectedProperty.private_owners.length === 1 ? 'Private Owner' : 'Private Owners'}
+                        </span>
                       </div>
-                    )
+                      {selectedProperty.private_owners.map((owner: PrivateOwner) => (
+                        <InfoCard
+                          key={owner.id}
+                          icon={<UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />}
+                          title={`${owner.first_name} ${owner.last_name}`}
+                          subtitle="Private Owner"
+                          phone={owner.phone}
+                          email={owner.email}
+                          color="green"
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {/* Tenants for Selected Property */}
-                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-medium text-blue-800 dark:text-blue-200">Property Tenants</Label>
+                {/* Tenants */}
+                <div className="bg-purple-50 dark:bg-purple-900/40 rounded-xl border border-purple-200 dark:border-purple-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-200">Tenants</h2>
+                    </div>
+                    <span className="text-sm text-purple-700 dark:text-purple-300 font-semibold">
+                      {selectedProperty.tenants.length} {selectedProperty.tenants.length === 1 ? 'Tenant' : 'Tenants'}
+                    </span>
                   </div>
-                  <div className="mt-2 space-y-2">
-                    {selectedProperty.tenants.length === 0 ? (
-                      <div className="text-gray-500 dark:text-gray-300 text-sm">No tenants</div>
-                    ) : (
-                      selectedProperty.tenants.map((tenant: Tenant) => (
-                        <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <div className="flex flex-col">
-                            <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>
-                            <span className="text-xs text-gray-500 dark:text-gray-300">{tenant.phone}</span>
-                            {tenant.email && (
-                              <span className="text-xs text-blue-400 dark:text-blue-300">{tenant.email}</span>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  
+                  {selectedProperty.tenants.length === 0 ? (
+                    <div className="text-center py-8 text-purple-600 dark:text-purple-400">
+                      <UserIcon className="w-12 h-12 mx-auto mb-2 text-purple-300 dark:text-purple-600" />
+                      <div>No tenants assigned to this property</div>
+                      <div className="text-sm">This property is currently vacant</div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {selectedProperty.tenants.map((tenant: Tenant) => (
+                        <InfoCard
+                          key={tenant.id}
+                          icon={<UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+                          title={`${tenant.first_name} ${tenant.last_name}`}
+                          subtitle="Tenant"
+                          phone={tenant.phone}
+                          email={tenant.email}
+                          color="purple"
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
