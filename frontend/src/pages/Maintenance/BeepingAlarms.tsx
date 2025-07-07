@@ -4,20 +4,21 @@ import PageMeta from "../../components/common/PageMeta";
 import BeepingAlarmsTable from "../../components/maintenance/BeepingAlarmsTable";
 import BeepingAlarmsFiltersCard from "../../components/maintenance/BeepingAlarmsFiltersCard";
 import CreateBeepingAlarmForm from "../../components/maintenance/CreateBeepingAlarmForm";
+import { BeepingAlarmStatus, BeepingAlarmFilterMode } from "../../types/maintenance";
 
 export default function BeepingAlarms() {
   const [allocationFilter, setAllocationFilter] = useState<string | null>(null);
   const [tenantFilter, setTenantFilter] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<BeepingAlarmStatus | null>(null);
   const [customerContactedFilter, setCustomerContactedFilter] = useState<string | null>(null);
   const [propertyFilter, setPropertyFilter] = useState<string | null>(null);
-  const [agencyPrivateFilter, setAgencyPrivateFilter] = useState<string | null>(null);
+  const [agencyPrivateFilter, setAgencyPrivateFilter] = useState<'agency' | 'private' | null>(null);
   
   // Created At filter state
   const [createdAtSingleFilter, setCreatedAtSingleFilter] = useState<string | null>(null);
   const [createdAtFromFilter, setCreatedAtFromFilter] = useState<string | null>(null);
   const [createdAtToFilter, setCreatedAtToFilter] = useState<string | null>(null);
-  const [createdAtMode, setCreatedAtMode] = useState<'single' | 'range'>('single');
+  const [createdAtMode, setCreatedAtMode] = useState<BeepingAlarmFilterMode>('single');
 
   // Form modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function BeepingAlarms() {
     setTenantFilter(tenantId);
   }, []);
 
-  const handleStatusChange = useCallback((status: string | null) => {
+  const handleStatusChange = useCallback((status: BeepingAlarmStatus | null) => {
     setStatusFilter(status);
   }, []);
 
@@ -42,7 +43,7 @@ export default function BeepingAlarms() {
     setPropertyFilter(propertyId);
   }, []);
 
-  const handleAgencyPrivateChange = useCallback((agencyPrivate: string | null) => {
+  const handleAgencyPrivateChange = useCallback((agencyPrivate: 'agency' | 'private' | null) => {
     setAgencyPrivateFilter(agencyPrivate);
   }, []);
 
