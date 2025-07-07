@@ -9,7 +9,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import InfoCard from '../common/InfoCard';
-import { Property, Tenant, PropertyFormData } from '../../types/property';
+import { Property, Tenant, PropertyFormData, Agency, PrivateOwner, PropertyManager } from '../../types/property';
 
 interface EditPropertyFormProps {
   isOpen: boolean;
@@ -282,6 +282,63 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setTenantErrors({});
   };
 
+  const handleEditTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateTenant(editingTenantData) || !property || !editingTenant) return;
+
+    try {
+      setFormLoading(true);
+      const updatedTenant: Tenant = {
+        ...localTenants.find(t => t.id === editingTenant)!, // Find the tenant to update
+        first_name: editingTenantData.first_name,
+        last_name: editingTenantData.last_name,
+        phone: editingTenantData.phone,
+        email: editingTenantData.email || ''
+      };
+
+      // Update local state
+      setLocalTenants(prev => prev.map(t => t.id === editingTenant ? updatedTenant : t));
+      
+      // Add tenant data to the update
+      const data = {
+        tenants: localTenants.map(tenant => ({
+          id: tenant.id,
+          first_name: tenant.first_name,
+          last_name: tenant.last_name,
+          phone: tenant.phone,
+          email: tenant.email || ''
+        }))
+      };
+      
+      console.log('Sending data to backend:', data); // Debug log
+      
+      const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
+      
+      // Update parent's tenant state with the response data
+      if (response.tenants && onTenantsChange) {
+        onTenantsChange(response.tenants);
+      }
+      
+      // Set update successful flag and close modal
+      setUpdateSuccessful(true);
+      setEditingTenant(null);
+      setEditingTenantData({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: ''
+      });
+      setTenantErrors({});
+    } catch (error: any) {
+      console.error('Error updating tenant:', error);
+      if (error.data) {
+        setTenantErrors(error.data);
+      }
+      toast.error('Failed to update tenant');
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
 
   const openDeleteTenantModal = (tenant: Tenant) => {
@@ -617,7 +674,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     {(() => {
                       const selectedAgency = agencies.find(a => a.id === formData.agency_id);
                       const managers = selectedAgency?.property_managers || [];
-                      return managers.map((manager) => (
+                      return managers.map((manager: PropertyManager) => (
                         <InfoCard
                           key={manager.id}
                           title={`${manager.first_name} ${manager.last_name}`}
@@ -849,8 +906,95 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 </div>
               )}
 
+              {/* Edit Tenant Form */}
+              {editingTenant && (
+                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
+                        <InputField
+                          value={editingTenantData.first_name}
+                          onChange={(e) => setEditingTenantData(prev => ({ ...prev, first_name: e.target.value }))}
+                          placeholder="First name"
+                          error={!!tenantErrors.first_name}
+                          className="mt-1 text-sm"
+                        />
+                        {tenantErrors.first_name && (
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
+                        <InputField
+                          value={editingTenantData.last_name}
+                          onChange={(e) => setEditingTenantData(prev => ({ ...prev, last_name: e.target.value }))}
+                          placeholder="Last name"
+                          error={!!tenantErrors.last_name}
+                          className="mt-1 text-sm"
+                        />
+                        {tenantErrors.last_name && (
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
+                      <InputField
+                        value={editingTenantData.phone}
+                        onChange={(e) => setEditingTenantData(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Phone number"
+                        error={!!tenantErrors.phone}
+                        className="mt-1 text-sm"
+                      />
+                      {tenantErrors.phone && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                      <InputField
+                        value={editingTenantData.email}
+                        onChange={(e) => setEditingTenantData(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Email (optional)"
+                        type="email"
+                        className="mt-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleEditTenant}
+                        disabled={formLoading}
+                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <PencilIcon className="w-3 h-3" />
+                        {formLoading ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingTenant(null);
+                          setEditingTenantData({
+                            first_name: '',
+                            last_name: '',
+                            phone: '',
+                            email: ''
+                          });
+                          setTenantErrors({});
+                        }}
+                        disabled={formLoading}
+                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Existing Tenants */}
-              {localTenants.length === 0 && !showAddTenant ? (
+              {localTenants.length === 0 && !showAddTenant && !editingTenant ? (
                 <div className="text-gray-500 dark:text-gray-300 text-sm py-4 text-center">
                   No tenants assigned to this property
                 </div>
