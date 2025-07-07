@@ -1,3 +1,5 @@
+import { Property, PropertyManager, Agency, PrivateOwner, Tenant } from './property';
+
 export interface BeepingAlarm {
   id: number;
   uid: string;
@@ -9,88 +11,28 @@ export interface BeepingAlarm {
   };
   notes: string;
   is_active: boolean;
-  property: {
-    id: number;
-    unit_number: string | null;
-    street_number: string;
-    street_name: string;
-    suburb: string;
-    state: string;
-    postcode: string;
+  property: Property & {
     country: string;
-    agency?: {
-      id: number;
-      name: string;
-      email: string;
-      phone: string;
-    } | null;
-    private_owners: Array<{
-      id: number;
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-    }>;
-    tenants: Array<{
-      id: number;
-      first_name: string;
-      last_name: string;
-      phone: string;
-    }>;
     is_agency: boolean;
     is_private: boolean;
   };
   is_customer_contacted: boolean;
   created_at: string;
   updated_at: string;
-  allocation: Array<{
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  }>;
+  allocation: Array<User>;
 }
 
 export interface BeepingAlarmResponse {
   data: BeepingAlarm[];
 }
 
-export interface Property {
-  id: number;
-  unit_number: string | null;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-}
-
-export const formatPropertyAddress = (property: Property) => {
-  if (!property) {
-    return 'No property data';
-  }
-  
-  const parts = [
-    property.unit_number && `Unit ${property.unit_number}`,
-    property.street_number,
-    property.street_name,
-    property.suburb,
-    property.state,
-    property.postcode
-  ].filter(Boolean);
-  
-  const address = parts.join(' ');
-  return address || 'No address data';
-};
-
 export interface User {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  }
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
 
 export type BeepingAlarmStatus = 'new' | 'requires_call_back' | 'awaiting_response' | 'to_be_scheduled' | 'to_be_quoted' | 'completed' | 'cancelled';
 
@@ -127,5 +69,15 @@ export interface BeepingAlarmFilters {
   createdAtFrom: string | null;
   createdAtTo: string | null;
   createdAtMode: BeepingAlarmFilterMode;
+}
+
+export interface CreateBeepingAlarmFormData {
+  property: number | null;
+}
+
+export interface CreateBeepingAlarmProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 

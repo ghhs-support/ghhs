@@ -6,80 +6,17 @@ import Button from '../ui/button/Button';
 import { Modal } from '../ui/modal';
 import { useSearchService } from '../../services/search';
 import toast from 'react-hot-toast';
+import { Property, Tenant, PrivateOwner, PropertyManager } from '../../types/property';
+import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData } from '../../types/maintenance';
 
-interface Property {
-  id: number;
-  unit_number: string | null;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  tenants: Tenant[];
-  agency?: Agency;
-  private_owners: PrivateOwner[];
-}
-
-interface PropertyManager {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  notes?: string;
-}
-
-interface Agency {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  property_managers: PropertyManager[];
-  unit_number?: string | null;
-  street_number?: string | null;
-  street_name?: string | null;
-  suburb?: string | null;
-  state?: string | null;
-  postcode?: string | null;
-  country?: string | null;
-  longitude?: string | number | null;
-  latitude?: string | number | null;
-}
-
-interface PrivateOwner {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-}
-
-interface Tenant {
-  id: number;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email?: string;
-}
-
-interface CreateBeepingAlarmFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-interface FormData {
-  property: number | null;
-}
-
-export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmFormProps) {
+export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmProps) {
   const { authenticatedGet, authenticatedPost } = useAuthenticatedApi();
   const searchService = useSearchService();
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<CreateBeepingAlarmFormData>({
     property: null,
   });
 
@@ -110,7 +47,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     }
   };
 
-  const handleInputChange = (field: keyof FormData, value: any) => {
+  const handleInputChange = (field: keyof CreateBeepingAlarmFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -282,7 +219,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                             <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Property Managers:</span>
                           </div>
                           <div className="mt-1 space-y-1">
-                            {selectedProperty.agency.property_managers.map(pm => (
+                            {selectedProperty.agency.property_managers.map((pm: PropertyManager) => (
                               <div key={pm.id} className="text-xs bg-white dark:bg-gray-800 rounded p-2 border border-blue-200 dark:border-blue-700">
                                 <div className="font-medium text-gray-800 dark:text-gray-100">{pm.first_name} {pm.last_name}</div>
                                 <div className="text-gray-600 dark:text-gray-300">{pm.email}</div>
@@ -299,7 +236,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                       <div className="p-3 bg-green-50 dark:bg-green-900/40 rounded border border-green-200 dark:border-green-700">
                         <span className="text-sm font-medium text-green-800 dark:text-green-200">Private Owners</span>
                         <div className="mt-2 space-y-2">
-                          {selectedProperty.private_owners.map(owner => (
+                          {selectedProperty.private_owners.map((owner: PrivateOwner) => (
                             <div key={owner.id} className="text-sm bg-white dark:bg-gray-800 rounded p-2 border border-green-200 dark:border-green-700">
                               <div className="font-medium text-gray-800 dark:text-gray-100">{owner.first_name} {owner.last_name}</div>
                               <div className="text-gray-600 dark:text-gray-300">{owner.email}</div>
@@ -321,7 +258,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     {selectedProperty.tenants.length === 0 ? (
                       <div className="text-gray-500 dark:text-gray-300 text-sm">No tenants</div>
                     ) : (
-                      selectedProperty.tenants.map(tenant => (
+                      selectedProperty.tenants.map((tenant: Tenant) => (
                         <div key={tenant.id} className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                           <div className="flex flex-col">
                             <span className="text-sm text-gray-900 dark:text-gray-100">{tenant.first_name} {tenant.last_name}</span>

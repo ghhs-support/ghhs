@@ -54,3 +54,21 @@ export interface PropertyFormData {
   postcode: string;
   agency_id?: number | null;
 }
+
+export const formatPropertyAddress = (property: Property) => {
+  if (!property) {
+    return 'No property data';
+  }
+  
+  const parts = [
+    property.unit_number && `Unit ${property.unit_number}`,
+    property.street_number,
+    property.street_name,
+    property.suburb,
+    property.state,
+    property.postcode
+  ].filter(Boolean);
+  
+  const address = parts.join(' ');
+  return address || 'No address data';
+}
