@@ -2,34 +2,34 @@ import React, { useEffect, useState } from 'react';
 import FiltersCard, { FilterConfig, FilterValue, Option } from '../common/FiltersCard';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { useSearchService } from '../../services/search';
-
-// Define a proper User type based on the backend serializer
-interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
+import { 
+  User, 
+  BeepingAlarmStatus, 
+  BEEPING_ALARM_STATUS_OPTIONS,
+  CUSTOMER_CONTACTED_OPTIONS,
+  AGENCY_PRIVATE_OPTIONS,
+  BeepingAlarmFilterMode,
+  BeepingAlarmFilters
+} from '../../types/maintenance';
 
 interface BeepingAlarmsFiltersCardProps {
   onAllocationChange: (allocationId: string | null) => void;
   onTenantChange: (tenantId: string | null) => void;
-  onStatusChange: (status: string | null) => void;
+  onStatusChange: (status: BeepingAlarmStatus | null) => void;
   onCustomerContactedChange: (customerContacted: string | null) => void;
   onPropertyChange: (propertyId: string | null) => void;
-  onAgencyPrivateChange: (agencyPrivate: string | null) => void;
-  onCreatedAtChange: (createdAtSingle: string | null, createdAtFrom: string | null, createdAtTo: string | null, mode: 'single' | 'range') => void;
+  onAgencyPrivateChange: (agencyPrivate: 'agency' | 'private' | null) => void;
+  onCreatedAtChange: (createdAtSingle: string | null, createdAtFrom: string | null, createdAtTo: string | null, mode: BeepingAlarmFilterMode) => void;
   currentAllocation: string | null;
   currentTenant: string | null;
-  currentStatus: string | null;
+  currentStatus: BeepingAlarmStatus | null;
   currentCustomerContacted: string | null;
   currentProperty: string | null;
-  currentAgencyPrivate: string | null;
+  currentAgencyPrivate: 'agency' | 'private' | null;
   currentCreatedAtSingle: string | null;
   currentCreatedAtFrom: string | null;
   currentCreatedAtTo: string | null;
-  currentCreatedAtMode: 'single' | 'range';
+  currentCreatedAtMode: BeepingAlarmFilterMode;
 }
 
 const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({ 
@@ -69,28 +69,10 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
     }))
   , [allocations]);
 
-  // Status options based on backend STATUS_CHOICES
-  const statusOptions: Option[] = [
-    { value: 'new', label: 'New' },
-    { value: 'requires_call_back', label: 'Requires Call Back' },
-    { value: 'awaiting_response', label: 'Awaiting Response' },
-    { value: 'to_be_scheduled', label: 'To Be Scheduled' },
-    { value: 'to_be_quoted', label: 'To Be Quoted' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' }
-  ];
-
-  // Customer contacted options
-  const customerContactedOptions: Option[] = [
-    { value: 'true', label: 'Yes' },
-    { value: 'false', label: 'No' }
-  ];
-
-  // Agency/Private options
-  const agencyPrivateOptions: Option[] = [
-    { value: 'agency', label: 'Agency' },
-    { value: 'private', label: 'Private' }
-  ];
+  // Replace the hardcoded options with the constants
+  const statusOptions = BEEPING_ALARM_STATUS_OPTIONS;
+  const customerContactedOptions = CUSTOMER_CONTACTED_OPTIONS;
+  const agencyPrivateOptions = AGENCY_PRIVATE_OPTIONS;
 
   // Initialize filter values
   const [filterValues, setFilterValues] = useState<FilterValue>({
@@ -224,13 +206,13 @@ const BeepingAlarmsFiltersCard: React.FC<BeepingAlarmsFiltersCardProps> = ({
 
     onAllocationChange(isOption(values.allocation) ? values.allocation.value : null);
     onTenantChange(isOption(values.tenant) ? values.tenant.value : null);
-    onStatusChange(isOption(values.status) ? values.status.value : null);
+    onStatusChange(isOption(values.status) ? values.status.value as BeepingAlarmStatus : null);
     onCustomerContactedChange(isOption(values.customerContacted) ? values.customerContacted.value : null);
     onPropertyChange(isOption(values.property) ? values.property.value : null);
-    onAgencyPrivateChange(isOption(values.agencyPrivate) ? values.agencyPrivate.value : null);
+    onAgencyPrivateChange(isOption(values.agencyPrivate) ? values.agencyPrivate.value as 'agency' | 'private' : null);
     
     // Handle created at date filter
-    const createdAtValue = values.createdAt as { mode?: 'single' | 'range'; single?: string; from?: string; to?: string } | null;
+    const createdAtValue = values.createdAt as { mode?: BeepingAlarmFilterMode; single?: string; from?: string; to?: string } | null;
     onCreatedAtChange(
       createdAtValue?.single || null,
       createdAtValue?.from || null,
