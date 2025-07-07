@@ -69,6 +69,5 @@ export const formatPropertyAddress = (property: Property) => {
     property.postcode
   ].filter(Boolean);
   
-  const address = parts.join(' ');
-  return address || 'No address data';
-}
+  return parts.join(' ');
+};

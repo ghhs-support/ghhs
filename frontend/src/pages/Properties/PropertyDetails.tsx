@@ -14,52 +14,7 @@ import {
   BuildingOfficeIcon,
   MapPinIcon} from '@heroicons/react/24/outline';
 import InfoCard from '../../components/common/InfoCard';
-
-interface PropertyManager {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  notes?: string;
-}
-
-interface Agency {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  property_managers: PropertyManager[];
-}
-
-interface Property {
-  id: number;
-  unit_number: string | null;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  tenants: Tenant[];
-  agency?: Agency;
-  private_owners: PrivateOwner[];
-}
-
-interface Tenant {
-  id: number;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email?: string;
-}
-
-interface PrivateOwner {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-}
+import { Property, Tenant, formatPropertyAddress } from '../../types/property';
 
 export default function PropertyDetails() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -130,19 +85,6 @@ export default function PropertyDetails() {
     setTenants(updatedTenants);
   };
 
-  const formatAddress = (property: Property) => {
-    const parts = [
-      property.unit_number && `Unit ${property.unit_number}`,
-      property.street_number,
-      property.street_name,
-      property.suburb,
-      property.state,
-      property.postcode
-    ].filter(Boolean);
-    
-    return parts.join(' ');
-  };
-
   if (loading) {
     return (
       <div className="p-6">
@@ -194,7 +136,7 @@ export default function PropertyDetails() {
           </div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Property Details</h1>
-        <p className="text-gray-600 dark:text-gray-400">{formatAddress(property)}</p>
+        <p className="text-gray-600 dark:text-gray-400">{formatPropertyAddress(property)}</p>
       </div>
 
       <div className="flex flex-col gap-6">
