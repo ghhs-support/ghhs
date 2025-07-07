@@ -1,4 +1,4 @@
-import { Property, PropertyManager, Agency, PrivateOwner, Tenant } from './property';
+import { Property } from './property';
 
 export interface BeepingAlarm {
   id: number;
