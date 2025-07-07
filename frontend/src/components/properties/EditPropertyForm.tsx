@@ -9,63 +9,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import InfoCard from '../common/InfoCard';
-
-interface Property {
-  id: number;
-  unit_number: string | null;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  tenants: Tenant[];
-  agency?: Agency;
-  private_owners: PrivateOwner[];
-}
-
-interface Tenant {
-  id: number;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email?: string;
-}
-
-interface PropertyManager {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  notes?: string;
-}
-
-interface Agency {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  property_managers: PropertyManager[];
-}
-
-interface PrivateOwner {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  notes?: string;
-}
-
-interface PropertyFormData {
-  unit_number: string;
-  street_number: string;
-  street_name: string;
-  suburb: string;
-  state: string;
-  postcode: string;
-  agency_id?: number | null;
-}
+import { Property, Tenant, PropertyFormData } from '../../types/property';
 
 interface EditPropertyFormProps {
   isOpen: boolean;
@@ -77,8 +21,8 @@ interface EditPropertyFormProps {
   setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
 }
 
-export default function EditPropertyForm({ isOpen, onClose, property, onSuccess, onTenantsChange, tenants, setTenants }: EditPropertyFormProps) {
-  const { authenticatedGet, authenticatedPost, authenticatedPatch, authenticatedDelete } = useAuthenticatedApi();
+export default function EditPropertyForm({ isOpen, onClose, property, onSuccess, onTenantsChange }: EditPropertyFormProps) {
+  const { authenticatedGet, authenticatedPatch } = useAuthenticatedApi();
   
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [privateOwners, setPrivateOwners] = useState<PrivateOwner[]>([]);
@@ -307,11 +251,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     return Object.keys(errors).length === 0;
   };
 
-  const fetchLatestTenants = async () => {
-    if (!property) return;
-    const response = await authenticatedGet(`/properties/properties/${property.id}/`);
-    if (onTenantsChange) onTenantsChange(response.tenants || []);
-  };
 
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -343,36 +282,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setTenantErrors({});
   };
 
-  const cancelEditTenant = () => {
-    setEditingTenant(null);
-    setEditingTenantData({
-      first_name: '',
-      last_name: '',
-      phone: '',
-      email: ''
-    });
-    setTenantErrors({});
-  };
 
-  const handleEditTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateTenant(editingTenantData) || !property || !editingTenant) return;
-
-    // Update tenant in local state
-    setLocalTenants(prev => prev.map(t => 
-      t.id === editingTenant 
-        ? { ...t, ...editingTenantData }
-        : t
-    ));
-    
-    setEditingTenant(null);
-    setEditingTenantData({
-      first_name: '',
-      last_name: '',
-      phone: '',
-      email: ''
-    });
-  };
 
   const openDeleteTenantModal = (tenant: Tenant) => {
     setTenantToDelete(tenant);
