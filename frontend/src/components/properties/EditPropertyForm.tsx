@@ -538,6 +538,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <Label htmlFor="edit_unit_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Unit Number</Label>
                 <InputField
                   id="edit_unit_number"
+                  name="edit_unit_number"
                   value={formData.unit_number}
                   onChange={(e) => handleFormChange('unit_number', e.target.value)}
                   placeholder="e.g., 1A"
@@ -548,6 +549,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <Label htmlFor="edit_street_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Street Number *</Label>
                 <InputField
                   id="edit_street_number"
+                  name="edit_street_number"
                   value={formData.street_number}
                   onChange={(e) => handleFormChange('street_number', e.target.value)}
                   placeholder="e.g., 123"
@@ -564,6 +566,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               <Label htmlFor="edit_street_name" className="text-sm font-medium text-gray-700 dark:text-gray-300">Street Name *</Label>
               <InputField
                 id="edit_street_name"
+                name="edit_street_name"
                 value={formData.street_name}
                 onChange={(e) => handleFormChange('street_name', e.target.value)}
                 placeholder="e.g., Main Street"
@@ -580,6 +583,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <Label htmlFor="edit_suburb" className="text-sm font-medium text-gray-700 dark:text-gray-300">Suburb *</Label>
                 <InputField
                   id="edit_suburb"
+                  name="edit_suburb"
                   value={formData.suburb}
                   onChange={(e) => handleFormChange('suburb', e.target.value)}
                   placeholder="e.g., Sydney"
@@ -594,6 +598,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <Label htmlFor="edit_state" className="text-sm font-medium text-gray-700 dark:text-gray-300">State *</Label>
                 <InputField
                   id="edit_state"
+                  name="edit_state"
                   value={formData.state}
                   onChange={(e) => handleFormChange('state', e.target.value)}
                   placeholder="e.g., NSW"
@@ -608,6 +613,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 <Label htmlFor="edit_postcode" className="text-sm font-medium text-gray-700 dark:text-gray-300">Postcode *</Label>
                 <InputField
                   id="edit_postcode"
+                  name="edit_postcode"
                   value={formData.postcode}
                   onChange={(e) => handleFormChange('postcode', e.target.value)}
                   placeholder="e.g., 2000"
@@ -833,6 +839,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       <div>
                         <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
                         <InputField
+                          name="first_name"
                           value={newTenant.first_name}
                           onChange={(e) => setNewTenant(prev => ({ ...prev, first_name: e.target.value }))}
                           placeholder="First name"
@@ -846,6 +853,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       <div>
                         <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
                         <InputField
+                          name="last_name"
                           value={newTenant.last_name}
                           onChange={(e) => setNewTenant(prev => ({ ...prev, last_name: e.target.value }))}
                           placeholder="Last name"
@@ -860,6 +868,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     <div>
                       <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
                       <InputField
+                        name="phone"
                         value={newTenant.phone}
                         onChange={(e) => setNewTenant(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="Phone number"
@@ -873,6 +882,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     <div>
                       <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
                       <InputField
+                        name="email"
                         value={newTenant.email}
                         onChange={(e) => setNewTenant(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="Email (optional)"
@@ -914,6 +924,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       <div>
                         <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
                         <InputField
+                          name="first_name"
                           value={editingTenantData.first_name}
                           onChange={(e) => setEditingTenantData(prev => ({ ...prev, first_name: e.target.value }))}
                           placeholder="First name"
@@ -927,6 +938,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                       <div>
                         <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
                         <InputField
+                          name="last_name"
                           value={editingTenantData.last_name}
                           onChange={(e) => setEditingTenantData(prev => ({ ...prev, last_name: e.target.value }))}
                           placeholder="Last name"
@@ -941,6 +953,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     <div>
                       <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
                       <InputField
+                        name="phone"
                         value={editingTenantData.phone}
                         onChange={(e) => setEditingTenantData(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="Phone number"
@@ -954,6 +967,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                     <div>
                       <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
                       <InputField
+                        name="email"
                         value={editingTenantData.email}
                         onChange={(e) => setEditingTenantData(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="Email (optional)"
