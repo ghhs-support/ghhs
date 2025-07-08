@@ -12,6 +12,7 @@ export interface Property {
   tenants: Tenant[];
   agency?: Agency;
   private_owners: PrivateOwner[];
+  is_active: boolean;
 }
 
 export interface Tenant {

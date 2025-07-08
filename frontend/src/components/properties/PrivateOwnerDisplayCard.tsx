@@ -40,7 +40,7 @@ export default function PrivateOwnerDisplayCard({
   }
 
   return (
-    <div className="border border-green-200 dark:border-green-700 rounded-lg p-4 bg-green-50 dark:bg-gray-800">
+    <div className="border border-green-200 dark:border-green-700 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
       <div className="flex items-center justify-between mb-2">
         <Label className="text-base font-medium text-green-900 dark:text-green-200">
           <UserIcon className="w-5 h-5 inline mr-2" />

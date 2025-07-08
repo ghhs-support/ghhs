@@ -28,6 +28,7 @@ class Agency(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     property_managers = models.ManyToManyField('PropertyManager', related_name='agencies', blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -39,6 +40,7 @@ class PropertyManager(models.Model):
     email = models.EmailField(max_length=100)
     phone = models.CharField(max_length=100)
     notes = models.TextField(max_length=1000, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
@@ -50,6 +52,7 @@ class PrivateOwner(models.Model):
     email = models.EmailField(max_length=100, null=True, blank=True)
     phone = models.CharField(max_length=100)
     notes = models.TextField(max_length=1000, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         if self.last_name:
@@ -72,6 +75,7 @@ class Property(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_agency = models.BooleanField(default=False, help_text="True if property is managed by an agency")
     is_private = models.BooleanField(default=False, help_text="True if property is managed by private owners")
+    is_active = models.BooleanField(default=True)
 
     def clean(self):
         super().clean()

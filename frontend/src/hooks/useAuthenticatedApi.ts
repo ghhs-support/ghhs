@@ -30,8 +30,6 @@ export const useAuthenticatedApi = () => {
       requestUrl += `?${searchParams.toString()}`;
     }
     
-    console.log('Making GET request to:', requestUrl); // Debug log
-    
     const response = await fetch(requestUrl, {
       method: 'GET',
       headers: {
@@ -62,8 +60,6 @@ export const useAuthenticatedApi = () => {
 
     const requestUrl = `http://localhost:8000/api${url}`;
     
-    console.log('Making POST request to:', requestUrl); // Debug log
-    
     const response = await fetch(requestUrl, {
       method: 'POST',
       headers: {
@@ -87,7 +83,9 @@ export const useAuthenticatedApi = () => {
     if (!isAuthenticated) throw new Error('User not authenticated');
     const token = await getToken();
     if (!token) throw new Error('No authentication token available');
+    
     const requestUrl = `http://localhost:8000/api${url}`;
+    
     const response = await fetch(requestUrl, {
       method: 'PATCH',
       headers: {
@@ -96,12 +94,14 @@ export const useAuthenticatedApi = () => {
       },
       body: options?.data ? JSON.stringify(options.data) : undefined,
     });
+    
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const error = new Error(`HTTP error! status: ${response.status}`);
       (error as any).data = errorData;
       throw error;
     }
+    
     return response.json();
   }, [isAuthenticated, getToken]);
 

@@ -63,7 +63,7 @@ export default function TenantDisplayCard({
 
   return (
     <>
-      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-gray-800">
+      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
         <div className="flex items-center justify-between mb-1">
           <Label className="text-base font-medium text-purple-900 dark:text-purple-200">
             <UserIcon className="w-5 h-5 inline mr-2" />

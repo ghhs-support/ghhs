@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import Button from '../../components/ui/button/Button';
-import ConfirmModal from '../../components/common/ConfirmModal';
+import Switch from '../../components/form/switch/Switch';
 import EditPropertyForm from '../../components/properties/EditPropertyForm';
 import toast from 'react-hot-toast';
 import { 
   PencilIcon, 
-  TrashIcon, 
   ArrowLeftIcon,
   BuildingOfficeIcon,
   MapPinIcon} from '@heroicons/react/24/outline';
@@ -21,19 +20,15 @@ import { Property, Tenant, formatPropertyAddress } from '../../types/property';
 export default function PropertyDetails() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
-  const { authenticatedGet, authenticatedDelete } = useAuthenticatedApi();
+  const { authenticatedGet, authenticatedPatch } = useAuthenticatedApi();
   
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
-  // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
-  const [formLoading, setFormLoading] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
-  // Load property data
   useEffect(() => {
     if (propertyId) {
       loadProperty();
@@ -55,28 +50,27 @@ export default function PropertyDetails() {
     }
   };
 
-  const openEditModal = () => {
-    setShowEditModal(true);
-  };
-
-  const openDeleteModal = () => {
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteProperty = async () => {
+  const handleActiveToggle = async (isActive: boolean) => {
     if (!property) return;
 
     try {
-      setFormLoading(true);
-      await authenticatedDelete(`/properties/properties/${property.id}/delete/`);
-      toast.success('Property deleted successfully!');
-      navigate('/properties');
+      setToggleLoading(true);
+      const response = await authenticatedPatch(
+        `/properties/properties/${property.id}/update/`,
+        { data: { is_active: isActive } }
+      );
+      setProperty(response);
+      toast.success(`Property ${isActive ? 'activated' : 'deactivated'} successfully!`);
     } catch (error) {
-      console.error('Error deleting property:', error);
-      toast.error('Failed to delete property');
+      console.error('Error updating property status:', error);
+      toast.error('Failed to update property status');
     } finally {
-      setFormLoading(false);
+      setToggleLoading(false);
     }
+  };
+
+  const openEditModal = () => {
+    setShowEditModal(true);
   };
 
   const handleEditSuccess = () => {
@@ -109,31 +103,31 @@ export default function PropertyDetails() {
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/properties')}
-            startIcon={<ArrowLeftIcon className="w-4 h-4" />}
-          >
-            Back to Properties
-          </Button>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/properties')}
+              startIcon={<ArrowLeftIcon className="w-4 h-4" />}
+            >
+              Back to Properties
+            </Button>
             <Button
               onClick={openEditModal}
               startIcon={<PencilIcon className="w-4 h-4" />}
             >
               Edit Property
             </Button>
-            <Button
-              variant="outline"
-              onClick={openDeleteModal}
-              startIcon={<TrashIcon className="w-4 h-4" />}
-              className="text-red-600 hover:text-red-700"
-            >
-              Delete Property
-            </Button>
+          </div>
+          <div className="flex items-center gap-4">
+            <Switch
+              label={property.is_active ? "Active" : "Inactive"}
+              defaultChecked={property.is_active}
+              onChange={handleActiveToggle}
+              disabled={toggleLoading}
+              color="blue"
+            />
           </div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Property Details</h1>
@@ -141,7 +135,6 @@ export default function PropertyDetails() {
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Property Information */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center gap-2 mb-4">
             <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
@@ -164,7 +157,6 @@ export default function PropertyDetails() {
           </div>
         </div>
 
-        {/* Property Owner - Show Agency OR Private Owners */}
         {property.agency ? (
           <AgencyDisplayCard
             agency={property.agency}
@@ -177,7 +169,6 @@ export default function PropertyDetails() {
           />
         )}
 
-        {/* Tenants */}
         <TenantDisplayCard
           tenants={tenants}
           onTenantsChange={handleTenantsChange}
@@ -188,7 +179,6 @@ export default function PropertyDetails() {
         />
       </div>
 
-      {/* Edit Property Modal */}
       <EditPropertyForm
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -197,19 +187,6 @@ export default function PropertyDetails() {
         onTenantsChange={handleTenantsChange}
         tenants={tenants}
         setTenants={setTenants}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onConfirm={handleDeleteProperty}
-        onCancel={() => setShowDeleteModal(false)}
-        title="Delete Property?"
-        message={`Are you sure you want to delete the property at ${property.street_number} ${property.street_name}? This action cannot be undone.`}
-        confirmLabel="Delete Property"
-        cancelLabel="Cancel"
-        confirmColor="red"
-        loading={formLoading}
       />
     </div>
   );
