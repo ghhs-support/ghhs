@@ -30,7 +30,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
   searchLoading = false
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<number | null>(null);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
