@@ -244,39 +244,9 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
           )}
         </div>
 
-        <div>
-          <Label htmlFor="latitude" className="text-gray-700 dark:text-gray-300">Latitude</Label>
-          <InputField
-            id="latitude"
-            name="latitude"
-            type="text"
-            value={formData.latitude}
-            onChange={onChange}
-            disabled={disabled}
-            placeholder="e.g., -37.8136"
-            className="mt-1"
-          />
-          {errors.latitude && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.latitude}</p>
-          )}
-        </div>
-
-        <div>
-          <Label htmlFor="longitude" className="text-gray-700 dark:text-gray-300">Longitude</Label>
-          <InputField
-            id="longitude"
-            name="longitude"
-            type="text"
-            value={formData.longitude}
-            onChange={onChange}
-            disabled={disabled}
-            placeholder="e.g., 144.9631"
-            className="mt-1"
-          />
-          {errors.longitude && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.longitude}</p>
-          )}
-        </div>
+        {/* Hidden fields for latitude and longitude - populated by Google API */}
+        <input type="hidden" name="latitude" value={formData.latitude} />
+        <input type="hidden" name="longitude" value={formData.longitude} />
       </div>
     </div>
   );
