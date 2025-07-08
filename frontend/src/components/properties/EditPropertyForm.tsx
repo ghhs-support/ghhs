@@ -6,6 +6,8 @@ import InputField from '../../components/form/input/InputField';
 import Button from '../../components/ui/button/Button';
 import { Modal } from '../../components/ui/modal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import OwnerTypeToggle from '../../components/common/OwnerTypeToggle';
+import AddressForm from '../../components/common/AddressForm';
 import toast from 'react-hot-toast';
 import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import InfoCard from '../common/InfoCard';
@@ -35,6 +37,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     suburb: '',
     state: '',
     postcode: '',
+    country: '',
+    latitude: '',
+    longitude: '',
     agency_id: null,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -137,6 +142,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         suburb: property.suburb,
         state: property.state,
         postcode: property.postcode,
+        country: property.country || '',
+        latitude: property.latitude || '',
+        longitude: property.longitude || '',
         agency_id: property.agency?.id || null,
       });
       
@@ -175,21 +183,18 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setFormErrors({});
   };
 
-  const handleFormChange = (field: keyof PropertyFormData, value: any) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [name]: value
     }));
     
-    // Update draft agency selection when agency changes
-    if (field === 'agency_id') {
-      setDraftAgencyId(value);
-    }
-    
-    if (formErrors[field]) {
+    // Clear error when user starts typing
+    if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors[field];
+        delete newErrors[name];
         return newErrors;
       });
     }
@@ -504,128 +509,19 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
                 Current: {getCurrentOwnerDisplay()}
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Agency</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleOwnerTypeChange(ownerType === 'agency' ? 'private' : 'agency')}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  ownerType === 'private' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    ownerType === 'private' ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Private Owner</span>
-              </div>
-            </div>
+            <OwnerTypeToggle
+              ownerType={ownerType}
+              onChange={handleOwnerTypeChange}
+              disabled={formLoading}
+            />
           </div>
 
           {/* Property Address Information */}
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-            <Label className="text-base font-medium mb-3 text-gray-900 dark:text-gray-100">Property Address</Label>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <Label htmlFor="edit_unit_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Unit Number</Label>
-                <InputField
-                  id="edit_unit_number"
-                  name="edit_unit_number"
-                  value={formData.unit_number}
-                  onChange={(e) => handleFormChange('unit_number', e.target.value)}
-                  placeholder="e.g., 1A"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_street_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Street Number *</Label>
-                <InputField
-                  id="edit_street_number"
-                  name="edit_street_number"
-                  value={formData.street_number}
-                  onChange={(e) => handleFormChange('street_number', e.target.value)}
-                  placeholder="e.g., 123"
-                  error={!!formErrors.street_number}
-                  className="mt-1"
-                />
-                {formErrors.street_number && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.street_number}</p>
-                )}
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <Label htmlFor="edit_street_name" className="text-sm font-medium text-gray-700 dark:text-gray-300">Street Name *</Label>
-              <InputField
-                id="edit_street_name"
-                name="edit_street_name"
-                value={formData.street_name}
-                onChange={(e) => handleFormChange('street_name', e.target.value)}
-                placeholder="e.g., Main Street"
-                error={!!formErrors.street_name}
-                className="mt-1"
-              />
-              {formErrors.street_name && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.street_name}</p>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="edit_suburb" className="text-sm font-medium text-gray-700 dark:text-gray-300">Suburb *</Label>
-                <InputField
-                  id="edit_suburb"
-                  name="edit_suburb"
-                  value={formData.suburb}
-                  onChange={(e) => handleFormChange('suburb', e.target.value)}
-                  placeholder="e.g., Sydney"
-                  error={!!formErrors.suburb}
-                  className="mt-1"
-                />
-                {formErrors.suburb && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.suburb}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="edit_state" className="text-sm font-medium text-gray-700 dark:text-gray-300">State *</Label>
-                <InputField
-                  id="edit_state"
-                  name="edit_state"
-                  value={formData.state}
-                  onChange={(e) => handleFormChange('state', e.target.value)}
-                  placeholder="e.g., NSW"
-                  error={!!formErrors.state}
-                  className="mt-1"
-                />
-                {formErrors.state && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.state}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="edit_postcode" className="text-sm font-medium text-gray-700 dark:text-gray-300">Postcode *</Label>
-                <InputField
-                  id="edit_postcode"
-                  name="edit_postcode"
-                  value={formData.postcode}
-                  onChange={(e) => handleFormChange('postcode', e.target.value)}
-                  placeholder="e.g., 2000"
-                  error={!!formErrors.postcode}
-                  className="mt-1"
-                />
-                {formErrors.postcode && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.postcode}</p>
-                )}
-              </div>
-            </div>
-          </div>
+          <AddressForm 
+            formData={formData} 
+            onChange={handleFormChange} 
+            errors={formErrors}
+          />
 
           {/* Owner Selection */}
           {ownerType === 'agency' && (
@@ -643,7 +539,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               </div>
               <SearchableDropdown
                 value={getSelectedAgencyOption()}
-                onChange={(option) => handleFormChange('agency_id', option ? parseInt(option.value) : null)}
+                onChange={(option) => handleFormChange({ target: { name: 'agency_id', value: option ? parseInt(option.value) : null } })}
                 onSearch={async (query) => {
                   const filtered = agencies.filter(agency => 
                     agency.name.toLowerCase().includes(query.toLowerCase())

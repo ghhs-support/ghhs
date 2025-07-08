@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../ui/button/Button';
+import AddressForm from '../common/AddressForm';
+import OwnerTypeToggle from '../common/OwnerTypeToggle';
 import { Modal } from '../ui/modal';
 
 interface CreatePropertyFormProps {
@@ -10,11 +12,64 @@ interface CreatePropertyFormProps {
 }
 
 const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    unit_number: '',
+    street_number: '',
+    street_name: '',
+    suburb: '',
+    state: '',
+    postcode: '',
+    country: '',
+    latitude: '',
+    longitude: '',
+  });
+  const [ownerType, setOwnerType] = useState<'agency' | 'private'>('agency');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.street_number.trim()) {
+      newErrors.street_number = 'Street number is required';
+    }
+    if (!formData.street_name.trim()) {
+      newErrors.street_name = 'Street name is required';
+    }
+    if (!formData.suburb.trim()) {
+      newErrors.suburb = 'Suburb is required';
+    }
+    if (!formData.state.trim()) {
+      newErrors.state = 'State is required';
+    }
+    if (!formData.postcode.trim()) {
+      newErrors.postcode = 'Postcode is required';
+    }
+    
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     setFormLoading(true);
+    console.log('Form data:', { ...formData, ownerType });
     
     setTimeout(() => {
       toast.success('Property created successfully! (placeholder)');
@@ -29,9 +84,17 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
       <Modal.Header onClose={onClose}>Create Property</Modal.Header>
       <Modal.Body>
         <form id="create-property-form" onSubmit={handleSubmit} className="space-y-6">
-          <div className="p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">Form fields will be added here...</p>
-          </div>
+          <AddressForm 
+            formData={formData} 
+            onChange={handleChange} 
+            errors={formErrors}
+          />
+          
+          <OwnerTypeToggle
+            ownerType={ownerType}
+            onChange={setOwnerType}
+            disabled={formLoading}
+          />
         </form>
       </Modal.Body>
       <Modal.Footer>
