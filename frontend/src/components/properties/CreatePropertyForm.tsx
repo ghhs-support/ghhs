@@ -1,77 +1,59 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../ui/button/Button';
-import AddressForm from '../common/AddressForm';
-import Switch from '../form/switch/Switch';
-import { BuildingOfficeIcon, UserIcon } from '@heroicons/react/24/outline';
-import Label from '../form/Label';
+import { Modal } from '../ui/modal';
 
 interface CreatePropertyFormProps {
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
-const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ onSuccess, onCancel }) => {
-  const [ownerType, setOwnerType] = useState<'agency' | 'private'>('agency');
-  const [formData, setFormData] = useState({
-    unit_number: '',
-    street_number: '',
-    street_name: '',
-    suburb: '',
-    state: '',
-    postcode: '',
-    country: '',
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [formLoading, setFormLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ ...formData, ownerType });
-    toast.success('Property created successfully! (placeholder)');
-    onSuccess();
+    setFormLoading(true);
+    
+    setTimeout(() => {
+      toast.success('Property created successfully! (placeholder)');
+      setFormLoading(false);
+      onClose();
+      onSuccess();
+    }, 1000);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6.5">
-      <AddressForm formData={formData} onChange={handleChange} />
-
-      {/* Owner Type Toggle */}
-      <div className="rounded-lg p-4 bg-[#1C2537] mt-4">
-        <Label className="text-base font-medium text-white mb-3">Property Owner Type</Label>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-300">Agency</span>
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <Modal.Header onClose={onClose}>Create Property</Modal.Header>
+      <Modal.Body>
+        <form id="create-property-form" onSubmit={handleSubmit} className="space-y-6">
+          <div className="p-8 text-center">
+            <p className="text-gray-500 dark:text-gray-400">Form fields will be added here...</p>
           </div>
-          <Switch
-            label=""
-            defaultChecked={ownerType === 'private'}
-            onChange={(checked) => setOwnerType(checked ? 'private' : 'agency')}
-            color="blue"
-          />
-          <div className="flex items-center gap-2">
-            <UserIcon className="w-5 h-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-300">Private Owner</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-3 mt-6">
-        <Button onClick={onCancel} variant="outline">
+        </form>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={formLoading}
+        >
           Cancel
         </Button>
-        <Button type="submit" variant="primary">
-          Create Property
-        </Button>
-      </div>
-    </form>
+        <button
+          type="submit"
+          form="create-property-form"
+          disabled={formLoading}
+          className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
+        >
+          {formLoading ? 'Creating...' : 'Create Property'}
+        </button>
+      </Modal.Footer>
+    </Modal>
   );
 };
 
 export default CreatePropertyForm;
-
 
