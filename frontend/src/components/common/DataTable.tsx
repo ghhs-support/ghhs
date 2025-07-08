@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, ReactNode, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -49,6 +49,11 @@ export interface DataTableProps<T> {
   showEntriesSelector?: boolean;
   showSearch?: boolean;
   showPagination?: boolean;
+  
+  // Add new props for server vs client sorting
+  serverSideOperations?: boolean; // Whether to use server-side sorting/filtering
+  defaultSortField?: string;
+  defaultSortDirection?: 'asc' | 'desc';
 }
 
 export default function DataTable<T>({
@@ -64,8 +69,8 @@ export default function DataTable<T>({
   onSearchChange,
   onSort,
   sortFields,
-  sortField,
-  sortDirection,
+  sortField: externalSortField,
+  sortDirection: externalSortDirection,
   searchTerm,
   searchPlaceholder = "Search...",
   renderRow,
@@ -75,15 +80,57 @@ export default function DataTable<T>({
   showEntriesSelector = true,
   showSearch = true,
   showPagination = true,
+  serverSideOperations = false,
+  defaultSortField,
+  defaultSortDirection = 'asc',
 }: DataTableProps<T>) {
+  // Local state for client-side sorting
+  const [localSortField, setLocalSortField] = useState<string | null>(defaultSortField || null);
+  const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
+
+  // Use either server-side or client-side sorting state
+  const sortField = serverSideOperations ? externalSortField : localSortField;
+  const sortDirection = serverSideOperations ? externalSortDirection : localSortDirection;
+
+  // Handle sorting
+  const handleSort = useCallback((fieldKey: string) => {
+    if (serverSideOperations) {
+      // Use server-side sorting
+      onSort(fieldKey);
+    } else {
+      // Handle client-side sorting
+      if (localSortField === fieldKey) {
+        // Toggle direction if same field
+        setLocalSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      } else {
+        // Set new field with default direction
+        setLocalSortField(fieldKey);
+        setLocalSortDirection('asc');
+      }
+    }
+  }, [serverSideOperations, onSort, localSortField]);
+
+  // Client-side sorted data
+  const sortedData = useMemo(() => {
+    if (serverSideOperations || !localSortField || !data) {
+      return data;
+    }
+
+    return [...data].sort((a: any, b: any) => {
+      const aValue = a[localSortField];
+      const bValue = b[localSortField];
+
+      if (aValue === bValue) return 0;
+      
+      const comparison = aValue > bValue ? 1 : -1;
+      return localSortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [data, localSortField, localSortDirection, serverSideOperations]);
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     onSearchChange(value);
   }, [onSearchChange]);
-
-  const handleSort = (fieldKey: string) => {
-    onSort(fieldKey);
-  };
 
   const SortArrow = ({ fieldKey }: { fieldKey: string }) => {
     if (sortField !== fieldKey) {
@@ -240,7 +287,7 @@ export default function DataTable<T>({
                       )}
                     </TableCell>
                   </TableRow>
-                ) : data.length === 0 ? (
+                ) : sortedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={sortFields.length} className="px-3 py-8 text-center">
                       {renderEmptyState || (
@@ -251,7 +298,7 @@ export default function DataTable<T>({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.map((item, index) => renderRow(item, index))
+                  sortedData.map((item, index) => renderRow(item, index))
                 )}
               </TableBody>
             </Table>

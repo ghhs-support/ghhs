@@ -1,10 +1,12 @@
 from django.shortcuts import render
+from django.db.models import Q
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Agency, PrivateOwner, Property, Tenant, PropertyManager
 from .serializers import AgencySerializer, PrivateOwnerSerializer, PropertySerializer, PropertyManagerSerializer
 from backend.authentication import validate_kinde_token
+from common.pagination import CustomPageNumberPagination
 
 # Create your views here.
 
@@ -24,10 +26,50 @@ def private_owners(request):
 
 @api_view(['GET'])
 def properties(request):
-    """Get all properties with their tenants, agency, and private owner"""
-    properties = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()
-    serializer = PropertySerializer(properties, many=True)
-    return Response(serializer.data)
+    """Get paginated properties with their tenants, agency, and private owner"""
+    # Get the queryset with all relations
+    queryset = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()
+    
+    # Handle search
+    search = request.query_params.get('search', '')
+    if search:
+        queryset = queryset.filter(
+            Q(street_name__icontains=search) |
+            Q(street_number__icontains=search) |
+            Q(suburb__icontains=search) |
+            Q(agency__name__icontains=search) |
+            Q(private_owners__first_name__icontains=search) |
+            Q(private_owners__last_name__icontains=search)
+        ).distinct()
+    
+    # Handle sorting
+    ordering = request.query_params.get('ordering', 'street_name')
+    # Map frontend sort fields to actual database fields
+    ordering_map = {
+        'address': 'street_name',  # Default to street_name for address sorting
+        'owner': 'agency__name',   # Default to agency name for owner sorting
+        'street_name': 'street_name',
+        'street_number': 'street_number',
+        'suburb': 'suburb',
+        'state': 'state',
+        'postcode': 'postcode'
+    }
+    
+    # Get the actual database field for sorting
+    sort_field = ordering_map.get(ordering.replace('-', ''), 'street_name')
+    if ordering.startswith('-'):
+        sort_field = f'-{sort_field}'
+        
+    queryset = queryset.order_by(sort_field)
+    
+    # Apply pagination
+    paginator = CustomPageNumberPagination()
+    paginated_queryset = paginator.paginate_queryset(queryset, request)
+    
+    # Serialize the results
+    serializer = PropertySerializer(paginated_queryset, many=True)
+    
+    return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
 def property_detail(request, property_id):

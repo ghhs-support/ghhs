@@ -171,11 +171,7 @@ def tenant_suggestions(request):
 @validate_kinde_token
 def property_suggestions(request):
     search = request.query_params.get('q', '').strip()
-    
-    # Get properties that are actually used in active BeepingAlarms (exclude completed and cancelled)
     used_property_ids = BeepingAlarm.objects.filter(is_completed=False, is_cancelled=False).values_list('property_id', flat=True).distinct()
-    
-    # If no search query, return all used properties (limited)
     if len(search) == 0:
         properties = Property.objects.filter(id__in=used_property_ids).order_by('street_name', 'street_number')[:20]
         

@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import DataTable from "../common/DataTable";
-import { useAuthenticatedApi } from "../../hooks/useAuthenticatedApi";
+import { useDataTable } from "../../hooks/useDataTable";
 import {
   Property,
   PROPERTY_TABLE_COLUMNS,
@@ -16,55 +16,23 @@ const PropertiesTable: React.FC = () => {
   const navigate = useNavigate();
   const [localSortField, setLocalSortField] = useState<string | null>('street_name');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [entriesPerPage, setEntriesPerPage] = useState('10');
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
 
-  const { authenticatedGet } = useAuthenticatedApi();
-
-  // Load properties
-  useEffect(() => {
-    const loadProperties = async () => {
-      try {
-        setLoading(true);
-        const response = await authenticatedGet('/properties/properties/');
-        setProperties(response || []);
-        setTotalCount(response?.length || 0);
-        setTotalPages(Math.ceil((response?.length || 0) / parseInt(entriesPerPage)));
-        setError(null);
-      } catch (err) {
-        console.error('Error loading properties:', err);
-        setError('Failed to load properties');
-        setProperties([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProperties();
-  }, [authenticatedGet, entriesPerPage]);
-
-
-
-  // Handler functions
-  const handleSearchChange = useCallback((search: string) => {
-    setSearchTerm(search);
-    setCurrentPage(1);
-  }, []);
-
-  const handlePageChange = useCallback((page: number) => {
-    setCurrentPage(page);
-  }, []);
-
-  const handleEntriesPerPageChange = useCallback((entries: string) => {
-    setEntriesPerPage(entries);
-    setCurrentPage(1);
-  }, []);
+  const {
+    data: properties,
+    loading,
+    error,
+    totalCount,
+    totalPages,
+    currentPage,
+    entriesPerPage,
+    searchTerm,
+    handleSearchChange,
+    handlePageChange,
+    handleEntriesPerPageChange,
+  } = useDataTable<Property>({
+    endpoint: '/properties/properties/',
+    defaultEntriesPerPage: '10'
+  });
 
   // Handle local sorting
   const handleLocalSort = useCallback((field: string) => {
@@ -89,8 +57,8 @@ const PropertiesTable: React.FC = () => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       filtered = properties.filter(property => {
-        const address = `${property.street_number} ${property.street_name} ${property.suburb} ${property.state} ${property.postcode}`.toLowerCase();
-        const owner = property.agency ? property.agency.name : (property.private_owners.length > 0 ? `${property.private_owners[0].first_name} ${property.private_owners[0].last_name}` : '').toLowerCase();
+        const address = formatPropertyAddress(property).toLowerCase();
+        const owner = formatOwnerDisplay(property).name.toLowerCase();
         return address.includes(searchLower) || owner.includes(searchLower);
       });
     }
@@ -106,66 +74,36 @@ const PropertiesTable: React.FC = () => {
 
       switch (localSortField) {
         case 'address':
-          aValue = `${a.street_number} ${a.street_name} ${a.suburb}`.toLowerCase();
-          bValue = `${b.street_number} ${b.street_name} ${b.suburb}`.toLowerCase();
+          aValue = formatPropertyAddress(a).toLowerCase();
+          bValue = formatPropertyAddress(b).toLowerCase();
           break;
         case 'owner':
-          const aOwner = a.agency ? a.agency.name : (a.private_owners.length > 0 ? `${a.private_owners[0].first_name} ${a.private_owners[0].last_name}` : 'No owner');
-          const bOwner = b.agency ? b.agency.name : (b.private_owners.length > 0 ? `${b.private_owners[0].first_name} ${b.private_owners[0].last_name}` : 'No owner');
-          aValue = aOwner.toLowerCase();
-          bValue = bOwner.toLowerCase();
+          const aOwnerInfo = formatOwnerDisplay(a);
+          const bOwnerInfo = formatOwnerDisplay(b);
+          aValue = aOwnerInfo.name.toLowerCase();
+          bValue = bOwnerInfo.name.toLowerCase();
           break;
         case 'tenants':
           aValue = a.tenants.length;
           bValue = b.tenants.length;
+          break;
+        case 'street_name':
+          aValue = a.street_name.toLowerCase();
+          bValue = b.street_name.toLowerCase();
           break;
         default:
           return 0;
       }
 
       if (aValue === bValue) return 0;
-      
       const comparison = aValue > bValue ? 1 : -1;
       return localSortDirection === 'asc' ? comparison : -comparison;
     });
   }, [properties, searchTerm, localSortField, localSortDirection]);
 
-  const sortedProperties = getFilteredAndSortedProperties() || [];
+  const sortedProperties = getFilteredAndSortedProperties();
 
-  // Update total count and pages when filtered data changes
-  useEffect(() => {
-    setTotalCount(sortedProperties.length);
-    setTotalPages(Math.ceil(sortedProperties.length / parseInt(entriesPerPage)));
-  }, [sortedProperties, entriesPerPage]);
-
-  // Get paginated data
-  const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
-  const endIndex = startIndex + parseInt(entriesPerPage);
-  const paginatedData = sortedProperties.slice(startIndex, endIndex);
-
-  const renderRow = useCallback((property: Property) => (
-    <TableRow 
-      key={property.id}
-      className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
-      onClick={() => navigate(`/properties/${property.id}`)}
-    >
-      <TableCell className="w-64 px-5 py-4 text-left border-r border-gray-200 dark:border-gray-700">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-            {formatPropertyAddress(property)}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell className="w-48 px-5 py-4 text-left border-r border-gray-200 dark:border-gray-700">
-        {renderOwner(formatOwnerDisplay(property))}
-      </TableCell>
-      <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-        {renderTenants(formatTenantsDisplay(property.tenants))}
-      </TableCell>
-    </TableRow>
-  ), [navigate]);
-
-  // Keep the UI-specific render functions in the component
+  // Keep existing render functions...
   const renderOwner = (ownerInfo: ReturnType<typeof formatOwnerDisplay>) => (
     <div className="flex flex-col">
       <Badge size="sm" color={ownerInfo.type === 'agency' ? 'info' : ownerInfo.type === 'private' ? 'success' : 'error'}>
@@ -213,9 +151,31 @@ const PropertiesTable: React.FC = () => {
     </div>
   );
 
+  const renderRow = useCallback((property: Property) => (
+    <TableRow 
+      key={property.id}
+      className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
+      onClick={() => navigate(`/properties/${property.id}`)}
+    >
+      <TableCell className="w-64 px-5 py-4 text-left border-r border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+            {formatPropertyAddress(property)}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="w-48 px-5 py-4 text-left border-r border-gray-200 dark:border-gray-700">
+        {renderOwner(formatOwnerDisplay(property))}
+      </TableCell>
+      <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+        {renderTenants(formatTenantsDisplay(property.tenants))}
+      </TableCell>
+    </TableRow>
+  ), [navigate]);
+
   return (
     <DataTable
-      data={paginatedData}
+      data={sortedProperties}
       loading={loading}
       error={error}
       totalCount={totalCount}
