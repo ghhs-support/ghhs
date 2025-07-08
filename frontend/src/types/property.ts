@@ -6,6 +6,9 @@ export interface Property {
   suburb: string;
   state: string;
   postcode: string;
+  country?: string;
+  latitude?: string;
+  longitude?: string;
   tenants: Tenant[];
   agency?: Agency;
   private_owners: PrivateOwner[];
@@ -52,6 +55,9 @@ export interface PropertyFormData {
   suburb: string;
   state: string;
   postcode: string;
+  country: string;
+  latitude: string;
+  longitude: string;
   agency_id: number | null;
 }
 
@@ -120,6 +126,9 @@ export const getInitialFormData = (): PropertyFormData => ({
   suburb: '',
   state: '',
   postcode: '',
+  country: '',
+  latitude: '',
+  longitude: '',
   agency_id: null,
 });
 
@@ -130,6 +139,9 @@ export const propertyToFormData = (property: Property): PropertyFormData => ({
   suburb: property.suburb,
   state: property.state,
   postcode: property.postcode,
+  country: property.country || '',
+  latitude: property.latitude || '',
+  longitude: property.longitude || '',
   agency_id: property.agency?.id || null,
 });
 

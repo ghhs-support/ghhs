@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
-import SearchableDropdown from '../../components/common/SearchableDropdown';
 import Label from '../../components/form/Label';
-import InputField from '../../components/form/input/InputField';
 import Button from '../../components/ui/button/Button';
 import { Modal } from '../../components/ui/modal';
-import ConfirmModal from '../../components/common/ConfirmModal';
 import OwnerTypeToggle from '../../components/common/OwnerTypeToggle';
 import AddressForm from '../../components/common/AddressForm';
 import toast from 'react-hot-toast';
-import { BuildingOfficeIcon, UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import InfoCard from '../common/InfoCard';
-import { Property, Tenant, PropertyFormData, Agency, PrivateOwner, PropertyManager } from '../../types/property';
+import { AgencySelectionCard, PrivateOwnerSelectionCard, TenantManagementCard } from '../forms/property';
+import { Property, Tenant, PropertyFormData, Agency, PrivateOwner } from '../../types/property';
 
 interface EditPropertyFormProps {
   isOpen: boolean;
@@ -56,26 +52,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
   // Tenant management state - local state for modal only
   const [localTenants, setLocalTenants] = useState<Tenant[]>([]);
-  const [editingTenant, setEditingTenant] = useState<number | null>(null);
-  const [showAddTenant, setShowAddTenant] = useState(false);
-  const [showDeleteTenantModal, setShowDeleteTenantModal] = useState(false);
-  const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
-  const [showDeleteOwnerModal, setShowDeleteOwnerModal] = useState(false);
-  const [ownerToDelete, setOwnerToDelete] = useState<{ value: string; label: string } | null>(null);
   const [updateSuccessful, setUpdateSuccessful] = useState(false);
-  const [newTenant, setNewTenant] = useState({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    email: ''
-  });
-  const [editingTenantData, setEditingTenantData] = useState({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    email: ''
-  });
-  const [tenantErrors, setTenantErrors] = useState<Record<string, string>>({});
 
   // Load data when modal opens
   useEffect(() => {
@@ -88,22 +65,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
   useEffect(() => {
     if (!isOpen) {
-      // Only reset delete modals if they're not currently showing
-      if (!showDeleteTenantModal) {
-        setTenantToDelete(null);
-      }
-      if (!showDeleteOwnerModal) {
-        setOwnerToDelete(null);
-      }
-      setEditingTenant(null);
-      setEditingTenantData({
-        first_name: '',
-        last_name: '',
-        phone: '',
-        email: ''
-      });
-      setTenantErrors({});
-      
       // Show toast after modal is fully closed if update was successful
       if (updateSuccessful) {
         setTimeout(() => {
@@ -112,7 +73,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         }, 100);
       }
     }
-  }, [isOpen, showDeleteTenantModal, showDeleteOwnerModal, updateSuccessful]);
+  }, [isOpen, updateSuccessful]);
 
   const loadAgencies = async () => {
     try {
@@ -228,155 +189,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setTempSelectedOwner(null);
   };
 
-  // Tenant management functions
-  const resetTenantForm = () => {
-    setNewTenant({
-      first_name: '',
-      last_name: '',
-      phone: '',
-      email: ''
-    });
-    setTenantErrors({});
-  };
 
-  const validateTenant = (tenantData: any): boolean => {
-    const errors: Record<string, string> = {};
-    
-    if (!tenantData.first_name.trim()) {
-      errors.first_name = 'First name is required';
-    }
-    if (!tenantData.last_name.trim()) {
-      errors.last_name = 'Last name is required';
-    }
-    if (!tenantData.phone.trim()) {
-      errors.phone = 'Phone is required';
-    }
-    
-    setTenantErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-
-  const handleAddTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateTenant(newTenant) || !property) return;
-
-    // Create a temporary tenant object for local state
-    const tempTenant: Tenant = {
-      id: Date.now(), // Temporary ID for local state
-      first_name: newTenant.first_name,
-      last_name: newTenant.last_name,
-      phone: newTenant.phone,
-      email: newTenant.email || ''
-    };
-
-    // Add to local state
-    setLocalTenants(prev => [...prev, tempTenant]);
-    setShowAddTenant(false);
-    resetTenantForm();
-  };
-
-  const startEditTenant = (tenant: Tenant) => {
-    setEditingTenant(tenant.id);
-    setEditingTenantData({
-      first_name: tenant.first_name,
-      last_name: tenant.last_name,
-      phone: tenant.phone,
-      email: tenant.email || ''
-    });
-    setTenantErrors({});
-  };
-
-  const handleEditTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateTenant(editingTenantData) || !property || !editingTenant) return;
-
-    try {
-      setFormLoading(true);
-      const updatedTenant: Tenant = {
-        ...localTenants.find(t => t.id === editingTenant)!, // Find the tenant to update
-        first_name: editingTenantData.first_name,
-        last_name: editingTenantData.last_name,
-        phone: editingTenantData.phone,
-        email: editingTenantData.email || ''
-      };
-
-      // Update local state
-      setLocalTenants(prev => prev.map(t => t.id === editingTenant ? updatedTenant : t));
-      
-      // Add tenant data to the update
-      const data = {
-        tenants: localTenants.map(tenant => ({
-          id: tenant.id,
-          first_name: tenant.first_name,
-          last_name: tenant.last_name,
-          phone: tenant.phone,
-          email: tenant.email || ''
-        }))
-      };
-      
-      console.log('Sending data to backend:', data); // Debug log
-      
-      const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
-      
-      // Update parent's tenant state with the response data
-      if (response.tenants && onTenantsChange) {
-        onTenantsChange(response.tenants);
-      }
-      
-      // Set update successful flag and close modal
-      setUpdateSuccessful(true);
-      setEditingTenant(null);
-      setEditingTenantData({
-        first_name: '',
-        last_name: '',
-        phone: '',
-        email: ''
-      });
-      setTenantErrors({});
-    } catch (error: any) {
-      console.error('Error updating tenant:', error);
-      if (error.data) {
-        setTenantErrors(error.data);
-      }
-      toast.error('Failed to update tenant');
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-
-  const openDeleteTenantModal = (tenant: Tenant) => {
-    setTenantToDelete(tenant);
-    setShowDeleteTenantModal(true);
-  };
-
-  const handleRemoveTenant = async () => {
-    if (!property || !tenantToDelete) return;
-
-    // Remove tenant from local state
-    setLocalTenants(prev => prev.filter(t => t.id !== tenantToDelete.id));
-    
-    setShowDeleteTenantModal(false);
-    setTenantToDelete(null);
-  };
-
-  const openDeleteOwnerModal = (owner: { value: string; label: string }) => {
-    setOwnerToDelete(owner);
-    setShowDeleteOwnerModal(true);
-  };
-
-  const handleRemoveOwner = () => {
-    if (!ownerToDelete) return;
-
-    // Remove owner from local state
-    const updatedOwners = selectedPrivateOwners.filter(po => po.value !== ownerToDelete.value);
-    setSelectedPrivateOwners(updatedOwners);
-    setDraftPrivateOwners(updatedOwners);
-    
-    setShowDeleteOwnerModal(false);
-    setOwnerToDelete(null);
-  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -525,428 +338,48 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
           {/* Owner Selection */}
           {ownerType === 'agency' && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/40">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-medium text-blue-800 dark:text-blue-200">Agency Selection</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open('/agencies', '_blank')}
-                  className="text-xs"
-                >
-                  Manage Agencies
-                </Button>
-              </div>
-              <SearchableDropdown
-                value={getSelectedAgencyOption()}
-                onChange={(option) => handleFormChange({ target: { name: 'agency_id', value: option ? parseInt(option.value) : null } })}
-                onSearch={async (query) => {
-                  const filtered = agencies.filter(agency => 
-                    agency.name.toLowerCase().includes(query.toLowerCase())
-                  );
-                  return filtered.map(agency => ({
-                    value: agency.id.toString(),
-                    label: agency.name
-                  }));
-                }}
-                placeholder="Search agencies..."
-                showApplyButton={false}
-                showClearButton={true}
-              />
-              {formErrors.agency_id && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.agency_id}</p>
-              )}
-              
-              {/* Property Managers Display */}
-              {formData.agency_id && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
-                      {(() => {
-                        const selectedAgency = agencies.find(a => a.id === formData.agency_id);
-                        return selectedAgency?.property_managers?.length || 0;
-                      })()} {(() => {
-                        const selectedAgency = agencies.find(a => a.id === formData.agency_id);
-                        return (selectedAgency?.property_managers?.length || 0) === 1 ? 'manager' : 'managers';
-                      })()}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {(() => {
-                      const selectedAgency = agencies.find(a => a.id === formData.agency_id);
-                      const managers = selectedAgency?.property_managers || [];
-                      return managers.map((manager: PropertyManager) => (
-                        <InfoCard
-                          key={manager.id}
-                          title={`${manager.first_name} ${manager.last_name}`}
-                          phone={manager.phone}
-                          email={manager.email}
-                          notes={manager.notes}
-                          color="blue"
-                        />
-                      ));
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
+            <AgencySelectionCard
+              agencies={agencies}
+              selectedAgencyId={formData.agency_id}
+              onAgencySelect={(agencyId) => {
+                setFormData(prev => ({ ...prev, agency_id: agencyId }));
+                if (formErrors.agency_id) {
+                  setFormErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.agency_id;
+                    return newErrors;
+                  });
+                }
+              }}
+              error={formErrors.agency_id}
+              disabled={formLoading}
+            />
           )}
           
           {ownerType === 'private' && (
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/40">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-medium text-green-800 dark:text-green-200">Private Owner Selection</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open('/private-owners', '_blank')}
-                  className="text-xs"
-                >
-                  Manage Private Owners
-                </Button>
-              </div>
-              
-              {/* Add Private Owner */}
-              <div className="mb-4">
-                <SearchableDropdown
-                  value={tempSelectedOwner}
-                  onChange={(option) => {
-                    setTempSelectedOwner(option);
-                  }}
-                  onSearch={async (query) => {
-                    const filtered = privateOwners.filter(owner =>
-                      `${owner.first_name} ${owner.last_name}`.toLowerCase().includes(query.toLowerCase()) ||
-                      owner.email.toLowerCase().includes(query.toLowerCase()) ||
-                      owner.phone.includes(query)
-                    );
-                    return filtered.map(owner => ({
-                      value: owner.id.toString(),
-                      label: `${owner.first_name} ${owner.last_name}`,
-                      description: `${owner.email} • ${owner.phone}`
-                    }));
-                  }}
-                  placeholder="Search private owners..."
-                  showApplyButton={false}
-                  showClearButton={true}
-                />
-                
-                {/* Add/Cancel buttons */}
-                {tempSelectedOwner && (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (tempSelectedOwner && !selectedPrivateOwners.find(po => po.value === tempSelectedOwner.value)) {
-                          const updatedOwners = [...selectedPrivateOwners, tempSelectedOwner];
-                          setSelectedPrivateOwners(updatedOwners);
-                          setDraftPrivateOwners(updatedOwners);
-                        }
-                        setTempSelectedOwner(null);
-                      }}
-                      className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-                    >
-                      <PlusIcon className="w-3 h-3" />
-                      Add Owner
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTempSelectedOwner(null)}
-                      className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              {/* Selected Private Owners Display */}
-              {formErrors.private_owners && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.private_owners}</p>
-              )}
-              {selectedPrivateOwners.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-green-700 dark:text-green-300">
-                      Selected Owners
-                    </Label>
-                    <span className="text-sm text-green-700 dark:text-green-300 font-semibold">
-                      {selectedPrivateOwners.length} {selectedPrivateOwners.length === 1 ? 'owner' : 'owners'}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {selectedPrivateOwners.map((selectedOwner) => {
-                      const owner = privateOwners.find(o => o.id.toString() === selectedOwner.value);
-                      if (!owner) return null;
-                      
-                      return (
-                        <InfoCard
-                          key={owner.id}
-                          icon={<UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />}
-                          title={`${owner.first_name} ${owner.last_name}`}
-                          subtitle="Private Owner"
-                          phone={owner.phone}
-                          email={owner.email}
-                          notes={owner.notes}
-                          color="green"
-                          actions={[
-                            {
-                              icon: <TrashIcon className="w-4 h-4" />,
-                              onClick: () => openDeleteOwnerModal(selectedOwner),
-                              title: 'Remove owner',
-                              className: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20',
-                            },
-                          ]}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            <PrivateOwnerSelectionCard
+              privateOwners={privateOwners}
+              selectedOwnerIds={selectedPrivateOwners.map(po => parseInt(po.value))}
+              onOwnersChange={(ownerIds) => {
+                const newOwners = ownerIds.map(id => {
+                  const owner = privateOwners.find(o => o.id === id);
+                  return owner ? { value: owner.id.toString(), label: `${owner.first_name} ${owner.last_name}` } : null;
+                }).filter(Boolean) as { value: string; label: string }[];
+                setSelectedPrivateOwners(newOwners);
+                setDraftPrivateOwners(newOwners);
+              }}
+              error={formErrors.private_owners}
+              disabled={formLoading}
+            />
           )}
 
           {/* Tenant Management */}
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/40">
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-base font-medium text-purple-800 dark:text-purple-200">Property Tenants</Label>
-              <button
-                type="button"
-                onClick={() => setShowAddTenant(true)}
-                className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-              >
-                <PlusIcon className="w-3 h-3" />
-                Add Tenant
-              </button>
-            </div>
-            <div className="flex justify-end mb-2">
-              <span className="text-sm text-purple-700 dark:text-purple-300 font-semibold">
-                {localTenants.length} {localTenants.length === 1 ? 'tenant' : 'tenants'}
-              </span>
-            </div>
-            
-            <div className="space-y-2">
-              {/* Add Tenant Form */}
-              {showAddTenant && (
-                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
-                        <InputField
-                          name="first_name"
-                          value={newTenant.first_name}
-                          onChange={(e) => setNewTenant(prev => ({ ...prev, first_name: e.target.value }))}
-                          placeholder="First name"
-                          error={!!tenantErrors.first_name}
-                          className="mt-1 text-sm"
-                        />
-                        {tenantErrors.first_name && (
-                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
-                        <InputField
-                          name="last_name"
-                          value={newTenant.last_name}
-                          onChange={(e) => setNewTenant(prev => ({ ...prev, last_name: e.target.value }))}
-                          placeholder="Last name"
-                          error={!!tenantErrors.last_name}
-                          className="mt-1 text-sm"
-                        />
-                        {tenantErrors.last_name && (
-                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
-                      <InputField
-                        name="phone"
-                        value={newTenant.phone}
-                        onChange={(e) => setNewTenant(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Phone number"
-                        error={!!tenantErrors.phone}
-                        className="mt-1 text-sm"
-                      />
-                      {tenantErrors.phone && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                      <InputField
-                        name="email"
-                        value={newTenant.email}
-                        onChange={(e) => setNewTenant(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="Email (optional)"
-                        type="email"
-                        className="mt-1 text-sm"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddTenant}
-                        disabled={formLoading}
-                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <PlusIcon className="w-3 h-3" />
-                        {formLoading ? 'Adding...' : 'Add Tenant'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowAddTenant(false);
-                          resetTenantForm();
-                        }}
-                        disabled={formLoading}
-                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Edit Tenant Form */}
-              {editingTenant && (
-                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">First Name *</Label>
-                        <InputField
-                          name="first_name"
-                          value={editingTenantData.first_name}
-                          onChange={(e) => setEditingTenantData(prev => ({ ...prev, first_name: e.target.value }))}
-                          placeholder="First name"
-                          error={!!tenantErrors.first_name}
-                          className="mt-1 text-sm"
-                        />
-                        {tenantErrors.first_name && (
-                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Last Name *</Label>
-                        <InputField
-                          name="last_name"
-                          value={editingTenantData.last_name}
-                          onChange={(e) => setEditingTenantData(prev => ({ ...prev, last_name: e.target.value }))}
-                          placeholder="Last name"
-                          error={!!tenantErrors.last_name}
-                          className="mt-1 text-sm"
-                        />
-                        {tenantErrors.last_name && (
-                          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Phone *</Label>
-                      <InputField
-                        name="phone"
-                        value={editingTenantData.phone}
-                        onChange={(e) => setEditingTenantData(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="Phone number"
-                        error={!!tenantErrors.phone}
-                        className="mt-1 text-sm"
-                      />
-                      {tenantErrors.phone && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                      <InputField
-                        name="email"
-                        value={editingTenantData.email}
-                        onChange={(e) => setEditingTenantData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="Email (optional)"
-                        type="email"
-                        className="mt-1 text-sm"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleEditTenant}
-                        disabled={formLoading}
-                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <PencilIcon className="w-3 h-3" />
-                        {formLoading ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingTenant(null);
-                          setEditingTenantData({
-                            first_name: '',
-                            last_name: '',
-                            phone: '',
-                            email: ''
-                          });
-                          setTenantErrors({});
-                        }}
-                        disabled={formLoading}
-                        className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-gray-500 text-white hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Existing Tenants */}
-              {localTenants.length === 0 && !showAddTenant && !editingTenant ? (
-                <div className="text-gray-500 dark:text-gray-300 text-sm py-4 text-center">
-                  No tenants assigned to this property
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {localTenants.map((tenant) => (
-                    <InfoCard
-                      key={tenant.id}
-                      icon={<UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
-                      title={`${tenant.first_name} ${tenant.last_name}`}
-                      subtitle="Tenant"
-                      phone={tenant.phone}
-                      email={tenant.email}
-                      color="purple"
-                      actions={[
-                        {
-                          icon: <PencilIcon className="w-4 h-4" />,
-                          onClick: (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            startEditTenant(tenant);
-                          },
-                          title: 'Edit tenant',
-                          className: 'text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20',
-                        },
-                        {
-                          icon: <TrashIcon className="w-4 h-4" />,
-                          onClick: (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openDeleteTenantModal(tenant);
-                          },
-                          title: 'Delete tenant',
-                          className: 'text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20',
-                        },
-                      ]}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <TenantManagementCard
+            tenants={localTenants}
+            onTenantsChange={setLocalTenants}
+            disabled={formLoading}
+            loading={formLoading}
+          />
         </form>
       </Modal.Body>
       <Modal.Footer>
@@ -968,37 +401,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         </button>
       </Modal.Footer>
 
-      {/* Delete Tenant Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteTenantModal}
-        onConfirm={handleRemoveTenant}
-        onCancel={() => {
-          setShowDeleteTenantModal(false);
-          setTenantToDelete(null);
-        }}
-        title="Delete Tenant?"
-        message={`Are you sure you want to delete the tenant ${tenantToDelete?.first_name} ${tenantToDelete?.last_name}? This action cannot be undone.`}
-        confirmLabel="Delete Tenant"
-        cancelLabel="Cancel"
-        confirmColor="red"
-        loading={formLoading}
-      />
-
-      {/* Delete Private Owner Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteOwnerModal}
-        onConfirm={handleRemoveOwner}
-        onCancel={() => {
-          setShowDeleteOwnerModal(false);
-          setOwnerToDelete(null);
-        }}
-        title="Remove Private Owner?"
-        message={`Are you sure you want to remove ${ownerToDelete?.label} from this property? This action cannot be undone.`}
-        confirmLabel="Remove Owner"
-        cancelLabel="Cancel"
-        confirmColor="red"
-        loading={formLoading}
-      />
     </Modal>
   );
 } 
