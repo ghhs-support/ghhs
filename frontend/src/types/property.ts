@@ -132,3 +132,74 @@ export const propertyToFormData = (property: Property): PropertyFormData => ({
   postcode: property.postcode,
   agency_id: property.agency?.id || null,
 });
+
+// Add these new types
+export interface PropertyTableColumn {
+  key: 'address' | 'owner' | 'tenants';
+  label: string;
+  width: string;
+  align: 'left' | 'center' | 'right';
+}
+
+export const PROPERTY_TABLE_COLUMNS: PropertyTableColumn[] = [
+  {
+    key: 'address',
+    label: 'Address',
+    width: 'w-64',
+    align: 'left'
+  },
+  {
+    key: 'owner',
+    label: 'Property Owner',
+    width: 'w-48',
+    align: 'left'
+  },
+  {
+    key: 'tenants',
+    label: 'Tenants',
+    width: 'w-40',
+    align: 'center'
+  }
+];
+
+// Add these utility functions
+export const formatOwnerDisplay = (property: Property) => {
+  if (property.agency) {
+    return {
+      type: 'agency' as const,
+      name: property.agency.name,
+      email: property.agency.email
+    };
+  }
+  
+  if (property.private_owners.length > 0) {
+    const owner = property.private_owners[0];
+    return {
+      type: 'private' as const,
+      name: `${owner.first_name} ${owner.last_name}`,
+      email: owner.email
+    };
+  }
+  
+  return {
+    type: 'none' as const,
+    name: 'Unassigned',
+    email: ''
+  };
+};
+
+export const formatTenantsDisplay = (tenants: Tenant[]) => {
+  if (tenants.length === 0) {
+    return {
+      count: 0,
+      primary: '',
+      isVacant: true
+    };
+  }
+
+  return {
+    count: tenants.length,
+    primary: `${tenants[0].first_name} ${tenants[0].last_name}`,
+    isVacant: false
+  };
+};
