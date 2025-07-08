@@ -3,11 +3,7 @@ import { Property } from './property';
 export interface BeepingAlarm {
   id: number;
   uid: string;
-  issue_type: {
-    id: number;
-    name: string;
-    description: string;
-  };
+  issue_type: IssueType;
   notes: string;
   status: BeepingAlarmStatus;
   is_active: boolean;
@@ -20,6 +16,12 @@ export interface BeepingAlarm {
   created_at: string;
   updated_at: string;
   allocation: Array<User>;
+}
+
+export interface IssueType {
+  id: number;
+  name: string;
+  description: string;
 }
 
 export interface BeepingAlarmResponse {
@@ -79,6 +81,7 @@ export interface BeepingAlarmFilters {
 export interface CreateBeepingAlarmFormData {
   property: number | null;
   status: string | null;
+  issue_type: number | null;
 }
 
 export interface CreateBeepingAlarmProps {

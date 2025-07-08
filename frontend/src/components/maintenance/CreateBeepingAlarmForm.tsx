@@ -10,6 +10,7 @@ import { Property, Tenant, PrivateOwner, PropertyManager } from '../../types/pro
 import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData, BEEPING_ALARM_STATUS_OPTIONS } from '../../types/maintenance';
 import { BuildingOfficeIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline';
 import InfoCard from '../common/InfoCard';
+import { IssueType } from '../../types/maintenance';
 
 
 export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmProps) {
@@ -21,10 +22,12 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   
   const [formData, setFormData] = useState<CreateBeepingAlarmFormData>({
     property: null,
-    status: 'new'  
+    status: 'new',
+    issue_type: null
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [issueTypes, setIssueTypes] = useState<IssueType[]>([]);
 
   // Load initial data
   useEffect(() => {
@@ -36,14 +39,12 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      // Load properties with tenants, agency, and private owner
-      try {
-        const propertiesResponse = await authenticatedGet('/properties/properties/');
-        setProperties(propertiesResponse);
-      } catch (error) {
-        console.log('Properties endpoint not available, using empty array');
-        setProperties([]);
-      }
+      const [propertiesResponse, issueTypesResponse] = await Promise.all([
+        authenticatedGet('/properties/properties/'),
+        authenticatedGet('/maintenance/issue_types/')
+      ]);
+      setProperties(propertiesResponse);
+      setIssueTypes(issueTypesResponse);
     } catch (error) {
       console.error('Error loading initial data:', error);
     } finally {
@@ -99,7 +100,8 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       console.log('Beeping alarm created successfully:', response);
       setFormData({
         property: null,
-        status: 'new'
+        status: 'new',
+        issue_type: null
       });
       setSelectedProperty(null);
       setErrors({});
@@ -356,6 +358,24 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     onChange={(option) => handleInputChange('status', option ? option.value : null)}
                     options={BEEPING_ALARM_STATUS_OPTIONS}
                     placeholder="Select a status"
+                    className="w-full"
+                  />
+                </div>
+                {/* Issue Type */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Label htmlFor="issue_type" className="text-gray-900 dark:text-gray-100">
+                      Issue Type <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
+                  <SearchableDropdown
+                    value={formData.issue_type ? { 
+                      value: formData.issue_type.toString(),
+                      label: issueTypes.find(type => type.id === formData.issue_type)?.name || ''
+                    } : null}
+                    onChange={(option) => handleInputChange('issue_type', option ? parseInt(option.value) : null)}
+                    options={issueTypes.map(type => ({ value: type.id.toString(), label: type.name }))}
+                    placeholder="Select an issue type"
                     className="w-full"
                   />
                 </div>
