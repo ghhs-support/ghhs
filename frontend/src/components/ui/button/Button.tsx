@@ -3,8 +3,13 @@ import { ReactNode } from "react";
 interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   variant?: 'primary' | 'outline';
+  size?: 'sm' | 'md';
   onClick?: () => void;
   children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+  startIcon?: ReactNode;
+  endIcon?: ReactNode;
 }
 
 const Button: React.FC<ButtonProps> = ({

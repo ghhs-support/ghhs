@@ -55,6 +55,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
           <Label htmlFor="unit_number" className="text-sm font-medium text-gray-300">Unit Number</Label>
           <InputField
             id="unit_number"
+            name="unit_number"
             value={formData.unit_number}
             onChange={onChange}
             placeholder="e.g. 1A"
@@ -66,6 +67,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
           <Label htmlFor="street_number" className="text-sm font-medium text-gray-300">Street Number *</Label>
           <InputField
             id="street_number"
+            name="street_number"
             value={formData.street_number}
             onChange={onChange}
             placeholder="e.g. 123"
@@ -79,6 +81,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
         <Label htmlFor="street_name" className="text-sm font-medium text-gray-300">Street Name *</Label>
         <InputField
           id="street_name"
+          name="street_name"
           value={formData.street_name}
           onChange={onChange}
           placeholder="e.g. Main Street"
@@ -92,6 +95,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
           <Label htmlFor="suburb" className="text-sm font-medium text-gray-300">Suburb *</Label>
           <InputField
             id="suburb"
+            name="suburb"
             value={formData.suburb}
             onChange={onChange}
             placeholder="e.g. Sydney"
@@ -103,6 +107,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
           <Label htmlFor="state" className="text-sm font-medium text-gray-300">State *</Label>
           <InputField
             id="state"
+            name="state"
             value={formData.state}
             onChange={onChange}
             placeholder="e.g. NSW"
@@ -114,6 +119,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ formData, onChange }) => {
           <Label htmlFor="postcode" className="text-sm font-medium text-gray-300">Postcode *</Label>
           <InputField
             id="postcode"
+            name="postcode"
             value={formData.postcode}
             onChange={onChange}
             placeholder="e.g. 2000"
