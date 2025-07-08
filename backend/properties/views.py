@@ -571,6 +571,9 @@ def update_property(request, property_id):
     suburb = data.get('suburb')
     state = data.get('state')
     postcode = data.get('postcode')
+    country = data.get('country')
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
     agency_id = data.get('agency_id')
     private_owner_id = data.get('private_owner_id')  # For backward compatibility
     private_owner_ids = data.get('private_owner_ids', [])  # New field for multiple owners
@@ -593,13 +596,31 @@ def update_property(request, property_id):
             errors['postcode'] = 'Postcode is required'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Update fields
+    # Update address fields
     property_obj.unit_number = unit_number if unit_number else None
     property_obj.street_number = street_number
     property_obj.street_name = street_name
     property_obj.suburb = suburb
     property_obj.state = state
     property_obj.postcode = postcode
+    property_obj.country = country if country else ''
+    
+    # Handle latitude and longitude - convert empty strings to None for DecimalField
+    if latitude and latitude.strip():
+        try:
+            property_obj.latitude = float(latitude)
+        except (ValueError, TypeError):
+            property_obj.latitude = None
+    else:
+        property_obj.latitude = None
+        
+    if longitude and longitude.strip():
+        try:
+            property_obj.longitude = float(longitude)
+        except (ValueError, TypeError):
+            property_obj.longitude = None
+    else:
+        property_obj.longitude = None
     
     # Handle agency vs private owner changes - they are mutually exclusive
     # Always clear both first, then set the correct one based on the data
