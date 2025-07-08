@@ -193,6 +193,7 @@ const PropertiesTable: React.FC = () => {
       searchPlaceholder="Search by address, owner, suburb..."
       renderRow={renderRow}
       tableHeight="600px"
+      serverSideOperations={true} // Add this line
       renderEmptyState={
         <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
           No properties found

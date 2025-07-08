@@ -188,7 +188,26 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
     }
   ];
 
-  // Client-side sorting function (since backend sorting might not handle all fields)
+  // Move formatPropertyAddress up here, before getSortedAlarms
+  const formatPropertyAddress = (property: any) => {
+    if (!property) {
+      return 'No property data';
+    }
+    
+    const parts = [
+      property.unit_number && `Unit ${property.unit_number}`,
+      property.street_number,
+      property.street_name,
+      property.suburb,
+      property.state,
+      property.postcode
+    ].filter(Boolean);
+    
+    const address = parts.join(' ');
+    return address || 'No address data';
+  };
+
+  // Now getSortedAlarms can use formatPropertyAddress
   const getSortedAlarms = useCallback(() => {
     if (!localSortField) {
       return beepingAlarms;
@@ -202,49 +221,71 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         case 'allocation':
           aValue = a.allocation?.[0]?.first_name || '';
           bValue = b.allocation?.[0]?.first_name || '';
-          break;
-        case 'status':
-          aValue = a.status || '';
-          bValue = b.status || '';
-          break;
-        case 'agency_private':
-          aValue = a.property?.is_agency ? 'Agency' : 'Private';
-          bValue = b.property?.is_agency ? 'Agency' : 'Private';
-          break;
-        case 'tenant':
-          // Sort by first tenant's name, or by tenant count if names are equal
-          const aFirstTenant = a.property?.tenants?.[0];
-          const bFirstTenant = b.property?.tenants?.[0];
-          aValue = aFirstTenant ? `${aFirstTenant.first_name || ''} ${aFirstTenant.last_name || ''}`.trim() : '';
-          bValue = bFirstTenant ? `${bFirstTenant.first_name || ''} ${bFirstTenant.last_name || ''}`.trim() : '';
-          // If names are the same, sort by tenant count
+          // If first names are equal, try last names
           if (aValue === bValue) {
-            aValue = a.property?.tenants?.length || 0;
-            bValue = b.property?.tenants?.length || 0;
+            aValue = a.allocation?.[0]?.last_name || '';
+            bValue = b.allocation?.[0]?.last_name || '';
           }
           break;
+        
+        case 'status':
+          const statusOrder: Record<string, number> = {
+            'new': 0,
+            'requires_call_back': 1,
+            'awaiting_response': 2,
+            'to_be_scheduled': 3,
+            'to_be_quoted': 4,
+            'completed': 5,
+            'cancelled': 6
+          };
+          aValue = statusOrder[a.status?.toLowerCase() ?? ''] ?? 999;
+          bValue = statusOrder[b.status?.toLowerCase() ?? ''] ?? 999;
+          break;
+        
+        case 'agency_private':
+          // Simplify the sorting logic
+          aValue = a.property?.is_agency ? 'A' : (a.property?.is_private ? 'B' : 'C');
+          bValue = b.property?.is_agency ? 'A' : (b.property?.is_private ? 'B' : 'C');
+          break;
+        
+        case 'tenant':
+          // Simplify tenant sorting
+          aValue = a.property?.tenants?.[0] ? 
+            `${a.property.tenants[0].first_name} ${a.property.tenants[0].last_name}`.toLowerCase() : 'zzz';
+          bValue = b.property?.tenants?.[0] ? 
+            `${b.property.tenants[0].first_name} ${b.property.tenants[0].last_name}`.toLowerCase() : 'zzz';
+          break;
+        
         case 'customer_contacted':
-          aValue = a.is_customer_contacted;
-          bValue = b.is_customer_contacted;
+          // Simplify boolean sorting
+          aValue = a.is_customer_contacted ? 0 : 1;
+          bValue = b.is_customer_contacted ? 0 : 1;
           break;
+        
         case 'property':
-          aValue = `${a.property?.street_number || ''} ${a.property?.street_name || ''}`;
-          bValue = `${b.property?.street_number || ''} ${b.property?.street_name || ''}`;
+          // Sort by full address
+          aValue = formatPropertyAddress(a.property).toLowerCase();
+          bValue = formatPropertyAddress(b.property).toLowerCase();
           break;
+        
         case 'created_at':
           aValue = new Date(a.created_at).getTime();
           bValue = new Date(b.created_at).getTime();
           break;
+        
         default:
           return 0;
       }
 
+      // Add null/undefined handling
+      if (aValue === null || aValue === undefined) aValue = '';
+      if (bValue === null || bValue === undefined) bValue = '';
+
       if (aValue === bValue) return 0;
-      
       const comparison = aValue > bValue ? 1 : -1;
       return localSortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [beepingAlarms, localSortField, localSortDirection]);
+  }, [beepingAlarms, localSortField, localSortDirection, formatPropertyAddress]); // Added formatPropertyAddress to dependencies
 
   const sortedAlarms = getSortedAlarms();
 
@@ -298,24 +339,6 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       return <Badge size="sm" color="success">Private</Badge>;
     }
     return <Badge size="sm" color="error">Unknown</Badge>;
-  };
-
-  const formatPropertyAddress = (property: any) => {
-    if (!property) {
-      return 'No property data';
-    }
-    
-    const parts = [
-      property.unit_number && `Unit ${property.unit_number}`,
-      property.street_number,
-      property.street_name,
-      property.suburb,
-      property.state,
-      property.postcode
-    ].filter(Boolean);
-    
-    const address = parts.join(' ');
-    return address || 'No address data';
   };
 
   const formatAllocation = (allocation: BeepingAlarm['allocation']) => {
@@ -452,6 +475,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       searchPlaceholder="Search by address, allocation, notes..."
       renderRow={renderRow}
       tableHeight="600px"
+      serverSideOperations={true} // Add this line
       renderEmptyState={
         <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
           No beeping alarms found
