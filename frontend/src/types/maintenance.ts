@@ -16,7 +16,7 @@ export interface BeepingAlarm {
   created_at: string;
   updated_at: string;
   allocation: Array<User>;
-}
+
 
 export interface IssueType {
   id: number;
@@ -80,8 +80,10 @@ export interface BeepingAlarmFilters {
 
 export interface CreateBeepingAlarmFormData {
   property: number | null;
-  status: string | null;
+  status: string;
   issue_type: number | null;
+  allocation: number | null;
+  notes: string;
 }
 
 export interface CreateBeepingAlarmProps {

@@ -23,7 +23,9 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   const [formData, setFormData] = useState<CreateBeepingAlarmFormData>({
     property: null,
     status: 'new',
-    issue_type: null
+    issue_type: null,
+    allocation: null,
+    notes: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,9 +80,17 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    
     if (!formData.property) {
       newErrors.property = 'Property is required';
     }
+    if (!formData.issue_type) {
+      newErrors.issue_type = 'Issue type is required';
+    }
+    if (!formData.notes?.trim()) {
+      newErrors.notes = 'Notes are required';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -101,7 +111,9 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       setFormData({
         property: null,
         status: 'new',
-        issue_type: null
+        issue_type: null,
+        allocation: null,
+        notes: ''
       });
       setSelectedProperty(null);
       setErrors({});
@@ -346,6 +358,26 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     </div>
                   )}
                 </div>
+                {/* Allocation */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Label htmlFor="allocation" className="text-gray-900 dark:text-gray-100">
+                      Allocation
+                    </Label>
+                  </div>
+                  <SearchableDropdown
+                    value={formData.allocation ? { 
+                      value: formData.allocation.toString(),
+                      label: formData.allocation.toString() 
+                    } : null}
+                    onChange={(option) => handleInputChange('allocation', option ? parseInt(option.value) : null)}
+                    onSearch={searchService.searchUsers} 
+                    options={[]} 
+                    placeholder="Select a user to allocate"
+                    className="w-full"
+                    includeAllOption={false}
+                  />
+                </div>
                 {/* Status */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -359,6 +391,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     options={BEEPING_ALARM_STATUS_OPTIONS}
                     placeholder="Select a status"
                     className="w-full"
+                    includeAllOption={false}
                   />
                 </div>
                 {/* Issue Type */}
@@ -377,6 +410,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     options={issueTypes.map(type => ({ value: type.id.toString(), label: type.name }))}
                     placeholder="Select an issue type"
                     className="w-full"
+                    includeAllOption={false}
                   />
                 </div>
                 {/* Notes */}
@@ -391,9 +425,14 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     name="notes" 
                     rows={4} 
                     required
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
                     className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" 
                     placeholder="Enter notes..." 
                   />
+                  {errors.notes && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.notes}</p>
+                  )}
                 </div>
               </div>
             )}
