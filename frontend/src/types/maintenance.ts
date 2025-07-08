@@ -82,7 +82,17 @@ export interface CreateBeepingAlarmFormData {
   property: number | null;
   status: string;
   issue_type: number | null;
-  allocation: number | null;
+  allocation: number | null;  // This is still null | number for the form
+  allocation_label?: string | null;
+  notes: string;
+}
+
+// Add this interface for the actual API payload
+export interface CreateBeepingAlarmPayload {
+  property: number | null;
+  status: string;
+  issue_type: number | null;
+  allocation: number[];  // This is what gets sent to the API
   notes: string;
 }
 

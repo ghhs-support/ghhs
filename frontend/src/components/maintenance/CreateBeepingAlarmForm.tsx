@@ -25,6 +25,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     status: 'new',
     issue_type: null,
     allocation: null,
+    allocation_label: null,
     notes: ''
   });
 
@@ -104,6 +105,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       setLoading(true);
       const payload = {
         ...formData,
+        allocation: formData.allocation ? [formData.allocation] : [], // Convert to array
       };
       console.log('Creating beeping alarm with payload:', payload);
       const response = await authenticatedPost('/maintenance/beeping_alarms/', { data: payload });
@@ -113,6 +115,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
         status: 'new',
         issue_type: null,
         allocation: null,
+        allocation_label: null,
         notes: ''
       });
       setSelectedProperty(null);
@@ -366,11 +369,14 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                     </Label>
                   </div>
                   <SearchableDropdown
-                    value={formData.allocation ? { 
+                    value={formData.allocation ? {
                       value: formData.allocation.toString(),
-                      label: formData.allocation.toString() 
+                      label: formData.allocation_label || formData.allocation.toString()
                     } : null}
-                    onChange={(option) => handleInputChange('allocation', option ? parseInt(option.value) : null)}
+                    onChange={(option) => {
+                      handleInputChange('allocation', option ? parseInt(option.value) : null);
+                      handleInputChange('allocation_label', option ? option.label : null);
+                    }}
                     onSearch={searchService.searchUsers} 
                     options={[]} 
                     placeholder="Select a user to allocate"
