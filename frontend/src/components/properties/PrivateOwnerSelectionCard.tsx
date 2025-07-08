@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { UserIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import SearchableDropdown from '../../common/SearchableDropdown';
-import Label from '../../form/Label';
-import Button from '../../ui/button/Button';
-import InfoCard from '../../common/InfoCard';
-import ConfirmModal from '../../common/ConfirmModal';
-import { PrivateOwner } from '../../../types/property';
+import SearchableDropdown from '../common/SearchableDropdown';
+import Label from '../form/Label';
+import Button from '../ui/button/Button';
+import InfoCard from './InfoCard';
+import ConfirmModal from '../common/ConfirmModal';
+import { PrivateOwner } from '../../types/property';
 
 interface PrivateOwnerSelectionCardProps {
   privateOwners: PrivateOwner[];
@@ -58,9 +58,9 @@ export default function PrivateOwnerSelectionCard({
 
   return (
     <>
-      <div className="border border-green-200 dark:border-green-700 rounded-lg p-4 bg-gray-800 dark:bg-gray-900">
+      <div className="border border-green-200 dark:border-green-700 rounded-lg p-4 bg-green-50 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-2">
-          <Label className="text-base font-medium text-green-200 dark:text-green-200">
+          <Label className="text-base font-medium text-green-900 dark:text-green-200">
             <UserIcon className="w-5 h-5 inline mr-2" />
             Private Owner Selection
           </Label>
@@ -77,7 +77,6 @@ export default function PrivateOwnerSelectionCard({
           )}
         </div>
         
-        {/* Add Private Owner */}
         <div className="mb-4">
           <SearchableDropdown
             value={tempSelectedOwner}
@@ -100,7 +99,6 @@ export default function PrivateOwnerSelectionCard({
             disabled={disabled}
           />
           
-          {/* Add/Cancel buttons */}
           {tempSelectedOwner && (
             <div className="mt-2 flex gap-2">
               <button
@@ -124,19 +122,17 @@ export default function PrivateOwnerSelectionCard({
           )}
         </div>
         
-        {/* Error Display */}
         {error && (
-          <p className="mt-1 text-sm text-red-400">{error}</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
         
-        {/* Selected Private Owners Display */}
         {selectedOwners.length > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <Label className="text-sm font-medium text-green-200">
+              <Label className="text-sm font-medium text-green-900 dark:text-green-200">
                 Selected Owners
               </Label>
-              <span className="text-sm text-green-400 font-semibold">
+              <span className="text-sm text-green-600 dark:text-green-400 font-semibold">
                 {selectedOwners.length} {selectedOwners.length === 1 ? 'owner' : 'owners'}
               </span>
             </div>
@@ -167,13 +163,12 @@ export default function PrivateOwnerSelectionCard({
         )}
         
         {selectedOwners.length === 0 && (
-          <div className="text-green-400 text-sm py-4 text-center">
+          <div className="text-green-600 dark:text-green-400 text-sm py-4 text-center">
             No private owners selected
           </div>
         )}
       </div>
 
-      {/* Delete Owner Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         onConfirm={handleRemoveOwner}

@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../ui/button/Button';
-import AddressForm from '../common/AddressForm';
-import OwnerTypeToggle from '../common/OwnerTypeToggle';
 import { Modal } from '../ui/modal';
-import { AgencySelectionCard, PrivateOwnerSelectionCard, TenantDisplayCard } from '../forms/property';
+import { 
+  PropertyAddressForm, 
+  OwnerTypeToggle, 
+  AgencySelectionCard, 
+  PrivateOwnerSelectionCard, 
+  TenantDisplayCard 
+} from '.';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { Agency, PrivateOwner, Tenant } from '../../types/property';
 
@@ -184,90 +188,68 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
       <Modal.Header onClose={onClose}>Create Property</Modal.Header>
       <Modal.Body>
         <form id="create-property-form" onSubmit={handleSubmit} className="space-y-6">
-          <AddressForm 
+          <PropertyAddressForm 
             formData={formData} 
             onChange={handleChange} 
             errors={formErrors}
           />
           
-          {/* Owner Type Toggle */}
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-base font-medium text-gray-900 dark:text-gray-100">Property Owner Type</label>
-            </div>
-            <OwnerTypeToggle
-              ownerType={ownerType}
-              onChange={setOwnerType}
-              disabled={formLoading}
-            />
-          </div>
-
-          {/* Owner Selection */}
+          <OwnerTypeToggle
+            ownerType={ownerType}
+            onChange={setOwnerType}
+            disabled={formLoading}
+          />
+          
+          {/* Agency Selection */}
           {ownerType === 'agency' && (
             <AgencySelectionCard
               agencies={agencies}
               selectedAgencyId={formData.agency_id}
-              onAgencySelect={(agencyId) => {
-                setFormData(prev => ({ ...prev, agency_id: agencyId }));
-                if (formErrors.agency_id) {
-                  setFormErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.agency_id;
-                    return newErrors;
-                  });
-                }
-              }}
+              onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
               error={formErrors.agency_id}
               disabled={formLoading}
             />
           )}
           
+          {/* Private Owner Selection */}
           {ownerType === 'private' && (
             <PrivateOwnerSelectionCard
               privateOwners={privateOwners}
               selectedOwnerIds={selectedPrivateOwnerIds}
-              onOwnersChange={(ownerIds) => {
-                setSelectedPrivateOwnerIds(ownerIds);
-                if (formErrors.private_owners) {
-                  setFormErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.private_owners;
-                    return newErrors;
-                  });
-                }
-              }}
+              onOwnersChange={setSelectedPrivateOwnerIds}
               error={formErrors.private_owners}
               disabled={formLoading}
             />
           )}
-
-          {/* Tenant Assignment - Display Only */}
+          
+          {/* Tenant Display */}
           <TenantDisplayCard
             tenants={tenants}
             onTenantsChange={setTenants}
+            allowAdd={false}
+            allowRemove={false}
             disabled={formLoading}
-            loading={formLoading}
-            allowAdd={true}
-            allowRemove={true}
           />
         </form>
       </Modal.Body>
       <Modal.Footer>
-        <Button
-          variant="outline"
-          onClick={onClose}
-          disabled={formLoading}
-        >
-          Cancel
-        </Button>
-        <button
-          type="submit"
-          form="create-property-form"
-          disabled={formLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
-        >
-          {formLoading ? 'Creating...' : 'Create Property'}
-        </button>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            disabled={formLoading}
+          >
+            Cancel
+          </Button>
+          <button
+            type="submit"
+            form="create-property-form"
+            disabled={formLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
+          >
+            {formLoading ? 'Creating...' : 'Create Property'}
+          </button>
+        </div>
       </Modal.Footer>
     </Modal>
   );

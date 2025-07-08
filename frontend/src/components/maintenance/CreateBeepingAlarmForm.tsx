@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { Property, Tenant, PrivateOwner, PropertyManager } from '../../types/property';
 import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData, BEEPING_ALARM_STATUS_OPTIONS } from '../../types/maintenance';
 import { BuildingOfficeIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline';
-import InfoCard from '../common/InfoCard';
+import InfoCard from '../properties/InfoCard';
 import { IssueType } from '../../types/maintenance';
 
 

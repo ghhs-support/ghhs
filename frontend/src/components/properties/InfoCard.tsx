@@ -23,28 +23,28 @@ interface InfoCardProps {
 const colorMap = {
   blue: {
     border: 'border-blue-200 dark:border-blue-700',
-    title: 'text-blue-200',
-    subtitle: 'text-blue-400',
+    title: 'text-blue-900 dark:text-blue-200',
+    subtitle: 'text-blue-600 dark:text-blue-400',
   },
   green: {
     border: 'border-green-200 dark:border-green-700',
-    title: 'text-green-200',
-    subtitle: 'text-green-400',
+    title: 'text-green-900 dark:text-green-200',
+    subtitle: 'text-green-600 dark:text-green-400',
   },
   purple: {
     border: 'border-purple-200 dark:border-purple-700',
-    title: 'text-purple-200',
-    subtitle: 'text-purple-400',
+    title: 'text-purple-900 dark:text-purple-200',
+    subtitle: 'text-purple-600 dark:text-purple-400',
   },
   red: {
     border: 'border-red-200 dark:border-red-700',
-    title: 'text-red-200',
-    subtitle: 'text-red-400',
+    title: 'text-red-900 dark:text-red-200',
+    subtitle: 'text-red-600 dark:text-red-400',
   },
   gray: {
     border: 'border-gray-200 dark:border-gray-700',
-    title: 'text-gray-100',
-    subtitle: 'text-gray-400',
+    title: 'text-gray-900 dark:text-gray-100',
+    subtitle: 'text-gray-600 dark:text-gray-400',
   },
 };
 
@@ -65,7 +65,7 @@ export default function InfoCard({
   children,
 }: InfoCardProps) {
   const colorStyles = colorMap[color] || colorMap.gray;
-  const bgClass = 'bg-gray-800 dark:bg-gray-900';
+  const bgClass = 'bg-white dark:bg-gray-800';
 
   return (
     <div
@@ -96,7 +96,7 @@ export default function InfoCard({
         )}
       </div>
       {phone && (
-        <div className="flex items-center gap-1 text-xs text-red-400">
+        <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
           <span>📞</span>
           <span>{phone}</span>
         </div>
@@ -108,7 +108,7 @@ export default function InfoCard({
         </div>
       )}
       {notes && (
-        <div className="text-xs text-gray-400 italic">{notes}</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 italic">{notes}</div>
       )}
       {children}
     </div>

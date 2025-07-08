@@ -4,16 +4,18 @@ import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import Button from '../../components/ui/button/Button';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import EditPropertyForm from '../../components/properties/EditPropertyForm';
-import Label from '../../components/form/Label';
 import toast from 'react-hot-toast';
 import { 
   PencilIcon, 
   TrashIcon, 
   ArrowLeftIcon,
-  UserIcon,
   BuildingOfficeIcon,
   MapPinIcon} from '@heroicons/react/24/outline';
-import InfoCard from '../../components/common/InfoCard';
+import { 
+  TenantDisplayCard, 
+  AgencyDisplayCard, 
+  PrivateOwnerDisplayCard 
+} from '../../components/properties';
 import { Property, Tenant, formatPropertyAddress } from '../../types/property';
 
 export default function PropertyDetails() {
@@ -78,7 +80,7 @@ export default function PropertyDetails() {
   };
 
   const handleEditSuccess = () => {
-    loadProperty(); // Reload property data after successful edit
+    loadProperty();
   };
 
   const handleTenantsChange = (updatedTenants: Tenant[]) => {
@@ -132,7 +134,6 @@ export default function PropertyDetails() {
             >
               Delete Property
             </Button>
-
           </div>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Property Details</h1>
@@ -163,123 +164,28 @@ export default function PropertyDetails() {
           </div>
         </div>
 
-        {/* Property Owner */}
-        <div className={`rounded-xl border p-6 ${
-          property.agency 
-            ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700' 
-            : property.private_owners.length > 0 
-            ? 'bg-green-50 dark:bg-green-900/40 border-green-200 dark:border-green-700'
-            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-        }`}>
-          <div className="flex items-center gap-2 mb-4">
-            {property.agency ? (
-              <BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            ) : property.private_owners.length > 0 ? (
-              <UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <UserIcon className="w-5 h-5 text-gray-500" />
-            )}
-            <h2 className={`text-lg font-semibold ${
-              property.agency 
-                ? 'text-blue-800 dark:text-blue-200' 
-                : property.private_owners.length > 0 
-                ? 'text-green-800 dark:text-green-200'
-                : 'text-gray-900 dark:text-gray-100'
-            }`}>
-              Property Owner
-            </h2>
-          </div>
-          
-          {property.agency && (
-            <InfoCard
-              icon={<BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-              title={property.agency.name}
-              subtitle="Agency"
-              phone={property.agency.phone}
-              email={property.agency.email}
-              color="blue"
-            >
-              {property.agency.property_managers && property.agency.property_managers.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-medium text-blue-700 dark:text-blue-300">Property Managers</Label>
-                    <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold">
-                      {property.agency.property_managers.length} {property.agency.property_managers.length === 1 ? 'manager' : 'managers'}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {property.agency.property_managers.map((manager) => (
-                      <InfoCard
-                        key={manager.id}
-                        title={`${manager.first_name} ${manager.last_name}`}
-                        phone={manager.phone}
-                        email={manager.email}
-                        notes={manager.notes}
-                        color="blue"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </InfoCard>
-          )}
-          {property.private_owners.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-green-700 dark:text-green-300 font-semibold">Private Owner</span>
-                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                  {property.private_owners.length} {property.private_owners.length === 1 ? 'Private Owner' : 'Private Owners'}
-                </span>
-              </div>
-              {property.private_owners.map((owner) => (
-                <InfoCard
-                  key={owner.id}
-                  icon={<UserIcon className="w-5 h-5 text-green-600 dark:text-green-400" />}
-                  title={`${owner.first_name} ${owner.last_name}`}
-                  subtitle="Private Owner"
-                  phone={owner.phone}
-                  email={owner.email}
-                  color="green"
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Property Owner - Show Agency OR Private Owners */}
+        {property.agency ? (
+          <AgencyDisplayCard
+            agency={property.agency}
+            loading={loading}
+          />
+        ) : (
+          <PrivateOwnerDisplayCard
+            privateOwners={property.private_owners || []}
+            loading={loading}
+          />
+        )}
 
         {/* Tenants */}
-        <div className="bg-purple-50 dark:bg-purple-900/40 rounded-xl border border-purple-200 dark:border-purple-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <h2 className="text-lg font-semibold text-purple-800 dark:text-purple-200">Tenants</h2>
-            </div>
-            <span className="text-sm text-purple-700 dark:text-purple-300 font-semibold">
-              {tenants.length} {tenants.length === 1 ? 'Tenant' : 'Tenants'}
-            </span>
-          </div>
-          
-          {tenants.length === 0 ? (
-            <div className="text-center py-8 text-purple-600 dark:text-purple-400">
-              <UserIcon className="w-12 h-12 mx-auto mb-2 text-purple-300 dark:text-purple-600" />
-              <div>No tenants assigned to this property</div>
-              <div className="text-sm">This property is currently vacant</div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {tenants.map((tenant) => (
-                <InfoCard
-                  key={tenant.id}
-                  icon={<UserIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
-                  title={`${tenant.first_name} ${tenant.last_name}`}
-                  subtitle="Tenant"
-                  phone={tenant.phone}
-                  email={tenant.email}
-                  color="purple"
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        <TenantDisplayCard
+          tenants={tenants}
+          onTenantsChange={handleTenantsChange}
+          allowAdd={false}
+          allowRemove={false}
+          disabled={false}
+          loading={loading}
+        />
       </div>
 
       {/* Edit Property Modal */}

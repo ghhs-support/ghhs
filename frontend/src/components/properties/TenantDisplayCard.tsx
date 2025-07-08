@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { UserIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import SearchableDropdown from '../../common/SearchableDropdown';
-import Label from '../../form/Label';
-import InfoCard from '../../common/InfoCard';
-import ConfirmModal from '../../common/ConfirmModal';
-import { Tenant } from '../../../types/property';
+import SearchableDropdown from '../common/SearchableDropdown';
+import Label from '../form/Label';
+import InfoCard from './InfoCard';
+import ConfirmModal from '../common/ConfirmModal';
+import { Tenant } from '../../types/property';
 
 interface TenantDisplayCardProps {
   tenants: Tenant[];
@@ -27,22 +27,18 @@ export default function TenantDisplayCard({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
 
-  // Mock tenant search - in real app, this would search from a tenant database
   const searchTenants = async (query: string) => {
-    // This would typically call an API to search for existing tenants
-    // For now, return empty array as this is just for display purposes
     return [];
   };
 
   const handleAddTenant = () => {
     if (tempSelectedTenant) {
-      // In a real implementation, you'd fetch the full tenant details
       const newTenant: Tenant = {
         id: Date.now(),
         first_name: tempSelectedTenant.label.split(' ')[0] || '',
         last_name: tempSelectedTenant.label.split(' ')[1] || '',
-        phone: '', // Would be fetched from the selected tenant
-        email: ''  // Would be fetched from the selected tenant
+        phone: '',
+        email: ''
       };
       
       onTenantsChange([...tenants, newTenant]);
@@ -67,21 +63,21 @@ export default function TenantDisplayCard({
 
   return (
     <>
-      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-gray-800 dark:bg-gray-900">
+      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-1">
-          <Label className="text-base font-medium text-purple-200 dark:text-purple-200">
+          <Label className="text-base font-medium text-purple-900 dark:text-purple-200">
             <UserIcon className="w-5 h-5 inline mr-2" />
             Property Tenants
           </Label>
           {allowAdd && (
-            <div className="text-xs text-purple-400">
+            <div className="text-xs text-purple-600 dark:text-purple-400">
               Display Only
             </div>
           )}
         </div>
         
         <div className="flex justify-end mb-2">
-          <span className="text-sm text-purple-400 font-semibold">
+          <span className="text-sm text-purple-600 dark:text-purple-400 font-semibold">
             {tenants.length} {tenants.length === 1 ? 'tenant' : 'tenants'}
           </span>
         </div>
@@ -124,7 +120,7 @@ export default function TenantDisplayCard({
         
         <div className="space-y-2">
           {tenants.length === 0 ? (
-            <div className="text-purple-400 text-sm py-4 text-center">
+            <div className="text-purple-600 dark:text-purple-400 text-sm py-4 text-center">
               No tenants assigned to this property
             </div>
           ) : (
@@ -155,7 +151,6 @@ export default function TenantDisplayCard({
         </div>
       </div>
 
-      {/* Delete Tenant Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         onConfirm={handleDeleteTenant}

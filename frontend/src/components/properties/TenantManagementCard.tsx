@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import Label from '../../form/Label';
-import InputField from '../../form/input/InputField';
-import InfoCard from '../../common/InfoCard';
-import ConfirmModal from '../../common/ConfirmModal';
-import { Tenant } from '../../../types/property';
+import Label from '../form/Label';
+import InputField from '../form/input/InputField';
+import InfoCard from './InfoCard';
+import ConfirmModal from '../common/ConfirmModal';
+import { Tenant } from '../../types/property';
 
 interface TenantManagementCardProps {
   tenants: Tenant[];
@@ -153,9 +153,9 @@ export default function TenantManagementCard({
 
   return (
     <>
-      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-gray-800 dark:bg-gray-900">
+      <div className="border border-purple-200 dark:border-purple-700 rounded-lg p-4 bg-purple-50 dark:bg-gray-800">
         <div className="flex items-center justify-between mb-1">
-          <Label className="text-base font-medium text-purple-200 dark:text-purple-200">
+          <Label className="text-base font-medium text-purple-900 dark:text-purple-200">
             <UserIcon className="w-5 h-5 inline mr-2" />
             Property Tenants
           </Label>
@@ -171,7 +171,7 @@ export default function TenantManagementCard({
         </div>
         
         <div className="flex justify-end mb-2">
-          <span className="text-sm text-purple-400 font-semibold">
+          <span className="text-sm text-purple-600 dark:text-purple-400 font-semibold">
             {tenants.length} {tenants.length === 1 ? 'tenant' : 'tenants'}
           </span>
         </div>
@@ -179,11 +179,11 @@ export default function TenantManagementCard({
         <div className="space-y-2">
           {/* Add Tenant Form */}
           {showAddTenant && (
-            <div className="p-3 bg-gray-700 dark:bg-gray-800 rounded border border-gray-600 dark:border-gray-700">
+            <div className="p-3 bg-purple-100 dark:bg-gray-700 rounded border border-purple-200 dark:border-gray-600">
               <form onSubmit={handleAddTenant} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">First Name *</Label>
+                    <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">First Name *</Label>
                     <InputField
                       name="first_name"
                       value={newTenant.first_name}
@@ -193,11 +193,11 @@ export default function TenantManagementCard({
                       className="mt-1 text-sm"
                     />
                     {tenantErrors.first_name && (
-                      <p className="mt-1 text-xs text-red-400">{tenantErrors.first_name}</p>
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
                     )}
                   </div>
                   <div>
-                    <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Last Name *</Label>
+                    <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Last Name *</Label>
                     <InputField
                       name="last_name"
                       value={newTenant.last_name}
@@ -207,12 +207,12 @@ export default function TenantManagementCard({
                       className="mt-1 text-sm"
                     />
                     {tenantErrors.last_name && (
-                      <p className="mt-1 text-xs text-red-400">{tenantErrors.last_name}</p>
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
                     )}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Phone *</Label>
+                  <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Phone *</Label>
                   <InputField
                     name="phone"
                     value={newTenant.phone}
@@ -222,11 +222,11 @@ export default function TenantManagementCard({
                     className="mt-1 text-sm"
                   />
                   {tenantErrors.phone && (
-                    <p className="mt-1 text-xs text-red-400">{tenantErrors.phone}</p>
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Email</Label>
+                  <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Email</Label>
                   <InputField
                     name="email"
                     value={newTenant.email}
@@ -263,11 +263,11 @@ export default function TenantManagementCard({
 
           {/* Edit Tenant Form */}
           {editingTenant && (
-            <div className="p-3 bg-gray-700 dark:bg-gray-800 rounded border border-gray-600 dark:border-gray-700">
+            <div className="p-3 bg-purple-100 dark:bg-gray-700 rounded border border-purple-200 dark:border-gray-600">
               <form onSubmit={handleEditTenant} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">First Name *</Label>
+                    <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">First Name *</Label>
                     <InputField
                       name="first_name"
                       value={editingTenantData.first_name}
@@ -277,11 +277,11 @@ export default function TenantManagementCard({
                       className="mt-1 text-sm"
                     />
                     {tenantErrors.first_name && (
-                      <p className="mt-1 text-xs text-red-400">{tenantErrors.first_name}</p>
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.first_name}</p>
                     )}
                   </div>
                   <div>
-                    <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Last Name *</Label>
+                    <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Last Name *</Label>
                     <InputField
                       name="last_name"
                       value={editingTenantData.last_name}
@@ -291,12 +291,12 @@ export default function TenantManagementCard({
                       className="mt-1 text-sm"
                     />
                     {tenantErrors.last_name && (
-                      <p className="mt-1 text-xs text-red-400">{tenantErrors.last_name}</p>
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.last_name}</p>
                     )}
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Phone *</Label>
+                  <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Phone *</Label>
                   <InputField
                     name="phone"
                     value={editingTenantData.phone}
@@ -306,11 +306,11 @@ export default function TenantManagementCard({
                     className="mt-1 text-sm"
                   />
                   {tenantErrors.phone && (
-                    <p className="mt-1 text-xs text-red-400">{tenantErrors.phone}</p>
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">{tenantErrors.phone}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-200 dark:text-gray-300">Email</Label>
+                  <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">Email</Label>
                   <InputField
                     name="email"
                     value={editingTenantData.email}
@@ -353,7 +353,7 @@ export default function TenantManagementCard({
 
           {/* Existing Tenants */}
           {tenants.length === 0 && !showAddTenant && !editingTenant ? (
-            <div className="text-purple-400 text-sm py-4 text-center">
+            <div className="text-purple-600 dark:text-purple-400 text-sm py-4 text-center">
               No tenants assigned to this property
             </div>
           ) : (
@@ -396,7 +396,6 @@ export default function TenantManagementCard({
         </div>
       </div>
 
-      {/* Delete Tenant Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         onConfirm={handleDeleteTenant}

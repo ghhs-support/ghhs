@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
-import Label from '../../components/form/Label';
-import Button from '../../components/ui/button/Button';
-import { Modal } from '../../components/ui/modal';
-import OwnerTypeToggle from '../../components/common/OwnerTypeToggle';
-import AddressForm from '../../components/common/AddressForm';
+import Label from '../form/Label';
+import Button from '../ui/button/Button';
+import { Modal } from '../ui/modal';
 import toast from 'react-hot-toast';
-import { AgencySelectionCard, PrivateOwnerSelectionCard, TenantManagementCard } from '../forms/property';
+import { 
+  OwnerTypeToggle, 
+  PropertyAddressForm, 
+  AgencySelectionCard, 
+  PrivateOwnerSelectionCard, 
+  TenantManagementCard 
+} from '.';
 import { Property, Tenant, PropertyFormData, Agency, PrivateOwner } from '../../types/property';
 
 interface EditPropertyFormProps {
@@ -189,8 +193,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     setTempSelectedOwner(null);
   };
 
-
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -225,7 +227,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const handleEditProperty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm() || !property) return;
-
+    
     try {
       setFormLoading(true);
       let data: any = { ...formData };
@@ -236,16 +238,14 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       
       // Set the correct owner type based on toggle
       if (ownerType === 'agency') {
-        // Toggle is on agency side - set agency and ensure private owners are cleared
         data.agency_id = formData.agency_id;
-        data.private_owner_ids = []; // Explicitly clear private owners
+        data.private_owner_ids = [];
       } else if (ownerType === 'private') {
-        // Toggle is on private side - set private owners and ensure agency is cleared
-        data.agency_id = null; // Explicitly clear agency
-        data.private_owner_ids = selectedPrivateOwners.map(po => parseInt(po.value));
+        data.agency_id = null;
+        data.private_owner_ids = selectedPrivateOwners.map(owner => parseInt(owner.value));
       }
       
-      // Add tenant data to the update
+      // Add tenant data
       data.tenants = localTenants.map(tenant => ({
         id: tenant.id,
         first_name: tenant.first_name,
@@ -254,22 +254,22 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         email: tenant.email || ''
       }));
       
-      console.log('Sending data to backend:', data); // Debug log
+      console.log('Updating property with data:', data);
       
-      const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
+      const response = await authenticatedPatch(`/properties/properties/${property.id}/`, { data });
+      console.log('Property updated:', response);
       
-      // Update parent's tenant state with the response data
-      if (response.tenants && onTenantsChange) {
-        onTenantsChange(response.tenants);
+      setUpdateSuccessful(true);
+      
+      if (onTenantsChange) {
+        onTenantsChange(localTenants);
       }
       
-      // Set update successful flag and close modal
-      setUpdateSuccessful(true);
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       onClose();
-      // Call the success callback after modal is closed
-      setTimeout(() => {
-        if (onSuccess) onSuccess();
-      }, 100);
     } catch (error: any) {
       console.error('Error updating property:', error);
       if (error.data) {
@@ -292,115 +292,98 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   };
 
   const getCurrentOwnerDisplay = () => {
-    if (!property) return 'No property loaded';
-    if (ownerType === 'agency' && property.agency) {
-      return property.agency.name;
-    } else if (ownerType === 'private' && property.private_owners && property.private_owners.length > 0) {
-      if (property.private_owners.length === 1) {
-        return `${property.private_owners[0].first_name} ${property.private_owners[0].last_name}`;
-      } else {
-        return `${property.private_owners.length} private owners`;
-      }
+    if (!property) return 'Currently: No property loaded';
+    
+    if (property.agency) {
+      return `Currently: ${property.agency.name} (Agency)`;
+    } else if (property.private_owners && property.private_owners.length > 0) {
+      const ownerNames = property.private_owners.map(owner => `${owner.first_name} ${owner.last_name}`);
+      return `Currently: ${ownerNames.join(', ')} (Private Owner${property.private_owners.length > 1 ? 's' : ''})`;
     }
-    return 'No owner assigned';
+    return 'Currently: No owner assigned';
   };
 
-  if (!property) {
-    return null;
-  }
+  if (!property) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <Modal.Header onClose={onClose}>Edit Property</Modal.Header>
       <Modal.Body>
         <form id="edit-property-form" onSubmit={handleEditProperty} className="space-y-6">
-          {/* Owner Type Toggle */}
-          <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-            <div className="flex items-center justify-between mb-3">
-              <Label className="text-base font-medium text-gray-900 dark:text-gray-100">Property Owner Type</Label>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Current: {getCurrentOwnerDisplay()}
-              </div>
-            </div>
-            <OwnerTypeToggle
-              ownerType={ownerType}
-              onChange={handleOwnerTypeChange}
-              disabled={formLoading}
-            />
-          </div>
-
-          {/* Property Address Information */}
-          <AddressForm 
+          <PropertyAddressForm 
             formData={formData} 
             onChange={handleFormChange} 
             errors={formErrors}
           />
-
-          {/* Owner Selection */}
+          
+          <OwnerTypeToggle
+            ownerType={ownerType}
+            onChange={handleOwnerTypeChange}
+            disabled={formLoading}
+          />
+          
+          <div className="text-sm text-gray-600 dark:text-gray-400 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+            {getCurrentOwnerDisplay()}
+          </div>
+          
+          {/* Agency Selection */}
           {ownerType === 'agency' && (
             <AgencySelectionCard
               agencies={agencies}
               selectedAgencyId={formData.agency_id}
-              onAgencySelect={(agencyId) => {
-                setFormData(prev => ({ ...prev, agency_id: agencyId }));
-                if (formErrors.agency_id) {
-                  setFormErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.agency_id;
-                    return newErrors;
-                  });
-                }
-              }}
+              onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
               error={formErrors.agency_id}
               disabled={formLoading}
             />
           )}
           
+          {/* Private Owner Selection */}
           {ownerType === 'private' && (
             <PrivateOwnerSelectionCard
               privateOwners={privateOwners}
-              selectedOwnerIds={selectedPrivateOwners.map(po => parseInt(po.value))}
+              selectedOwnerIds={selectedPrivateOwners.map(owner => parseInt(owner.value))}
               onOwnersChange={(ownerIds) => {
-                const newOwners = ownerIds.map(id => {
+                const ownerOptions = ownerIds.map(id => {
                   const owner = privateOwners.find(o => o.id === id);
-                  return owner ? { value: owner.id.toString(), label: `${owner.first_name} ${owner.last_name}` } : null;
+                  return owner ? {
+                    value: owner.id.toString(),
+                    label: `${owner.first_name} ${owner.last_name}`
+                  } : null;
                 }).filter(Boolean) as { value: string; label: string }[];
-                setSelectedPrivateOwners(newOwners);
-                setDraftPrivateOwners(newOwners);
+                setSelectedPrivateOwners(ownerOptions);
               }}
               error={formErrors.private_owners}
               disabled={formLoading}
             />
           )}
-
+          
           {/* Tenant Management */}
           <TenantManagementCard
             tenants={localTenants}
             onTenantsChange={setLocalTenants}
             disabled={formLoading}
-            loading={formLoading}
           />
         </form>
       </Modal.Body>
       <Modal.Footer>
-        <Button
-          variant="outline"
-          onClick={onClose}
-          disabled={formLoading}
-          className="text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          Cancel
-        </Button>
-        <button
-          type="submit"
-          form="edit-property-form"
-          disabled={formLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
-        >
-          {formLoading ? 'Updating...' : 'Update Property'}
-        </button>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            disabled={formLoading}
+          >
+            Cancel
+          </Button>
+          <button
+            type="submit"
+            form="edit-property-form"
+            disabled={formLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
+          >
+            {formLoading ? 'Updating...' : 'Update Property'}
+          </button>
+        </div>
       </Modal.Footer>
-
     </Modal>
   );
 } 
