@@ -16,7 +16,7 @@ export interface BeepingAlarm {
   created_at: string;
   updated_at: string;
   allocation: Array<User>;
-
+}
 
 export interface IssueType {
   id: number;
