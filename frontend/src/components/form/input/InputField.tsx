@@ -2,7 +2,7 @@ import type React from "react";
 import type { FC } from "react";
 
 interface InputProps {
-  label: string;
+  label?: string;
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -40,9 +40,9 @@ const Input: FC<InputProps> = ({
   required,
   optional,
 }) => {
-  let inputClasses = `h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm 
-    bg-gray-900 text-white placeholder:text-gray-500 
-    border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
+  let inputClasses = `h-11 w-full rounded-lg border-0 px-4 py-2.5 text-sm 
+    bg-[#1C2537] text-white placeholder:text-gray-500 
+    focus:ring-1 focus:ring-blue-500 
     focus:outline-none ${className}`;
 
   if (disabled) {
@@ -57,11 +57,11 @@ const Input: FC<InputProps> = ({
     <div className="relative">
       {label && (
         <div className="flex justify-between mb-2">
-          <label htmlFor={id || name} className="text-white font-medium">
+          <label htmlFor={id || name} className="text-gray-300 text-sm">
             {label}
             {required && <span className="text-red-500 ml-0.5">*</span>}
           </label>
-          {optional && <span className="text-gray-500">(optional)</span>}
+          {optional && <span className="text-gray-500 text-sm">(optional)</span>}
         </div>
       )}
       <input
