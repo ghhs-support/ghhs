@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Label from '../form/Label';
 import InputField from '../form/input/InputField';
 
@@ -17,14 +17,54 @@ interface PropertyAddressFormProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   errors: Record<string, string>;
   disabled?: boolean;
+  onAddressSearch?: (searchTerm: string) => void;
+  searchLoading?: boolean;
 }
 
 const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({ 
   formData, 
   onChange, 
   errors, 
-  disabled = false 
+  disabled = false,
+  onAddressSearch,
+  searchLoading = false
 }) => {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // Set new timeout for search
+    if (value.trim() && onAddressSearch) {
+      debounceTimeoutRef.current = setTimeout(() => {
+        onAddressSearch(value.trim());
+      }, 500); // 500ms delay
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
       <div className="flex items-center justify-between mb-4">
@@ -33,9 +73,60 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </Label>
       </div>
       
+      {/* Address Search Field */}
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Search Address (Optional)
+        </Label>
+        <div className="relative">
+          <InputField
+            id="address_search"
+            name="address_search"
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            disabled={disabled}
+            placeholder="Start typing an address to search..."
+            className="w-full pr-20"
+          />
+          
+          {/* Loading indicator */}
+          {searchLoading && (
+            <div className="absolute right-12 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+            </div>
+          )}
+          
+          {/* Clear button */}
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              disabled={disabled}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Search results will auto-populate the fields below
+          </p>
+          {searchLoading && (
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Searching...
+            </p>
+          )}
+        </div>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="unit_number">Unit Number</Label>
+          <Label htmlFor="unit_number" className="text-gray-700 dark:text-gray-300">Unit Number</Label>
           <InputField
             id="unit_number"
             name="unit_number"
@@ -52,7 +143,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="street_number">Street Number *</Label>
+          <Label htmlFor="street_number" className="text-gray-700 dark:text-gray-300">Street Number *</Label>
           <InputField
             id="street_number"
             name="street_number"
@@ -69,7 +160,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div className="md:col-span-2">
-          <Label htmlFor="street_name">Street Name *</Label>
+          <Label htmlFor="street_name" className="text-gray-700 dark:text-gray-300">Street Name *</Label>
           <InputField
             id="street_name"
             name="street_name"
@@ -86,7 +177,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="suburb">Suburb *</Label>
+          <Label htmlFor="suburb" className="text-gray-700 dark:text-gray-300">Suburb *</Label>
           <InputField
             id="suburb"
             name="suburb"
@@ -103,7 +194,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="state">State *</Label>
+          <Label htmlFor="state" className="text-gray-700 dark:text-gray-300">State *</Label>
           <InputField
             id="state"
             name="state"
@@ -120,7 +211,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="postcode">Postcode *</Label>
+          <Label htmlFor="postcode" className="text-gray-700 dark:text-gray-300">Postcode *</Label>
           <InputField
             id="postcode"
             name="postcode"
@@ -137,7 +228,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="country">Country</Label>
+          <Label htmlFor="country" className="text-gray-700 dark:text-gray-300">Country</Label>
           <InputField
             id="country"
             name="country"
@@ -154,7 +245,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="latitude">Latitude</Label>
+          <Label htmlFor="latitude" className="text-gray-700 dark:text-gray-300">Latitude</Label>
           <InputField
             id="latitude"
             name="latitude"
@@ -171,7 +262,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="longitude">Longitude</Label>
+          <Label htmlFor="longitude" className="text-gray-700 dark:text-gray-300">Longitude</Label>
           <InputField
             id="longitude"
             name="longitude"
