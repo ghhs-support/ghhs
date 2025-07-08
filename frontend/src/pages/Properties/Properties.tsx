@@ -1,8 +1,16 @@
+import { useState } from 'react';
 import Button from '../../components/ui/button/Button';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import PropertiesTable from '../../components/properties/PropertiesTable';
+import { Modal } from '../../components/ui/modal';
+import CreatePropertyForm from '../../components/properties/CreatePropertyForm';
 
 export default function Properties() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -12,7 +20,7 @@ export default function Properties() {
 
       <div className="mb-4">
         <Button
-          onClick={() => {}}
+          onClick={handleOpenModal}
           startIcon={<PlusIcon className="w-5 h-5" />}
         >
           Add Property
@@ -20,6 +28,21 @@ export default function Properties() {
       </div>
 
       <PropertiesTable />
+
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} size="lg">
+        <Modal.Header onClose={handleCloseModal}>
+          Create a New Property
+        </Modal.Header>
+        <Modal.Body>
+          <CreatePropertyForm
+            onSuccess={handleCloseModal}
+            onCancel={handleCloseModal}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onClick={handleCloseModal}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 } 
