@@ -3,13 +3,13 @@ import { Property } from './property';
 export interface BeepingAlarm {
   id: number;
   uid: string;
-  status: string;
   issue_type: {
     id: number;
     name: string;
     description: string;
   };
   notes: string;
+  status: BeepingAlarmStatus;
   is_active: boolean;
   property: Property & {
     country: string;
@@ -36,7 +36,12 @@ export interface User {
 
 export type BeepingAlarmStatus = 'new' | 'requires_call_back' | 'awaiting_response' | 'to_be_scheduled' | 'to_be_quoted' | 'completed' | 'cancelled';
 
-export const BEEPING_ALARM_STATUS_OPTIONS = [
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export const BEEPING_ALARM_STATUS_OPTIONS: Option[] = [
   { value: 'new', label: 'New' },
   { value: 'requires_call_back', label: 'Requires Call Back' },
   { value: 'awaiting_response', label: 'Awaiting Response' },
@@ -73,6 +78,7 @@ export interface BeepingAlarmFilters {
 
 export interface CreateBeepingAlarmFormData {
   property: number | null;
+  status: string | null;
 }
 
 export interface CreateBeepingAlarmProps {

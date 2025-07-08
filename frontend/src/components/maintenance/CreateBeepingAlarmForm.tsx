@@ -7,9 +7,10 @@ import { Modal } from '../ui/modal';
 import { useSearchService } from '../../services/search';
 import toast from 'react-hot-toast';
 import { Property, Tenant, PrivateOwner, PropertyManager } from '../../types/property';
-import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData } from '../../types/maintenance';
+import { CreateBeepingAlarmProps, CreateBeepingAlarmFormData, BEEPING_ALARM_STATUS_OPTIONS } from '../../types/maintenance';
 import { BuildingOfficeIcon, MapPinIcon, UserIcon } from '@heroicons/react/24/outline';
 import InfoCard from '../common/InfoCard';
+
 
 export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: CreateBeepingAlarmProps) {
   const { authenticatedGet, authenticatedPost } = useAuthenticatedApi();
@@ -20,6 +21,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
   
   const [formData, setFormData] = useState<CreateBeepingAlarmFormData>({
     property: null,
+    status: 'new'  
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -97,6 +99,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
       console.log('Beeping alarm created successfully:', response);
       setFormData({
         property: null,
+        status: 'new'
       });
       setSelectedProperty(null);
       setErrors({});
@@ -340,6 +343,37 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
                       ))}
                     </div>
                   )}
+                </div>
+                {/* Status */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Label htmlFor="status" className="text-gray-900 dark:text-gray-100">
+                      Status <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
+                  <SearchableDropdown
+                    value={formData.status ? { value: formData.status, label: BEEPING_ALARM_STATUS_OPTIONS.find(opt => opt.value === formData.status)?.label || '' } : null}
+                    onChange={(option) => handleInputChange('status', option ? option.value : null)}
+                    options={BEEPING_ALARM_STATUS_OPTIONS}
+                    placeholder="Select a status"
+                    className="w-full"
+                  />
+                </div>
+                {/* Notes */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
+                      Notes <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
+                  <textarea 
+                    id="notes" 
+                    name="notes" 
+                    rows={4} 
+                    required
+                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 dark:focus:ring-brand-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" 
+                    placeholder="Enter notes..." 
+                  />
                 </div>
               </div>
             )}
