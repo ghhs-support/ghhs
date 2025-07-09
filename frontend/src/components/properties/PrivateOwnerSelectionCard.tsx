@@ -97,6 +97,7 @@ export default function PrivateOwnerSelectionCard({
             showApplyButton={false}
             showClearButton={true}
             disabled={disabled}
+            includeAllOption={false}
           />
           
           {tempSelectedOwner && (

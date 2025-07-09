@@ -1,4 +1,3 @@
-import React from 'react';
 import { BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import SearchableDropdown from '../common/SearchableDropdown';
 import Label from '../form/Label';
@@ -25,7 +24,6 @@ export default function AgencySelectionCard({
   disabled = false,
   showManageButton = true,
   manageButtonUrl = '/agencies',
-  loading = false,
 }: AgencySelectionCardProps) {
   const getSelectedAgencyOption = () => {
     if (!selectedAgencyId) return null;
@@ -75,6 +73,7 @@ export default function AgencySelectionCard({
         showApplyButton={false}
         showClearButton={true}
         disabled={disabled}
+        includeAllOption={false}
       />
       
       {error && (
