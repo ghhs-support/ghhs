@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import Button from '../ui/button/Button';
 import { Modal } from '../ui/modal';
 import DuplicateAddressModal from '../common/DuplicateAddressModal';
@@ -21,6 +22,7 @@ interface CreatePropertyFormProps {
 
 const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose, onSuccess }) => {
   const { authenticatedGet, authenticatedPost, authenticatedPatch } = useAuthenticatedApi();
+  const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
     unit_number: '',
@@ -132,13 +134,6 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
     try {
       setFormLoading(true);
       
-      // Check if we're trying to create a private property
-      if (ownerType === 'private') {
-        toast.error('Creating properties with private owners is not yet supported. Please select an agency.');
-        setFormLoading(false);
-        return;
-      }
-      
       // Prepare data for backend
       const propertyData = {
         unit_number: formData.unit_number || null,
@@ -150,21 +145,20 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
         country: formData.country || '',
         latitude: formData.latitude || null,
         longitude: formData.longitude || null,
-        agency_id: formData.agency_id,
         force_create: forceCreate,
       };
       
-      console.log('Sending data to backend:', propertyData);
-      
-      // Make sure agency_id is a number, not null
-      const dataToSend = { ...propertyData };
-      if (dataToSend.agency_id === null) {
-        const { agency_id, ...dataWithoutAgencyId } = dataToSend;
-        Object.assign(dataToSend, dataWithoutAgencyId);
+      // Add owner data based on owner type
+      if (ownerType === 'agency') {
+        propertyData.agency_id = formData.agency_id;
+      } else {
+        propertyData.private_owner_ids = selectedPrivateOwnerIds;
       }
       
+      console.log('Sending data to backend:', propertyData);
+      
       // Step 1: Create the property  
-      const createdProperty = await authenticatedPost('/properties/create/', { data: dataToSend });
+      const createdProperty = await authenticatedPost('/properties/create/', { data: propertyData });
       
       // Step 2: If there are tenants, add them to the property
       if (tenants.length > 0) {
@@ -187,15 +181,19 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
         await authenticatedPatch(`/properties/${createdProperty.id}/update/`, updateData);
       }
       
-      toast.success(`Property created successfully${tenants.length > 0 ? ` with ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}` : ''}!`);
+      
+      toast.success(`Property created successfully!`);
       handleClose();
       onSuccess();
+      
+      // Navigate to property details page
+      navigate(`/properties/${createdProperty.id}`);
       
     } catch (error: any) {
       console.error('Error creating property:', error);
       console.error('Error data:', error.data);
       
-      // Handle duplicate address case - fix the error data access
+      // Handle duplicate address case
       if (error.message?.includes('409') && error.data?.duplicate) {
         setExistingProperty(error.data.existing_property);
         setShowDuplicateModal(true);

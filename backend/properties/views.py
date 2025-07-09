@@ -523,12 +523,24 @@ def create_property(request):
     state = data.get('state')
     postcode = data.get('postcode')
     agency_id = data.get('agency_id')
+    private_owner_ids = data.get('private_owner_ids', [])
     force_create = data.get('force_create', False)
     
     # Validate required fields
     if not all([street_number, street_name, suburb, state, postcode]):
         return Response({
             'detail': 'Street number, street name, suburb, state, and postcode are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate that either agency_id or private_owner_ids is provided (but not both)
+    if agency_id and private_owner_ids:
+        return Response({
+            'detail': 'Property cannot have both an agency and private owners'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not agency_id and not private_owner_ids:
+        return Response({
+            'detail': 'Property must have either an agency or private owners'
         }, status=status.HTTP_400_BAD_REQUEST)
     
     # Check for duplicate address (case-insensitive)
@@ -574,6 +586,15 @@ def create_property(request):
             return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
     
     property_obj = Property.objects.create(**property_data)
+    
+    # Add private owners if provided
+    if private_owner_ids:
+        for owner_id in private_owner_ids:
+            try:
+                private_owner = PrivateOwner.objects.get(id=owner_id)
+                property_obj.private_owners.add(private_owner)
+            except PrivateOwner.DoesNotExist:
+                return Response({'detail': f'Private owner with ID {owner_id} not found'}, status=status.HTTP_404_NOT_FOUND)
     
     # Return the created property
     property_obj.refresh_from_db()
