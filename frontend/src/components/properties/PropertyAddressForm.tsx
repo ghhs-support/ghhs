@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import Label from '../form/Label';
 import InputField from '../form/input/InputField';
 import SearchableDropdown from '../common/SearchableDropdown';
@@ -82,7 +82,6 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </Label>
         <div className="relative">
           <InputField
-            ref={addressSearchRef}
             id="address_search"
             name="address_search"
             type="text"

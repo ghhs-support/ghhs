@@ -30,6 +30,7 @@ export interface GoogleAddressComponent {
 }
 
 export interface ParsedAddress {
+  unit_number?: string;
   street_number: string;
   street_name: string;
   suburb: string;

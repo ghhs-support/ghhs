@@ -135,7 +135,7 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
       setFormLoading(true);
       
       // Prepare data for backend
-      const propertyData = {
+      const propertyData: any = {
         unit_number: formData.unit_number || null,
         street_number: formData.street_number,
         street_name: formData.street_name,
@@ -222,11 +222,6 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await createProperty(false);
-  };
-
-  const handleDuplicateConfirm = async () => {
-    setShowDuplicateModal(false);
-    await createProperty(true);
   };
 
   const handleClose = () => {
@@ -330,7 +325,6 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
         <DuplicateAddressModal
           isOpen={showDuplicateModal}
           onClose={() => setShowDuplicateModal(false)}
-          onConfirm={handleDuplicateConfirm}
           existingProperty={existingProperty}
           newAddress={formData}
         />
