@@ -40,6 +40,10 @@ const DuplicateAddressModal: React.FC<DuplicateAddressModalProps> = ({
     return parts.join(' ');
   };
 
+  const handleViewPropertyDetails = () => {
+    window.open(`/properties/${existingProperty.id}`, '_blank');
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <Modal.Header onClose={onClose}>
@@ -61,6 +65,20 @@ const DuplicateAddressModal: React.FC<DuplicateAddressModalProps> = ({
             <p className="text-sm text-red-800 dark:text-red-200">
               <strong>Cannot create property:</strong> A property with this address already exists in the system. Please check the address and try again.
             </p>
+          </div>
+
+          <div 
+            className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/20 dark:border-blue-800 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+            onClick={handleViewPropertyDetails}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                💡 <strong>Tip:</strong> If you need to update this property, you can edit the existing one instead of creating a duplicate.
+              </p>
+              <span className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline ml-4 whitespace-nowrap">
+                View Property Details →
+              </span>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,12 +132,6 @@ const DuplicateAddressModal: React.FC<DuplicateAddressModalProps> = ({
                 allowRemove={false}
               />
             </div>
-          </div>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-900/20 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              💡 <strong>Tip:</strong> If you need to update this property, you can edit the existing one instead of creating a duplicate.
-            </p>
           </div>
         </div>
       </Modal.Body>
