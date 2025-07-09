@@ -206,14 +206,14 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
       
     } catch (error: any) {
       console.error('Error creating property:', error);
-      console.error('Error response:', error.response?.data); // Add this line
+      console.error('Error response:', error.response?.data);
       
       // Handle API errors
       if (error.response?.data) {
         if (typeof error.response.data === 'object' && error.response.data.detail) {
           toast.error(error.response.data.detail);
         } else if (typeof error.response.data === 'object') {
-          console.error('Validation errors:', error.response.data); // Add this line
+          console.error('Validation errors:', error.response.data);
           setFormErrors(error.response.data);
         } else {
           toast.error('Failed to create property');
@@ -235,6 +235,7 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
             formData={formData} 
             onChange={handleChange} 
             errors={formErrors}
+            disabled={formLoading}
           />
           
           <OwnerTypeToggle

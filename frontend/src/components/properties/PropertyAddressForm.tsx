@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import Label from '../form/Label';
 import InputField from '../form/input/InputField';
+import { useAddressAutocomplete } from '../../hooks/useAddressAutocomplete';
 
 interface PropertyAddressFormProps {
   formData: {
@@ -17,53 +18,55 @@ interface PropertyAddressFormProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   errors: Record<string, string>;
   disabled?: boolean;
-  onAddressSearch?: (searchTerm: string) => void;
-  searchLoading?: boolean;
 }
 
 const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({ 
   formData, 
   onChange, 
   errors, 
-  disabled = false,
-  onAddressSearch,
-  searchLoading = false
+  disabled = false
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const debounceTimeoutRef = useRef<number | null>(null);
+
+  // Google API hook - handles all address search logic internally
+  const { suggestions, loading: searchLoading, searchAddress, selectAddress } = useAddressAutocomplete({
+    onAddressSelected: (parsedAddress) => {
+      // Update parent form by simulating onChange events
+      const fields = [
+        { name: 'street_number', value: parsedAddress.street_number },
+        { name: 'street_name', value: parsedAddress.street_name },
+        { name: 'suburb', value: parsedAddress.suburb },
+        { name: 'state', value: parsedAddress.state },
+        { name: 'postcode', value: parsedAddress.postcode },
+        { name: 'country', value: parsedAddress.country },
+        { name: 'latitude', value: parsedAddress.latitude.toString() },
+        { name: 'longitude', value: parsedAddress.longitude.toString() },
+      ];
+      
+      fields.forEach(field => {
+        onChange({ target: { name: field.name, value: field.value } } as any);
+      });
+    }
+  });
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
     
-    // Clear previous timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+    // Call Google API search directly
+    if (value.trim()) {
+      searchAddress(value.trim());
     }
-    
-    // Set new timeout for search
-    if (value.trim() && onAddressSearch) {
-      debounceTimeoutRef.current = setTimeout(() => {
-        onAddressSearch(value.trim());
-      }, 500); // 500ms delay
-    }
+  };
+
+  const handleSuggestionSelect = (suggestion: any) => {
+    selectAddress(suggestion);
+    setSearchTerm(suggestion.description);
   };
 
   const handleClearSearch = () => {
     setSearchTerm('');
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800">
@@ -110,6 +113,27 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
               </svg>
             </button>
           )}
+          
+          {/* Suggestions Dropdown */}
+          {suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion.place_id}
+                  type="button"
+                  onClick={() => handleSuggestionSelect(suggestion)}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+                >
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {suggestion.structured_formatting.main_text}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {suggestion.structured_formatting.secondary_text}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         
         <div className="flex items-center justify-between mt-2">
@@ -124,6 +148,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
         </div>
       </div>
       
+      {/* Form Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="unit_number" className="text-gray-700 dark:text-gray-300">Unit Number</Label>
@@ -244,7 +269,7 @@ const PropertyAddressForm: React.FC<PropertyAddressFormProps> = ({
           )}
         </div>
 
-        {/* Hidden fields for latitude and longitude - populated by Google API */}
+        {/* Hidden fields for latitude and longitude */}
         <input type="hidden" name="latitude" value={formData.latitude} />
         <input type="hidden" name="longitude" value={formData.longitude} />
       </div>
