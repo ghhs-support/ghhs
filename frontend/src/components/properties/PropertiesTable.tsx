@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
@@ -9,7 +9,6 @@ import {
   PROPERTY_TABLE_COLUMNS,
   formatPropertyAddress,
   formatOwnerDisplay,
-  formatTenantsDisplay,
   Tenant,
   PrivateOwner
 } from '../../types/property';
