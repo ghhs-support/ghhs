@@ -513,19 +513,47 @@ def update_property_manager(request, manager_id):
 @validate_kinde_token
 def create_property(request):
     """Create a new property"""
-    unit_number = request.data.get('unit_number')
-    street_number = request.data.get('street_number')
-    street_name = request.data.get('street_name')
-    suburb = request.data.get('suburb')
-    state = request.data.get('state')
-    postcode = request.data.get('postcode')
-    agency_id = request.data.get('agency_id')
+    # Get data from request.data (frontend sends data in 'data' field)
+    data = request.data.get('data', request.data)
+    
+    unit_number = data.get('unit_number')
+    street_number = data.get('street_number')
+    street_name = data.get('street_name')
+    suburb = data.get('suburb')
+    state = data.get('state')
+    postcode = data.get('postcode')
+    agency_id = data.get('agency_id')
+    force_create = data.get('force_create', False)
     
     # Validate required fields
     if not all([street_number, street_name, suburb, state, postcode]):
         return Response({
             'detail': 'Street number, street name, suburb, state, and postcode are required'
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check for duplicate address (case-insensitive)
+    if not force_create:
+        duplicate_query = Property.objects.filter(
+            unit_number__iexact=unit_number if unit_number else None,
+            street_number__iexact=street_number,
+            street_name__iexact=street_name,
+            suburb__iexact=suburb,
+            state__iexact=state,
+            postcode__iexact=postcode
+        )
+        
+        # Handle case where unit_number is None or empty
+        if not unit_number:
+            duplicate_query = duplicate_query.filter(unit_number__isnull=True)
+        
+        if duplicate_query.exists():
+            duplicate_property = duplicate_query.first()
+            serializer = PropertySerializer(duplicate_property)
+            return Response({
+                'duplicate': True,
+                'existing_property': serializer.data,
+                'message': 'A property with this address already exists. Do you want to create it anyway?'
+            }, status=status.HTTP_409_CONFLICT)
     
     # Create property
     property_data = {

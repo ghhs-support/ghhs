@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import Button from '../ui/button/Button';
 import { Modal } from '../ui/modal';
+import DuplicateAddressModal from '../common/DuplicateAddressModal';
 import { 
   PropertyAddressForm, 
   OwnerTypeToggle, 
@@ -10,7 +11,7 @@ import {
   TenantManagementCard
 } from '.';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
-import { Agency, PrivateOwner, Tenant } from '../../types/property';
+import { Agency, PrivateOwner, Tenant, Property } from '../../types/property';
 
 interface CreatePropertyFormProps {
   isOpen: boolean;
@@ -36,6 +37,10 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
   const [ownerType, setOwnerType] = useState<'agency' | 'private'>('agency');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
+  
+  // Duplicate address modal state
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [existingProperty, setExistingProperty] = useState<Property | null>(null);
   
   // Data for dropdowns
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -121,8 +126,7 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createProperty = async (forceCreate: boolean = false) => {
     if (!validateForm()) return;
     
     try {
@@ -135,7 +139,7 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
         return;
       }
       
-      // Prepare data for backend (direct fields, not wrapped in 'data')
+      // Prepare data for backend
       const propertyData = {
         unit_number: formData.unit_number || null,
         street_number: formData.street_number,
@@ -147,16 +151,10 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
         latitude: formData.latitude || null,
         longitude: formData.longitude || null,
         agency_id: formData.agency_id,
+        force_create: forceCreate,
       };
       
       console.log('Sending data to backend:', propertyData);
-      console.log('Individual fields:');
-      console.log('- street_number:', `"${propertyData.street_number}"`);
-      console.log('- street_name:', `"${propertyData.street_name}"`);
-      console.log('- suburb:', `"${propertyData.suburb}"`);
-      console.log('- state:', `"${propertyData.state}"`);
-      console.log('- postcode:', `"${propertyData.postcode}"`);
-      console.log('- agency_id:', propertyData.agency_id);
       
       // Make sure agency_id is a number, not null
       const dataToSend = { ...propertyData };
@@ -190,38 +188,28 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
       }
       
       toast.success(`Property created successfully${tenants.length > 0 ? ` with ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}` : ''}!`);
-      onClose();
+      handleClose();
       onSuccess();
-      
-      // Reset form
-      setFormData({
-        unit_number: '',
-        street_number: '',
-        street_name: '',
-        suburb: '',
-        state: '',
-        postcode: '',
-        country: '',
-        latitude: '',
-        longitude: '',
-        agency_id: null,
-      });
-      setSelectedPrivateOwnerIds([]);
-      setTenants([]);
-      setOwnerType('agency');
-      setFormErrors({});
       
     } catch (error: any) {
       console.error('Error creating property:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error data:', error.data);
       
-      // Handle API errors
-      if (error.response?.data) {
-        if (typeof error.response.data === 'object' && error.response.data.detail) {
-          toast.error(error.response.data.detail);
-        } else if (typeof error.response.data === 'object') {
-          console.error('Validation errors:', error.response.data);
-          setFormErrors(error.response.data);
+      // Handle duplicate address case - fix the error data access
+      if (error.message?.includes('409') && error.data?.duplicate) {
+        setExistingProperty(error.data.existing_property);
+        setShowDuplicateModal(true);
+        setFormLoading(false);
+        return;
+      }
+      
+      // Handle other API errors
+      if (error.data) {
+        if (typeof error.data === 'object' && error.data.detail) {
+          toast.error(error.data.detail);
+        } else if (typeof error.data === 'object') {
+          console.error('Validation errors:', error.data);
+          setFormErrors(error.data);
         } else {
           toast.error('Failed to create property');
         }
@@ -233,77 +221,123 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createProperty(false);
+  };
+
+  const handleDuplicateConfirm = async () => {
+    setShowDuplicateModal(false);
+    await createProperty(true);
+  };
+
+  const handleClose = () => {
+    // Reset form
+    setFormData({
+      unit_number: '',
+      street_number: '',
+      street_name: '',
+      suburb: '',
+      state: '',
+      postcode: '',
+      country: '',
+      latitude: '',
+      longitude: '',
+      agency_id: null,
+    });
+    setSelectedPrivateOwnerIds([]);
+    setTenants([]);
+    setOwnerType('agency');
+    setFormErrors({});
+    setShowDuplicateModal(false);
+    setExistingProperty(null);
+    onClose();
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <Modal.Header onClose={onClose}>Create Property</Modal.Header>
-      <Modal.Body>
-        <form id="create-property-form" onSubmit={handleSubmit} className="space-y-6">
-          <PropertyAddressForm 
-            formData={formData} 
-            onChange={handleChange} 
-            errors={formErrors}
-            disabled={formLoading}
-          />
-          
-          <OwnerTypeToggle
-            ownerType={ownerType}
-            onChange={setOwnerType}
-            disabled={formLoading}
-          />
-          
-          {/* Agency Selection */}
-          {ownerType === 'agency' && (
-            <AgencySelectionCard
-              agencies={agencies}
-              selectedAgencyId={formData.agency_id}
-              onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
-              error={formErrors.agency_id}
+    <>
+      <Modal isOpen={isOpen} onClose={handleClose}>
+        <Modal.Header onClose={handleClose}>Create Property</Modal.Header>
+        <Modal.Body>
+          <form id="create-property-form" onSubmit={handleSubmit} className="space-y-6">
+            <PropertyAddressForm 
+              formData={formData} 
+              onChange={handleChange} 
+              errors={formErrors}
               disabled={formLoading}
             />
-          )}
-          
-          {/* Private Owner Selection */}
-          {ownerType === 'private' && (
-            <div className="space-y-3">
-              <PrivateOwnerSelectionCard
-                privateOwners={privateOwners}
-                selectedOwnerIds={selectedPrivateOwnerIds}
-                onOwnersChange={setSelectedPrivateOwnerIds}
-                error={formErrors.private_owners}
+            
+            <OwnerTypeToggle
+              ownerType={ownerType}
+              onChange={setOwnerType}
+              disabled={formLoading}
+            />
+            
+            {/* Agency Selection */}
+            {ownerType === 'agency' && (
+              <AgencySelectionCard
+                agencies={agencies}
+                selectedAgencyId={formData.agency_id}
+                onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
+                error={formErrors.agency_id}
                 disabled={formLoading}
               />
-            </div>
-          )}
-          
-          {/* Tenant Management */}
-          <TenantManagementCard
-            tenants={tenants}
-            onTenantsChange={setTenants}
-            disabled={formLoading}
-            loading={formLoading}
-          />
-        </form>
-      </Modal.Body>
-      <Modal.Footer>
-        <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={formLoading}
-          >
-            Cancel
-          </Button>
-          <button
-            type="submit"
-            form="create-property-form"
-            disabled={formLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
-          >
-            {formLoading ? 'Creating...' : 'Create Property'}
-          </button>
-        </div>
-      </Modal.Footer>
-    </Modal>
+            )}
+            
+            {/* Private Owner Selection */}
+            {ownerType === 'private' && (
+              <div className="space-y-3">
+                <PrivateOwnerSelectionCard
+                  privateOwners={privateOwners}
+                  selectedOwnerIds={selectedPrivateOwnerIds}
+                  onOwnersChange={setSelectedPrivateOwnerIds}
+                  error={formErrors.private_owners}
+                  disabled={formLoading}
+                />
+              </div>
+            )}
+            
+            {/* Tenant Management */}
+            <TenantManagementCard
+              tenants={tenants}
+              onTenantsChange={setTenants}
+              disabled={formLoading}
+              loading={formLoading}
+            />
+          </form>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={handleClose}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <button
+              type="submit"
+              form="create-property-form"
+              disabled={formLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-600 dark:hover:bg-brand-700 dark:text-white"
+            >
+              {formLoading ? 'Creating...' : 'Create Property'}
+            </button>
+          </div>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Duplicate Address Confirmation Modal */}
+      {existingProperty && (
+        <DuplicateAddressModal
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+          onConfirm={handleDuplicateConfirm}
+          existingProperty={existingProperty}
+          newAddress={formData}
+        />
+      )}
+    </>
   );
 };
 
