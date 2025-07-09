@@ -7,7 +7,7 @@ import {
   OwnerTypeToggle, 
   AgencySelectionCard, 
   PrivateOwnerSelectionCard, 
-  TenantDisplayCard 
+  TenantManagementCard
 } from '.';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { Agency, PrivateOwner, Tenant } from '../../types/property';
@@ -19,7 +19,7 @@ interface CreatePropertyFormProps {
 }
 
 const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose, onSuccess }) => {
-  const { authenticatedGet, authenticatedPost } = useAuthenticatedApi();
+  const { authenticatedGet, authenticatedPost, authenticatedPatch } = useAuthenticatedApi();
   
   const [formData, setFormData] = useState({
     unit_number: '',
@@ -120,65 +120,108 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
     
     try {
       setFormLoading(true);
-      let data: any = { ...formData };
       
-      // Clear all owner data first, then set based on toggle position
-      data.agency_id = null;
-      data.private_owner_ids = [];
-      
-      // Set the correct owner type based on toggle
-      if (ownerType === 'agency') {
-        data.agency_id = formData.agency_id;
-        data.private_owner_ids = [];
-      } else if (ownerType === 'private') {
-        data.agency_id = null;
-        data.private_owner_ids = selectedPrivateOwnerIds;
+      // Check if we're trying to create a private property
+      if (ownerType === 'private') {
+        toast.error('Creating properties with private owners is not yet supported. Please select an agency.');
+        setFormLoading(false);
+        return;
       }
       
-      // Add tenant data
-      data.tenants = tenants.map(tenant => ({
-        id: tenant.id,
-        first_name: tenant.first_name,
-        last_name: tenant.last_name,
-        phone: tenant.phone,
-        email: tenant.email || ''
-      }));
+      // Prepare data for backend (direct fields, not wrapped in 'data')
+      const propertyData = {
+        unit_number: formData.unit_number || null,
+        street_number: formData.street_number,
+        street_name: formData.street_name,
+        suburb: formData.suburb,
+        state: formData.state,
+        postcode: formData.postcode,
+        country: formData.country || '',
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
+        agency_id: formData.agency_id,
+      };
       
-      console.log('Sending data to backend:', data);
+      console.log('Sending data to backend:', propertyData);
+      console.log('Individual fields:');
+      console.log('- street_number:', `"${propertyData.street_number}"`);
+      console.log('- street_name:', `"${propertyData.street_name}"`);
+      console.log('- suburb:', `"${propertyData.suburb}"`);
+      console.log('- state:', `"${propertyData.state}"`);
+      console.log('- postcode:', `"${propertyData.postcode}"`);
+      console.log('- agency_id:', propertyData.agency_id);
       
-      // For now, just simulate success - replace with actual API call
-      // const response = await authenticatedPost('/properties/properties/', { data });
+      // Make sure agency_id is a number, not null
+      const dataToSend = { ...propertyData };
+      if (dataToSend.agency_id === null) {
+        const { agency_id, ...dataWithoutAgencyId } = dataToSend;
+        Object.assign(dataToSend, dataWithoutAgencyId);
+      }
       
-      setTimeout(() => {
-        toast.success('Property created successfully!');
-        setFormLoading(false);
-        onClose();
-        onSuccess();
+      // Step 1: Create the property  
+      const createdProperty = await authenticatedPost('/properties/create/', { data: dataToSend });
+      
+      // Step 2: If there are tenants, add them to the property
+      if (tenants.length > 0) {
+        const updateData = {
+          data: {
+            ...propertyData,
+            tenants: tenants.map(tenant => ({
+              id: tenant.id,
+              first_name: tenant.first_name,
+              last_name: tenant.last_name,
+              phone: tenant.phone,
+              email: tenant.email || ''
+            }))
+          }
+        };
         
-        // Reset form
-        setFormData({
-          unit_number: '',
-          street_number: '',
-          street_name: '',
-          suburb: '',
-          state: '',
-          postcode: '',
-          country: '',
-          latitude: '',
-          longitude: '',
-          agency_id: null,
-        });
-        setSelectedPrivateOwnerIds([]);
-        setTenants([]);
-        setOwnerType('agency');
-        setFormErrors({});
-      }, 1000);
+        console.log('Adding tenants to property:', updateData);
+        
+        // Update the property with tenants
+        await authenticatedPatch(`/properties/${createdProperty.id}/update/`, updateData);
+      }
+      
+      toast.success(`Property created successfully${tenants.length > 0 ? ` with ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}` : ''}!`);
+      onClose();
+      onSuccess();
+      
+      // Reset form
+      setFormData({
+        unit_number: '',
+        street_number: '',
+        street_name: '',
+        suburb: '',
+        state: '',
+        postcode: '',
+        country: '',
+        latitude: '',
+        longitude: '',
+        agency_id: null,
+      });
+      setSelectedPrivateOwnerIds([]);
+      setTenants([]);
+      setOwnerType('agency');
+      setFormErrors({});
+      
     } catch (error: any) {
       console.error('Error creating property:', error);
-      if (error.data) {
-        setFormErrors(error.data);
+      console.error('Error response:', error.response?.data); // Add this line
+      
+      // Handle API errors
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object' && error.response.data.detail) {
+          toast.error(error.response.data.detail);
+        } else if (typeof error.response.data === 'object') {
+          console.error('Validation errors:', error.response.data); // Add this line
+          setFormErrors(error.response.data);
+        } else {
+          toast.error('Failed to create property');
+        }
+      } else {
+        toast.error('Failed to create property');
       }
-      toast.error('Failed to create property');
+    } finally {
       setFormLoading(false);
     }
   };
@@ -213,22 +256,23 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
           
           {/* Private Owner Selection */}
           {ownerType === 'private' && (
-            <PrivateOwnerSelectionCard
-              privateOwners={privateOwners}
-              selectedOwnerIds={selectedPrivateOwnerIds}
-              onOwnersChange={setSelectedPrivateOwnerIds}
-              error={formErrors.private_owners}
-              disabled={formLoading}
-            />
+            <div className="space-y-3">
+              <PrivateOwnerSelectionCard
+                privateOwners={privateOwners}
+                selectedOwnerIds={selectedPrivateOwnerIds}
+                onOwnersChange={setSelectedPrivateOwnerIds}
+                error={formErrors.private_owners}
+                disabled={formLoading}
+              />
+            </div>
           )}
           
-          {/* Tenant Display */}
-          <TenantDisplayCard
+          {/* Tenant Management */}
+          <TenantManagementCard
             tenants={tenants}
             onTenantsChange={setTenants}
-            allowAdd={false}
-            allowRemove={false}
             disabled={formLoading}
+            loading={formLoading}
           />
         </form>
       </Modal.Body>

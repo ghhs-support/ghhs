@@ -75,8 +75,7 @@ export default function TenantManagementCard({
     return Object.keys(errors).length === 0;
   };
 
-  const handleAddTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddTenant = () => {
     if (!validateTenant(newTenant)) return;
 
     const tempTenant: Tenant = {
@@ -103,8 +102,7 @@ export default function TenantManagementCard({
     setTenantErrors({});
   };
 
-  const handleEditTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditTenant = () => {
     if (!validateTenant(editingTenantData) || !editingTenant) return;
 
     const updatedTenant: Tenant = {
@@ -120,7 +118,7 @@ export default function TenantManagementCard({
 
     if (onTenantUpdate) {
       try {
-        await onTenantUpdate(updatedTenant);
+        onTenantUpdate(updatedTenant);
       } catch (error) {
         console.error('Error updating tenant:', error);
       }
@@ -180,7 +178,7 @@ export default function TenantManagementCard({
           {/* Add Tenant Form */}
           {showAddTenant && (
             <div className="p-3 bg-purple-100 dark:bg-gray-700 rounded border border-purple-200 dark:border-gray-600">
-              <form onSubmit={handleAddTenant} className="space-y-3">
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">First Name *</Label>
@@ -238,7 +236,8 @@ export default function TenantManagementCard({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleAddTenant}
                     disabled={loading}
                     className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors"
                   >
@@ -257,14 +256,14 @@ export default function TenantManagementCard({
                     Cancel
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           )}
 
           {/* Edit Tenant Form */}
           {editingTenant && (
             <div className="p-3 bg-purple-100 dark:bg-gray-700 rounded border border-purple-200 dark:border-gray-600">
-              <form onSubmit={handleEditTenant} className="space-y-3">
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-medium text-purple-900 dark:text-gray-200">First Name *</Label>
@@ -322,7 +321,8 @@ export default function TenantManagementCard({
                 </div>
                 <div className="flex gap-2">
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleEditTenant}
                     disabled={loading}
                     className="inline-flex items-center justify-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
                   >
@@ -347,7 +347,7 @@ export default function TenantManagementCard({
                     Cancel
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           )}
 
