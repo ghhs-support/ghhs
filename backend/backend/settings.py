@@ -151,6 +151,8 @@ KINDE_CLIENT_ID_M2M = os.environ.get('KINDE_CLIENT_ID_M2M')
 KINDE_CLIENT_SECRET_M2M = os.environ.get('KINDE_CLIENT_SECRET_M2M')
 KINDE_MGMNT_AUDIENCE = os.environ.get('KINDE_MGMNT_AUDIENCE')       
 
+# Google API Configuration
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
