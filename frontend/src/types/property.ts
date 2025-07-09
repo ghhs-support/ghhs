@@ -216,3 +216,68 @@ export const formatTenantsDisplay = (tenants: Tenant[]) => {
     isVacant: false
   };
 };
+
+// Tenant form types and utilities
+export interface TenantFormData {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+}
+
+export interface TenantFormErrors {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  email?: string;
+  [key: string]: string | undefined;
+}
+
+export const getInitialTenantFormData = (): TenantFormData => ({
+  first_name: '',
+  last_name: '',
+  phone: '',
+  email: ''
+});
+
+export const validateTenantForm = (formData: TenantFormData): TenantFormErrors => {
+  const errors: TenantFormErrors = {};
+  
+  if (!formData.first_name.trim()) {
+    errors.first_name = 'First name is required';
+  }
+  if (!formData.last_name.trim()) {
+    errors.last_name = 'Last name is required';
+  }
+  if (!formData.phone.trim()) {
+    errors.phone = 'Phone is required';
+  }
+  
+  return errors;
+};
+
+export const tenantToFormData = (tenant: Tenant): TenantFormData => ({
+  first_name: tenant.first_name,
+  last_name: tenant.last_name,
+  phone: tenant.phone,
+  email: tenant.email || ''
+});
+
+// Enhanced property form validation with owner validation
+export const validatePropertyFormWithOwner = (
+  formData: PropertyFormData,
+  ownerType: 'agency' | 'private',
+  selectedPrivateOwners: { value: string; label: string }[]
+): PropertyFormErrors => {
+  const errors = validatePropertyForm(formData);
+  
+  // Add owner validation
+  if (ownerType === 'agency' && !formData.agency_id) {
+    errors.agency_id = 'Please select an agency';
+  }
+  if (ownerType === 'private' && selectedPrivateOwners.length === 0) {
+    errors.private_owners = 'Please select at least one private owner';
+  }
+  
+  return errors;
+};

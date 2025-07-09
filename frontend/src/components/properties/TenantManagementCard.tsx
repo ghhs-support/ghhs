@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { UserIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Label from '../form/Label';
 import InputField from '../form/input/InputField';
 import InfoCard from './InfoCard';
 import ConfirmModal from '../common/ConfirmModal';
-import { Tenant } from '../../types/property';
+import { Tenant, TenantFormData, TenantFormErrors, validateTenantForm, getInitialTenantFormData } from '../../types/property';
 
 interface TenantManagementCardProps {
   tenants: Tenant[];
@@ -12,13 +12,6 @@ interface TenantManagementCardProps {
   disabled?: boolean;
   loading?: boolean;
   onTenantUpdate?: (tenant: Tenant) => Promise<void>;
-}
-
-interface TenantFormData {
-  first_name: string;
-  last_name: string;
-  phone: string;
-  email: string;
 }
 
 export default function TenantManagementCard({
@@ -32,45 +25,19 @@ export default function TenantManagementCard({
   const [editingTenant, setEditingTenant] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
-  const [tenantErrors, setTenantErrors] = useState<Record<string, string>>({});
+  const [tenantErrors, setTenantErrors] = useState<TenantFormErrors>({});
 
-  const [newTenant, setNewTenant] = useState<TenantFormData>({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    email: ''
-  });
+  const [newTenant, setNewTenant] = useState<TenantFormData>(getInitialTenantFormData());
 
-  const [editingTenantData, setEditingTenantData] = useState<TenantFormData>({
-    first_name: '',
-    last_name: '',
-    phone: '',
-    email: ''
-  });
+  const [editingTenantData, setEditingTenantData] = useState<TenantFormData>(getInitialTenantFormData());
 
   const resetTenantForm = () => {
-    setNewTenant({
-      first_name: '',
-      last_name: '',
-      phone: '',
-      email: ''
-    });
+    setNewTenant(getInitialTenantFormData());
     setTenantErrors({});
   };
 
   const validateTenant = (tenantData: TenantFormData): boolean => {
-    const errors: Record<string, string> = {};
-    
-    if (!tenantData.first_name.trim()) {
-      errors.first_name = 'First name is required';
-    }
-    if (!tenantData.last_name.trim()) {
-      errors.last_name = 'Last name is required';
-    }
-    if (!tenantData.phone.trim()) {
-      errors.phone = 'Phone is required';
-    }
-    
+    const errors = validateTenantForm(tenantData);
     setTenantErrors(errors);
     return Object.keys(errors).length === 0;
   };
