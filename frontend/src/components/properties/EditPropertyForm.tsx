@@ -256,7 +256,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       
       console.log('Updating property with data:', data);
       
-      const response = await authenticatedPatch(`/properties/properties/${property.id}/update/`, { data });
+      const response = await authenticatedPatch(`/properties/${property.id}/update/`, { data });
       console.log('Property updated:', response);
       
       setUpdateSuccessful(true);

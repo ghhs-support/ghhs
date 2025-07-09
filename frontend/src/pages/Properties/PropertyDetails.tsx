@@ -38,7 +38,7 @@ export default function PropertyDetails() {
   const loadProperty = async () => {
     try {
       setLoading(true);
-      const response = await authenticatedGet(`/properties/properties/${propertyId}/`);
+      const response = await authenticatedGet(`/properties/${propertyId}/`);
       setProperty(response);
       setTenants(response.tenants || []);
     } catch (error) {
@@ -56,7 +56,7 @@ export default function PropertyDetails() {
     try {
       setToggleLoading(true);
       const response = await authenticatedPatch(
-        `/properties/properties/${property.id}/update/`,
+        `/properties/${property.id}/update/`,
         { data: { is_active: isActive } }
       );
       setProperty(response);

@@ -43,7 +43,7 @@ export default function CreateBeepingAlarmForm({ isOpen, onClose, onSuccess }: C
     try {
       setLoading(true);
       const [propertiesResponse, issueTypesResponse] = await Promise.all([
-        authenticatedGet('/properties/properties/'),
+        authenticatedGet('/properties/'),
         authenticatedGet('/maintenance/issue_types/')
       ]);
       setProperties(propertiesResponse);
