@@ -1,7 +1,5 @@
 import requests
 from django.conf import settings
-from rest_framework.response import Response
-from rest_framework import status
 
 class GooglePlacesAPI:
     def __init__(self):
@@ -16,9 +14,14 @@ class GooglePlacesAPI:
             "components": f"country:{country_code}",
             "types": "geocode"
         }
-    
-        response = requests.get(url, params=params)
-        return response.json()
+        
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Error calling Google Places API: {e}")
+            return {"status": "ERROR", "predictions": []}
 
     def get_place_details(self, place_id):
         url = f"{self.base_url}/details/json"
@@ -27,7 +30,13 @@ class GooglePlacesAPI:
             "fields": "geometry,formatted_address,address_components",
             "key": self.api_key
         }
-        response = requests.get(url, params=params)
-        return response.json()
+        
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Error calling Google Places API: {e}")
+            return {"status": "ERROR", "result": {}}
 
     

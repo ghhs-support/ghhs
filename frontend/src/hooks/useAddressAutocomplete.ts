@@ -1,7 +1,7 @@
 // hooks/useAddressAutocomplete.ts
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { googleApiService } from '../services/googleApi';
 import { GoogleAutocompletePrediction, ParsedAddress } from '../types/google';
+import { useAuthenticatedApi } from './useAuthenticatedApi';
 
 interface UseAddressAutocompleteProps {
   onAddressSelected?: (parsedAddress: ParsedAddress) => void;
@@ -15,13 +15,16 @@ export const useAddressAutocomplete = ({
   countryCode = 'AU'
 }: UseAddressAutocompleteProps = {}) => {
   
-  // State management (same pattern as your useModal)
+  // Use your existing authenticated API hook
+  const { authenticatedGet } = useAuthenticatedApi();
+  
+  // State management
   const [suggestions, setSuggestions] = useState<GoogleAutocompletePrediction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState<GoogleAutocompletePrediction | null>(null);
   
-  // Refs for cleanup (similar to your form patterns)
+  // Refs for cleanup
   const searchTimeoutRef = useRef<number | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -37,7 +40,7 @@ export const useAddressAutocomplete = ({
     }
   }, []);
 
-  // Search addresses with debouncing (similar to your form validation pattern)
+  // Search addresses with debouncing
   const searchAddress = useCallback((input: string) => {
     cleanup();
     
@@ -52,8 +55,9 @@ export const useAddressAutocomplete = ({
       setError(null);
       
       try {
-        abortControllerRef.current = new AbortController();
-        const data = await googleApiService.getAddressSuggestions(input, countryCode);
+        const data = await authenticatedGet(
+          `/common/address/autocomplete/?input=${encodeURIComponent(input)}&country_code=${countryCode}`
+        );
         
         if (data.status === 'OK') {
           setSuggestions(data.predictions || []);
@@ -62,34 +66,51 @@ export const useAddressAutocomplete = ({
           setError('No suggestions found');
         }
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error('Error fetching address suggestions:', err);
-          setError('Failed to fetch suggestions');
-          setSuggestions([]);
-        }
+        console.error('Error fetching address suggestions:', err);
+        setError('Failed to fetch suggestions');
+        setSuggestions([]);
       } finally {
         setLoading(false);
-        abortControllerRef.current = null;
       }
     }, debounceMs);
-  }, [countryCode, debounceMs, cleanup]);
+  }, [countryCode, debounceMs, cleanup, authenticatedGet]);
 
-  // Select address and get details (similar to your form submission pattern)
+  // Select address and get details
   const selectAddress = useCallback(async (prediction: GoogleAutocompletePrediction) => {
     setSelectedSuggestion(prediction);
     setLoading(true);
     setError(null);
     
     try {
-      const placeDetails = await googleApiService.getPlaceDetails(prediction.place_id);
-      const parsedAddress = googleApiService.parseAddressComponents(placeDetails);
+      const placeDetails = await authenticatedGet(
+        `/common/address/details/?place_id=${encodeURIComponent(prediction.place_id)}`
+      );
       
-      // Call the callback if provided (similar to your onSuccess pattern)
+      // Parse address components
+      const components = placeDetails.result.address_components;
+      
+      const getComponent = (types: string[]) => {
+        const component = components.find((comp: any) => 
+          types.some(type => comp.types.includes(type))
+        );
+        return component?.long_name || '';
+      };
+
+      const parsedAddress = {
+        street_number: getComponent(['street_number']),
+        street_name: getComponent(['route']),
+        suburb: getComponent(['locality', 'sublocality']),
+        state: getComponent(['administrative_area_level_1']),
+        postcode: getComponent(['postal_code']),
+        country: getComponent(['country']),
+        latitude: placeDetails.result.geometry.location.lat,
+        longitude: placeDetails.result.geometry.location.lng,
+      };
+      
       if (onAddressSelected) {
         onAddressSelected(parsedAddress);
       }
       
-      // Clear suggestions after selection
       setSuggestions([]);
       
     } catch (err: any) {
@@ -98,9 +119,9 @@ export const useAddressAutocomplete = ({
     } finally {
       setLoading(false);
     }
-  }, [onAddressSelected]);
+  }, [onAddressSelected, authenticatedGet]);
 
-  // Clear all state (similar to your form reset pattern)
+  // Clear all state
   const clearSuggestions = useCallback(() => {
     cleanup();
     setSuggestions([]);
@@ -114,7 +135,6 @@ export const useAddressAutocomplete = ({
     return cleanup;
   }, [cleanup]);
 
-  // Return state and actions (same pattern as your useModal)
   return {
     suggestions,
     loading,
