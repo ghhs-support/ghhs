@@ -71,7 +71,14 @@ const CreatePropertyForm: React.FC<CreatePropertyFormProps> = ({ isOpen, onClose
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    console.log(`🔄 Parent handleChange: ${name} = "${value}"`);
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      console.log('📊 New form data:', newData);
+      return newData;
+    });
     
     // Clear error when user starts typing
     if (formErrors[name]) {
