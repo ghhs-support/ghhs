@@ -9,7 +9,9 @@ import {
   PROPERTY_TABLE_COLUMNS,
   formatPropertyAddress,
   formatOwnerDisplay,
-  formatTenantsDisplay
+  formatTenantsDisplay,
+  Tenant,
+  PrivateOwner
 } from '../../types/property';
 
 const PropertiesTable: React.FC = () => {
@@ -34,25 +36,20 @@ const PropertiesTable: React.FC = () => {
     defaultEntriesPerPage: '10'
   });
 
-  // Handle local sorting
   const handleLocalSort = useCallback((field: string) => {
     if (localSortField === field) {
-      // Toggle direction if same field
       setLocalSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new field with default direction
       setLocalSortField(field);
       setLocalSortDirection('asc');
     }
   }, [localSortField]);
 
-  // Client-side filtering and sorting function
   const getFilteredAndSortedProperties = useCallback(() => {
     if (!properties || !Array.isArray(properties)) {
       return [];
     }
 
-    // First filter by search term
     let filtered = properties;
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -63,7 +60,6 @@ const PropertiesTable: React.FC = () => {
       });
     }
 
-    // Then sort
     if (!localSortField) {
       return filtered;
     }
@@ -103,53 +99,100 @@ const PropertiesTable: React.FC = () => {
 
   const sortedProperties = getFilteredAndSortedProperties();
 
-  // Keep existing render functions...
-  const renderOwner = (ownerInfo: ReturnType<typeof formatOwnerDisplay>) => (
-    <div className="flex flex-col">
-      <Badge size="sm" color={ownerInfo.type === 'agency' ? 'info' : ownerInfo.type === 'private' ? 'success' : 'error'}>
-        {ownerInfo.type === 'agency' ? 'Agency' : ownerInfo.type === 'private' ? 'Private' : 'No Owner'}
-      </Badge>
-      <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-        {ownerInfo.name}
-      </span>
-      {ownerInfo.email && (
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {ownerInfo.email}
-        </span>
-      )}
-    </div>
-  );
-
-  const renderTenants = (tenantInfo: ReturnType<typeof formatTenantsDisplay>) => (
-    <div className="flex flex-col items-start">
-      <Badge
-        size="sm"
-        className={`rounded-full ${
-          tenantInfo.isVacant 
-            ? 'bg-gray-700 text-gray-300' 
-            : 'bg-purple-900/60 text-purple-300'
-        } font-semibold border-none shadow-none px-4 py-1 mb-1`}
-      >
-        {tenantInfo.isVacant 
-          ? 'No Tenants' 
-          : `${tenantInfo.count} ${tenantInfo.count === 1 ? 'Tenant' : 'Tenants'}`}
-      </Badge>
-      {tenantInfo.isVacant ? (
-        <span className="text-sm text-gray-400">Vacant</span>
-      ) : (
-        <>
+  // Updated renderOwner function to show all private owners like BeepingAlarmsTable
+  const renderOwner = (property: Property) => {
+    if (property.agency) {
+      return (
+        <div className="flex flex-col">
+          <Badge size="sm" color="info">Agency</Badge>
           <span className="text-sm font-medium text-gray-800 dark:text-white/90">
-            {tenantInfo.primary}
+            {property.agency.name}
           </span>
-          {tenantInfo.count > 1 && (
-            <span className="text-sm text-gray-400">
-              +{tenantInfo.count - 1} more
-            </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {property.agency.email}
+          </span>
+        </div>
+      );
+    }
+
+    if (property.private_owners.length > 0) {
+      return (
+        <div className="flex flex-col">
+          <Badge size="sm" color="success">Private</Badge>
+          {property.private_owners.length === 1 ? (
+            <div>
+              <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {`${property.private_owners[0].first_name} ${property.private_owners[0].last_name}`}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 block">
+                {property.private_owners[0].email}
+              </span>
+            </div>
+          ) : (
+            <div>
+              <span className="font-medium text-gray-800 dark:text-white/90 text-xs">
+                {property.private_owners.length} Owners
+              </span>
+              <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
+                {property.private_owners.map((owner: PrivateOwner) => (
+                  <div key={owner.id} className="truncate">
+                    {`${owner.first_name} ${owner.last_name}`}
+                    <span className="block">{owner.email}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </>
-      )}
-    </div>
-  );
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col">
+        <Badge size="sm" color="error">No Owner</Badge>
+        <span className="text-sm font-medium text-gray-800 dark:text-white/90">
+          Unassigned
+        </span>
+      </div>
+    );
+  };
+
+  // Updated renderTenants function to show all tenants like BeepingAlarmsTable
+  const renderTenants = (tenants: Tenant[]) => {
+    if (!tenants || tenants.length === 0) {
+      return (
+        <div className="flex flex-col items-center">
+          <Badge size="sm" className="rounded-full bg-gray-700 text-gray-300 font-semibold border-none shadow-none px-4 py-1 mb-1">
+            No Tenants
+          </Badge>
+          <span className="text-sm text-gray-400">Vacant</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center">
+        <Badge
+          size="sm"
+          className="rounded-full bg-purple-900/60 text-purple-300 font-semibold border-none shadow-none px-4 py-1 mb-1"
+        >
+          {tenants.length} {tenants.length === 1 ? 'Tenant' : 'Tenants'}
+        </Badge>
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-full">
+          {tenants.map((tenant: Tenant) => {
+            const name = `${tenant.first_name} ${tenant.last_name}`.trim();
+            const displayName = name || 'No name';
+            return (
+              <div key={tenant.id} className="truncate">
+                {displayName}
+                {tenant.phone && <span className="block">{tenant.phone}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderRow = useCallback((property: Property) => (
     <TableRow 
@@ -165,10 +208,10 @@ const PropertiesTable: React.FC = () => {
         </div>
       </TableCell>
       <TableCell className="w-48 px-5 py-4 text-left border-r border-gray-200 dark:border-gray-700">
-        {renderOwner(formatOwnerDisplay(property))}
+        {renderOwner(property)}
       </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
-        {renderTenants(formatTenantsDisplay(property.tenants))}
+        {renderTenants(property.tenants)}
       </TableCell>
     </TableRow>
   ), [navigate]);
@@ -193,7 +236,7 @@ const PropertiesTable: React.FC = () => {
       searchPlaceholder="Search by address, owner, suburb..."
       renderRow={renderRow}
       tableHeight="600px"
-      serverSideOperations={true} // Add this line
+      serverSideOperations={true}
       renderEmptyState={
         <div className="flex items-center justify-center h-[360px] text-gray-500 dark:text-gray-400">
           No properties found
