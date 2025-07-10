@@ -11,9 +11,12 @@ from common.pagination import CustomPageNumberPagination
 from django_filters import FilterSet
 from django.forms import forms
 
-# Create your views here.
+# ==============================================================================
+# BASIC LIST AND DETAIL VIEWS
+# ==============================================================================
 
 @api_view(['GET'])
+@validate_kinde_token
 def agencies(request):
     """Get all agencies"""
     agencies = Agency.objects.all()
@@ -21,6 +24,7 @@ def agencies(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@validate_kinde_token
 def private_owners(request):
     """Get all private owners"""
     private_owners = PrivateOwner.objects.all()
@@ -28,12 +32,11 @@ def private_owners(request):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@validate_kinde_token
 def properties(request):
     """Get paginated properties with their tenants, agency, and private owner"""
-    # Get the queryset with all relations
     queryset = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()
     
-    # Apply Django Filter
     filterset = PropertyFilter(request.query_params, queryset=queryset)
     if not filterset.is_valid():
         return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -47,25 +50,21 @@ def properties(request):
         'owner': 'agency__name',
     }
     
-    # Map legacy ordering to actual fields if needed
     if ordering in legacy_ordering_map:
         ordering = legacy_ordering_map[ordering]
     elif ordering.startswith('-') and ordering[1:] in legacy_ordering_map:
         ordering = f'-{legacy_ordering_map[ordering[1:]]}'
     
-    # Apply final ordering (this will override any ordering from the filter)
     queryset = queryset.order_by(ordering)
     
-    # Apply pagination
     paginator = CustomPageNumberPagination()
     paginated_queryset = paginator.paginate_queryset(queryset, request)
-    
-    # Serialize the results
     serializer = PropertySerializer(paginated_queryset, many=True)
     
     return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
+@validate_kinde_token
 def property_detail(request, property_id):
     """Get a specific property with its tenants, agency, and private owner"""
     try:
@@ -74,6 +73,10 @@ def property_detail(request, property_id):
         return Response(serializer.data)
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+
+# ==============================================================================
+# TENANT MANAGEMENT
+# ==============================================================================
 
 @api_view(['POST'])
 @validate_kinde_token
@@ -84,7 +87,6 @@ def add_tenant_to_property(request, property_id):
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Get data from request.data (frontend sends data in 'data' field)
     data = request.data.get('data', request.data)
     
     first_name = data.get('first_name')
@@ -92,7 +94,6 @@ def add_tenant_to_property(request, property_id):
     phone = data.get('phone')
     email = data.get('email', '')
     
-    # Validate required fields
     if not first_name or not last_name or not phone:
         errors = {}
         if not first_name:
@@ -103,7 +104,6 @@ def add_tenant_to_property(request, property_id):
             errors['phone'] = 'Phone number is required'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Create new tenant
     tenant = Tenant.objects.create(
         first_name=first_name,
         last_name=last_name,
@@ -111,10 +111,7 @@ def add_tenant_to_property(request, property_id):
         email=email
     )
     
-    # Add tenant to property
     property_obj.tenants.add(tenant)
-    
-    # Return updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -133,14 +130,12 @@ def remove_tenant_from_property(request, property_id, tenant_id):
     except Tenant.DoesNotExist:
         return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Remove tenant from property
     property_obj.tenants.remove(tenant)
     
-    # Optionally, delete the tenant if not attached to any other property
+    # Delete tenant if not attached to any other property
     if tenant.properties.count() == 0:
         tenant.delete()
     
-    # Return updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
@@ -154,7 +149,6 @@ def update_tenant(request, tenant_id):
     except Tenant.DoesNotExist:
         return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Get data from request.data (frontend sends data in 'data' field)
     data = request.data.get('data', request.data)
     
     first_name = data.get('first_name')
@@ -162,7 +156,6 @@ def update_tenant(request, tenant_id):
     phone = data.get('phone')
     email = data.get('email')
     
-    # Validate required fields
     if not first_name or not last_name or not phone:
         errors = {}
         if not first_name:
@@ -173,14 +166,12 @@ def update_tenant(request, tenant_id):
             errors['phone'] = 'Phone number is required'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Update tenant fields
     tenant.first_name = first_name
     tenant.last_name = last_name
     tenant.phone = phone
     tenant.email = email
     tenant.save()
     
-    # Return the updated tenant
     from .serializers import TenantSerializer
     serializer = TenantSerializer(tenant)
     return Response(serializer.data)
@@ -199,11 +190,9 @@ def update_tenant_in_property(request, property_id, tenant_id):
     except Tenant.DoesNotExist:
         return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Verify tenant belongs to this property
     if not property_obj.tenants.filter(id=tenant_id).exists():
         return Response({'detail': 'Tenant does not belong to this property'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Get data from request.data (frontend sends data in 'data' field)
     data = request.data.get('data', request.data)
     
     first_name = data.get('first_name')
@@ -211,7 +200,6 @@ def update_tenant_in_property(request, property_id, tenant_id):
     phone = data.get('phone')
     email = data.get('email')
     
-    # Validate required fields
     if not first_name or not last_name or not phone:
         errors = {}
         if not first_name:
@@ -222,17 +210,19 @@ def update_tenant_in_property(request, property_id, tenant_id):
             errors['phone'] = 'Phone number is required'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Update tenant fields
     tenant.first_name = first_name
     tenant.last_name = last_name
     tenant.phone = phone
     tenant.email = email
     tenant.save()
     
-    # Return updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
+
+# ==============================================================================
+# PRIVATE OWNER MANAGEMENT
+# ==============================================================================
 
 @api_view(['POST'])
 @validate_kinde_token
@@ -247,10 +237,10 @@ def add_private_owner_to_property(request, property_id):
     last_name = request.data.get('last_name')
     phone = request.data.get('phone')
     email = request.data.get('email')
+    
     if not all([first_name, last_name, phone]):
         return Response({'detail': 'First name, last name, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Create new private owner
     private_owner = PrivateOwner.objects.create(
         first_name=first_name,
         last_name=last_name,
@@ -258,11 +248,9 @@ def add_private_owner_to_property(request, property_id):
         email=email
     )
 
-    # Add private owner to property
     property_obj.private_owners.add(private_owner)
     property_obj.save()
 
-    # Return updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -285,43 +273,13 @@ def remove_private_owner_from_property(request, property_id):
     except PrivateOwner.DoesNotExist:
         return Response({'detail': 'Private owner not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    # Remove private owner from property
     property_obj.private_owners.remove(private_owner)
     property_obj.save()
 
-    # Optionally, delete the private owner if not attached to any other property
+    # Delete private owner if not attached to any other property
     if private_owner.properties.count() == 0:
         private_owner.delete()
 
-    # Return updated property
-    property_obj.refresh_from_db()
-    serializer = PropertySerializer(property_obj)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@validate_kinde_token
-def change_property_agency(request, property_id):
-    """Change the agency of a property"""
-    try:
-        property_obj = Property.objects.get(id=property_id)
-    except Property.DoesNotExist:
-        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    agency_id = request.data.get('agency_id')
-    
-    if agency_id is None:
-        # Remove agency from property
-        property_obj.agency = None
-        property_obj.save()
-    else:
-        try:
-            agency = Agency.objects.get(id=agency_id)
-            property_obj.agency = agency
-            property_obj.save()
-        except Agency.DoesNotExist:
-            return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    # Return updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
@@ -339,6 +297,7 @@ def update_private_owner(request, owner_id):
     last_name = request.data.get('last_name')
     phone = request.data.get('phone')
     email = request.data.get('email')
+    
     if first_name:
         private_owner.first_name = first_name
     if last_name:
@@ -350,6 +309,36 @@ def update_private_owner(request, owner_id):
     private_owner.save()
 
     serializer = PrivateOwnerSerializer(private_owner)
+    return Response(serializer.data)
+
+# ==============================================================================
+# AGENCY MANAGEMENT
+# ==============================================================================
+
+@api_view(['POST'])
+@validate_kinde_token
+def change_property_agency(request, property_id):
+    """Change the agency of a property"""
+    try:
+        property_obj = Property.objects.get(id=property_id)
+    except Property.DoesNotExist:
+        return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    agency_id = request.data.get('agency_id')
+    
+    if agency_id is None:
+        property_obj.agency = None
+        property_obj.save()
+    else:
+        try:
+            agency = Agency.objects.get(id=agency_id)
+            property_obj.agency = agency
+            property_obj.save()
+        except Agency.DoesNotExist:
+            return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    property_obj.refresh_from_db()
+    serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
 
 @api_view(['PATCH'])
@@ -413,6 +402,10 @@ def update_agency(request, agency_id):
     serializer = AgencySerializer(agency)
     return Response(serializer.data)
 
+# ==============================================================================
+# PROPERTY MANAGER MANAGEMENT
+# ==============================================================================
+
 @api_view(['POST'])
 @validate_kinde_token
 def add_property_manager_to_agency(request, agency_id):
@@ -427,10 +420,10 @@ def add_property_manager_to_agency(request, agency_id):
     email = request.data.get('email')
     phone = request.data.get('phone')
     notes = request.data.get('notes')
+    
     if not all([first_name, last_name, email, phone]):
         return Response({'detail': 'First name, last name, email, and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Create new property manager
     manager = PropertyManager.objects.create(
         first_name=first_name,
         last_name=last_name,
@@ -466,7 +459,6 @@ def remove_property_manager_from_agency(request, agency_id):
     agency.property_managers.remove(manager)
     agency.save()
 
-    # Optionally, delete the manager if not attached to any other agency
     if manager.agencies.count() == 0:
         manager.delete()
 
@@ -488,6 +480,7 @@ def update_property_manager(request, manager_id):
     email = request.data.get('email')
     phone = request.data.get('phone')
     notes = request.data.get('notes')
+    
     if first_name:
         manager.first_name = first_name
     if last_name:
@@ -503,11 +496,14 @@ def update_property_manager(request, manager_id):
     serializer = PropertyManagerSerializer(manager)
     return Response(serializer.data)
 
+# ==============================================================================
+# PROPERTY CRUD OPERATIONS
+# ==============================================================================
+
 @api_view(['POST'])
 @validate_kinde_token
 def create_property(request):
     """Create a new property"""
-    # Get data from request.data (frontend sends data in 'data' field)
     data = request.data.get('data', request.data)
     
     unit_number = data.get('unit_number')
@@ -520,13 +516,11 @@ def create_property(request):
     private_owner_ids = data.get('private_owner_ids', [])
     force_create = data.get('force_create', False)
     
-    # Validate required fields
     if not all([street_number, street_name, suburb, state, postcode]):
         return Response({
             'detail': 'Street number, street name, suburb, state, and postcode are required'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validate that either agency_id or private_owner_ids is provided (but not both)
     if agency_id and private_owner_ids:
         return Response({
             'detail': 'Property cannot have both an agency and private owners'
@@ -537,7 +531,6 @@ def create_property(request):
             'detail': 'Property must have either an agency or private owners'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Check for duplicate address (case-insensitive)
     if not force_create:
         duplicate_query = Property.objects.filter(
             unit_number__iexact=unit_number if unit_number else None,
@@ -548,7 +541,6 @@ def create_property(request):
             postcode__iexact=postcode
         )
         
-        # Handle case where unit_number is None or empty
         if not unit_number:
             duplicate_query = duplicate_query.filter(unit_number__isnull=True)
         
@@ -590,7 +582,6 @@ def create_property(request):
             except PrivateOwner.DoesNotExist:
                 return Response({'detail': f'Private owner with ID {owner_id} not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Return the created property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -604,18 +595,17 @@ def update_property(request, property_id):
     except Property.DoesNotExist:
         return Response({'detail': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Handle is_active field directly from request.data first
+    # Handle is_active field directly
     if 'is_active' in request.data:
         is_active = request.data.get('is_active')
         property_obj.is_active = is_active
         property_obj.save()
         
-        # Return the updated property
         property_obj.refresh_from_db()
         serializer = PropertySerializer(property_obj)
         return Response(serializer.data)
     
-    # For full property updates, get data from request.data (frontend sends data in 'data' field)
+    # Handle full property updates
     data = request.data.get('data', request.data)
     
     unit_number = data.get('unit_number')
@@ -632,7 +622,6 @@ def update_property(request, property_id):
     private_owner_ids = data.get('private_owner_ids', [])
     tenants_data = data.get('tenants', [])
     
-    # Validate required fields
     if not street_number or not street_name or not suburb or not state or not postcode:
         errors = {}
         if not street_number:
@@ -656,7 +645,7 @@ def update_property(request, property_id):
     property_obj.postcode = postcode
     property_obj.country = country if country else ''
     
-    # Handle latitude and longitude - convert empty strings to None for DecimalField
+    # Handle latitude and longitude - convert empty strings to None
     if latitude and latitude.strip():
         try:
             property_obj.latitude = float(latitude)
@@ -674,7 +663,6 @@ def update_property(request, property_id):
         property_obj.longitude = None
     
     # Handle agency vs private owner changes - they are mutually exclusive
-    # Always clear both first, then set the correct one based on the data
     property_obj.agency = None
     property_obj.private_owners.clear()
     
@@ -686,7 +674,7 @@ def update_property(request, property_id):
         except Agency.DoesNotExist:
             return Response({'detail': 'Agency not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Handle private owner changes - now supports multiple private owners
+    # Handle private owner changes - supports multiple private owners
     if private_owner_ids is not None:
         for owner_id in private_owner_ids:
             try:
@@ -726,13 +714,12 @@ def update_property(request, property_id):
                 except Tenant.DoesNotExist:
                     return Response({'detail': f'Tenant with ID {tenant_data["id"]} not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    # Save the property
     try:
         property_obj.save()
     except Exception as e:
         return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Validate that the property has either an agency or private owners after saving
+    # Validate property ownership constraints
     has_agency = bool(property_obj.agency)
     has_private_owners = property_obj.private_owners.count() > 0
     
@@ -741,12 +728,11 @@ def update_property(request, property_id):
     if not has_agency and not has_private_owners:
         return Response({'detail': 'Property must have either an agency or private owners'}, status=status.HTTP_400_BAD_REQUEST)
     
-    # Update the boolean fields based on the final state
+    # Update boolean fields based on final state
     property_obj.is_agency = has_agency
     property_obj.is_private = has_private_owners
     property_obj.save(update_fields=['is_agency', 'is_private'])
     
-    # Return the updated property
     property_obj.refresh_from_db()
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
