@@ -8,15 +8,16 @@ import CreatePropertyForm from '../../components/properties/CreatePropertyForm';
 export default function Properties() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Filter state - updated to use ownerType instead of separate isAgency/isPrivate
+  // Filter state - updated to include private owner
   const [filters, setFilters] = useState({
     address: null as string | null,
     suburb: null as string | null,
     state: null as string | null,
     postcode: null as string | null,
-    ownerType: null as string | null, // Changed from isAgency/isPrivate
+    ownerType: null as string | null,
     isActive: null as boolean | null,
     agency: null as string | null,
+    privateOwner: null as string | null, // Added missing private owner filter
   });
 
   const handleOpenCreateModal = () => setIsCreateModalOpen(true);
@@ -26,7 +27,7 @@ export default function Properties() {
     console.log('Property created successfully');
   };
 
-  // Filter handlers - updated for owner type
+  // Filter handlers - updated to include private owner
   const handleAddressChange = (address: string | null) => {
     setFilters(prev => ({ ...prev, address }));
   };
@@ -55,6 +56,11 @@ export default function Properties() {
     setFilters(prev => ({ ...prev, agency }));
   };
 
+  // Added missing private owner handler
+  const handlePrivateOwnerChange = (privateOwner: string | null) => {
+    setFilters(prev => ({ ...prev, privateOwner }));
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -80,6 +86,7 @@ export default function Properties() {
           onOwnerTypeChange={handleOwnerTypeChange}
           onIsActiveChange={handleIsActiveChange}
           onAgencyChange={handleAgencyChange}
+          onPrivateOwnerChange={handlePrivateOwnerChange}
           currentAddress={filters.address}
           currentSuburb={filters.suburb}
           currentState={filters.state}
@@ -87,6 +94,7 @@ export default function Properties() {
           currentOwnerType={filters.ownerType}
           currentIsActive={filters.isActive}
           currentAgency={filters.agency}
+          currentPrivateOwner={filters.privateOwner}
         />
       </div>
 

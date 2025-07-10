@@ -11,13 +11,18 @@ class PropertyFilter(filters.FilterSet):
     state = filters.CharFilter(field_name='state', lookup_expr='exact')
     postcode = filters.CharFilter(field_name='postcode', lookup_expr='exact')
     
-    # Replace separate is_agency and is_private with single owner_type
     owner_type = filters.CharFilter(method='filter_owner_type')
     is_active = filters.BooleanFilter(field_name='is_active')
     
     agency = filters.ModelChoiceFilter(
         field_name='agency',
         queryset=Agency.objects.filter(is_active=True)
+    )
+    
+    # This should filter properties that have this specific private owner
+    private_owner = filters.ModelChoiceFilter(
+        field_name='private_owners',
+        queryset=PrivateOwner.objects.filter(is_active=True)
     )
     
     ordering = filters.OrderingFilter(
