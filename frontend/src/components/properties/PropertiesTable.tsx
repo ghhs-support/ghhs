@@ -19,8 +19,7 @@ interface PropertiesTableProps {
     suburb?: string | null;
     state?: string | null;
     postcode?: string | null;
-    isAgency?: boolean | null;
-    isPrivate?: boolean | null;
+    ownerType?: string | null; // Changed from isAgency/isPrivate
     isActive?: boolean | null;
     agency?: string | null;
   };
@@ -37,8 +36,7 @@ const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
     ...(filters.suburb && { suburb: filters.suburb }),
     ...(filters.state && { state: filters.state }),
     ...(filters.postcode && { postcode: filters.postcode }),
-    ...(filters.isAgency !== null && { is_agency: filters.isAgency }),
-    ...(filters.isPrivate !== null && { is_private: filters.isPrivate }),
+    ...(filters.ownerType && { owner_type: filters.ownerType }), // Changed to use owner_type
     ...(filters.isActive !== null && { is_active: filters.isActive }),
     ...(filters.agency && { agency: filters.agency }),
   };

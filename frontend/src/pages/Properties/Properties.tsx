@@ -8,14 +8,13 @@ import CreatePropertyForm from '../../components/properties/CreatePropertyForm';
 export default function Properties() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Filter state
+  // Filter state - updated to use ownerType instead of separate isAgency/isPrivate
   const [filters, setFilters] = useState({
     address: null as string | null,
     suburb: null as string | null,
     state: null as string | null,
     postcode: null as string | null,
-    isAgency: null as boolean | null,
-    isPrivate: null as boolean | null,
+    ownerType: null as string | null, // Changed from isAgency/isPrivate
     isActive: null as boolean | null,
     agency: null as string | null,
   });
@@ -27,7 +26,7 @@ export default function Properties() {
     console.log('Property created successfully');
   };
 
-  // Filter handlers
+  // Filter handlers - updated for owner type
   const handleAddressChange = (address: string | null) => {
     setFilters(prev => ({ ...prev, address }));
   };
@@ -44,12 +43,8 @@ export default function Properties() {
     setFilters(prev => ({ ...prev, postcode }));
   };
 
-  const handleIsAgencyChange = (isAgency: boolean | null) => {
-    setFilters(prev => ({ ...prev, isAgency }));
-  };
-
-  const handleIsPrivateChange = (isPrivate: boolean | null) => {
-    setFilters(prev => ({ ...prev, isPrivate }));
+  const handleOwnerTypeChange = (ownerType: string | null) => {
+    setFilters(prev => ({ ...prev, ownerType }));
   };
 
   const handleIsActiveChange = (isActive: boolean | null) => {
@@ -82,16 +77,14 @@ export default function Properties() {
           onSuburbChange={handleSuburbChange}
           onStateChange={handleStateChange}
           onPostcodeChange={handlePostcodeChange}
-          onIsAgencyChange={handleIsAgencyChange}
-          onIsPrivateChange={handleIsPrivateChange}
+          onOwnerTypeChange={handleOwnerTypeChange}
           onIsActiveChange={handleIsActiveChange}
           onAgencyChange={handleAgencyChange}
           currentAddress={filters.address}
           currentSuburb={filters.suburb}
           currentState={filters.state}
           currentPostcode={filters.postcode}
-          currentIsAgency={filters.isAgency}
-          currentIsPrivate={filters.isPrivate}
+          currentOwnerType={filters.ownerType}
           currentIsActive={filters.isActive}
           currentAgency={filters.agency}
         />

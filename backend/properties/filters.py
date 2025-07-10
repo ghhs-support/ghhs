@@ -11,8 +11,8 @@ class PropertyFilter(filters.FilterSet):
     state = filters.CharFilter(field_name='state', lookup_expr='exact')
     postcode = filters.CharFilter(field_name='postcode', lookup_expr='exact')
     
-    is_agency = filters.BooleanFilter(field_name='is_agency')
-    is_private = filters.BooleanFilter(field_name='is_private')
+    # Replace separate is_agency and is_private with single owner_type
+    owner_type = filters.CharFilter(method='filter_owner_type')
     is_active = filters.BooleanFilter(field_name='is_active')
     
     agency = filters.ModelChoiceFilter(
@@ -89,6 +89,16 @@ class PropertyFilter(filters.FilterSet):
                 q_objects &= term_q
                 
             return queryset.filter(q_objects).distinct()
+    
+    def filter_owner_type(self, queryset, name, value):
+        """
+        Filter by owner type: 'agency' or 'private'
+        """
+        if value == 'agency':
+            return queryset.filter(is_agency=True)
+        elif value == 'private':
+            return queryset.filter(is_private=True)
+        return queryset
     
     class Meta:
         model = Property

@@ -15,16 +15,14 @@ interface PropertiesFiltersCardProps {
   onSuburbChange: (suburb: string | null) => void;
   onStateChange: (state: string | null) => void;
   onPostcodeChange: (postcode: string | null) => void;
-  onIsAgencyChange: (isAgency: boolean | null) => void;
-  onIsPrivateChange: (isPrivate: boolean | null) => void;
+  onOwnerTypeChange: (ownerType: string | null) => void; // Changed from separate isAgency/isPrivate
   onIsActiveChange: (isActive: boolean | null) => void;
   onAgencyChange: (agencyId: string | null) => void;
   currentAddress: string | null;
   currentSuburb: string | null;
   currentState: string | null;
   currentPostcode: string | null;
-  currentIsAgency: boolean | null;
-  currentIsPrivate: boolean | null;
+  currentOwnerType: string | null; // Changed from separate currentIsAgency/currentIsPrivate
   currentIsActive: boolean | null;
   currentAgency: string | null;
 }
@@ -34,16 +32,14 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   onSuburbChange,
   onStateChange,
   onPostcodeChange,
-  onIsAgencyChange,
-  onIsPrivateChange,
+  onOwnerTypeChange,
   onIsActiveChange,
   onAgencyChange,
   currentAddress,
   currentSuburb,
   currentState,
   currentPostcode,
-  currentIsAgency,
-  currentIsPrivate,
+  currentOwnerType,
   currentIsActive,
   currentAgency
 }) => {
@@ -71,6 +67,12 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     { value: 'false', label: 'No' }
   ];
 
+  // Owner type options
+  const ownerTypeOptions = [
+    { value: 'agency', label: 'Agency Managed' },
+    { value: 'private', label: 'Privately Owned' }
+  ];
+
   const agencyOptions = useMemo(() => 
     agencies.map(agency => ({
       value: agency.id.toString(),
@@ -84,8 +86,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: null as Option | null,
     state: null as Option | null,
     postcode: null as Option | null,
-    isAgency: null as Option | null,
-    isPrivate: null as Option | null,
+    ownerType: null as Option | null, // Changed from separate isAgency/isPrivate
     isActive: null as Option | null,
     agency: null as Option | null
   });
@@ -96,8 +97,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: null as Option | null,
     state: null as Option | null,
     postcode: null as Option | null,
-    isAgency: null as Option | null,
-    isPrivate: null as Option | null,
+    ownerType: null as Option | null, // Changed from separate isAgency/isPrivate
     isActive: null as Option | null,
     agency: null as Option | null
   });
@@ -169,8 +169,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         suburb: currentSuburb ? suburbs.find(opt => opt.value === currentSuburb) || { value: currentSuburb, label: currentSuburb } : null,
         state: currentState ? stateOptions.find(opt => opt.value === currentState) || null : null,
         postcode: currentPostcode ? postcodes.find(opt => opt.value === currentPostcode) || { value: currentPostcode, label: currentPostcode } : null,
-        isAgency: currentIsAgency !== null ? booleanOptions.find(opt => opt.value === currentIsAgency.toString()) || null : null,
-        isPrivate: currentIsPrivate !== null ? booleanOptions.find(opt => opt.value === currentIsPrivate.toString()) || null : null,
+        ownerType: currentOwnerType ? ownerTypeOptions.find(opt => opt.value === currentOwnerType) || null : null, // Changed
         isActive: currentIsActive !== null ? booleanOptions.find(opt => opt.value === currentIsActive.toString()) || null : null,
         agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || null : null
       };
@@ -180,7 +179,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     };
 
     initializeValues();
-  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentIsAgency, currentIsPrivate, currentIsActive, currentAgency, suburbs, postcodes, agencyOptions, authenticatedGet]);
+  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentOwnerType, currentIsActive, currentAgency, suburbs, postcodes, agencyOptions, authenticatedGet]);
 
   const handleFilterChange = (filterId: string, value: Option | null) => {
     setLocalValues(prev => ({ ...prev, [filterId]: value }));
@@ -195,8 +194,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     onSuburbChange(isOption(localValues.suburb) ? localValues.suburb.value : null);
     onPostcodeChange(isOption(localValues.postcode) ? localValues.postcode.value : null);
     onStateChange(isOption(localValues.state) ? localValues.state.value : null);
-    onIsAgencyChange(isOption(localValues.isAgency) ? localValues.isAgency.value === 'true' : null);
-    onIsPrivateChange(isOption(localValues.isPrivate) ? localValues.isPrivate.value === 'true' : null);
+    onOwnerTypeChange(isOption(localValues.ownerType) ? localValues.ownerType.value : null); // Changed
     onIsActiveChange(isOption(localValues.isActive) ? localValues.isActive.value === 'true' : null);
     onAgencyChange(isOption(localValues.agency) ? localValues.agency.value : null);
 
@@ -209,8 +207,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       suburb: null,
       state: null,
       postcode: null,
-      isAgency: null,
-      isPrivate: null,
+      ownerType: null, // Changed
       isActive: null,
       agency: null
     };
@@ -222,8 +219,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     onSuburbChange(null);
     onPostcodeChange(null);
     onStateChange(null);
-    onIsAgencyChange(null);
-    onIsPrivateChange(null);
+    onOwnerTypeChange(null); // Changed
     onIsActiveChange(null);
     onAgencyChange(null);
   };
@@ -246,11 +242,8 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       case 'postcode':
         onPostcodeChange(null);
         break;
-      case 'isAgency':
-        onIsAgencyChange(null);
-        break;
-      case 'isPrivate':
-        onIsPrivateChange(null);
+      case 'ownerType': // Changed
+        onOwnerTypeChange(null);
         break;
       case 'isActive':
         onIsActiveChange(null);
@@ -268,8 +261,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: 'Suburb',
     state: 'State',
     postcode: 'Postcode',
-    isAgency: 'Agency Managed',
-    isPrivate: 'Privately Owned',
+    ownerType: 'Owner Type', // Changed
     isActive: 'Active',
     agency: 'Agency'
   };
@@ -341,22 +333,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       />
 
       <SearchableDropdown
-        label="Agency Managed"
-        value={localValues.isAgency}
-        onChange={(option) => handleFilterChange('isAgency', option)}
-        options={booleanOptions}
-        placeholder="Select option..."
-        allOptionLabel="All Properties"
-        showApplyButton={false}
-        showClearButton={true}
-      />
-
-      <SearchableDropdown
-        label="Privately Owned"
-        value={localValues.isPrivate}
-        onChange={(option) => handleFilterChange('isPrivate', option)}
-        options={booleanOptions}
-        placeholder="Select option..."
+        label="Owner Type"
+        value={localValues.ownerType}
+        onChange={(option) => handleFilterChange('ownerType', option)}
+        options={ownerTypeOptions}
+        placeholder="Select owner type..."
         allOptionLabel="All Properties"
         showApplyButton={false}
         showClearButton={true}
