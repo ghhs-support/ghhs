@@ -144,20 +144,43 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
 
   // Initialize filter values when data is loaded
   useEffect(() => {
-    const initialValues = {
-      address: currentAddress ? { value: currentAddress, label: currentAddress } : null,
-      suburb: currentSuburb ? suburbs.find(opt => opt.value === currentSuburb) || { value: currentSuburb, label: currentSuburb } : null,
-      state: currentState ? stateOptions.find(opt => opt.value === currentState) || null : null,
-      postcode: currentPostcode ? postcodes.find(opt => opt.value === currentPostcode) || { value: currentPostcode, label: currentPostcode } : null,
-      isAgency: currentIsAgency !== null ? booleanOptions.find(opt => opt.value === currentIsAgency.toString()) || null : null,
-      isPrivate: currentIsPrivate !== null ? booleanOptions.find(opt => opt.value === currentIsPrivate.toString()) || null : null,
-      isActive: currentIsActive !== null ? booleanOptions.find(opt => opt.value === currentIsActive.toString()) || null : null,
-      agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || null : null
+    const initializeValues = async () => {
+      let addressOption = null;
+      
+      // If there's a currentAddress (property ID), fetch the corresponding address label
+      if (currentAddress) {
+        try {
+          // Use authenticatedGet directly to avoid the searchService dependency issue
+          const addressOptions = await authenticatedGet('/properties/addresses/');
+          addressOption = addressOptions.find((option: Option) => option.value === currentAddress) || null;
+          
+          // If not found in search, create a fallback option (shouldn't happen with proper data)
+          if (!addressOption) {
+            addressOption = { value: currentAddress, label: currentAddress };
+          }
+        } catch (error) {
+          console.error('Error fetching address for current value:', error);
+          addressOption = { value: currentAddress, label: currentAddress };
+        }
+      }
+
+      const initialValues = {
+        address: addressOption,
+        suburb: currentSuburb ? suburbs.find(opt => opt.value === currentSuburb) || { value: currentSuburb, label: currentSuburb } : null,
+        state: currentState ? stateOptions.find(opt => opt.value === currentState) || null : null,
+        postcode: currentPostcode ? postcodes.find(opt => opt.value === currentPostcode) || { value: currentPostcode, label: currentPostcode } : null,
+        isAgency: currentIsAgency !== null ? booleanOptions.find(opt => opt.value === currentIsAgency.toString()) || null : null,
+        isPrivate: currentIsPrivate !== null ? booleanOptions.find(opt => opt.value === currentIsPrivate.toString()) || null : null,
+        isActive: currentIsActive !== null ? booleanOptions.find(opt => opt.value === currentIsActive.toString()) || null : null,
+        agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || null : null
+      };
+
+      setLocalValues(initialValues);
+      setAppliedValues(initialValues);
     };
 
-    setLocalValues(initialValues);
-    setAppliedValues(initialValues);
-  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentIsAgency, currentIsPrivate, currentIsActive, currentAgency, suburbs, postcodes, agencyOptions]);
+    initializeValues();
+  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentIsAgency, currentIsPrivate, currentIsActive, currentAgency, suburbs, postcodes, agencyOptions, authenticatedGet]);
 
   const handleFilterChange = (filterId: string, value: Option | null) => {
     setLocalValues(prev => ({ ...prev, [filterId]: value }));

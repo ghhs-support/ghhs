@@ -76,16 +76,16 @@ def addresses(request):
             # Filter by query if provided
             if not query or query.lower() in full_address.lower():
                 addresses_list.append({
-                    'value': full_address,
-                    'label': full_address
+                    'value': str(property.id),  # Use property ID as value
+                    'label': full_address       # Keep full address as label
                 })
     
-    # Remove duplicates while preserving order
+    # Remove duplicates by address (keep first occurrence)
     seen = set()
     unique_addresses = []
     for addr in addresses_list:
-        if addr['value'] not in seen:
-            seen.add(addr['value'])
+        if addr['label'] not in seen:
+            seen.add(addr['label'])
             unique_addresses.append(addr)
     
     return Response(unique_addresses)

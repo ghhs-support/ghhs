@@ -65,24 +65,30 @@ class PropertyFilter(filters.FilterSet):
     
     def filter_address(self, queryset, name, value):
         """
-        Search specifically across property address fields
+        Filter by specific property ID when an address is selected
         """
         if not value:
             return queryset
-            
-        search_terms = value.split()
-        q_objects = Q()
         
-        for term in search_terms:
-            term_q = (
-                Q(street_name__icontains=term) |
-                Q(street_number__icontains=term) |
-                Q(suburb__icontains=term) |
-                Q(unit_number__icontains=term)
-            )
-            q_objects &= term_q
+        # Check if value is a property ID (numeric)
+        try:
+            property_id = int(value)
+            return queryset.filter(id=property_id)
+        except (ValueError, TypeError):
+            # Fall back to text-based search if not a valid ID
+            search_terms = value.split()
+            q_objects = Q()
             
-        return queryset.filter(q_objects).distinct()
+            for term in search_terms:
+                term_q = (
+                    Q(street_name__icontains=term) |
+                    Q(street_number__icontains=term) |
+                    Q(suburb__icontains=term) |
+                    Q(unit_number__icontains=term)
+                )
+                q_objects &= term_q
+                
+            return queryset.filter(q_objects).distinct()
     
     class Meta:
         model = Property
