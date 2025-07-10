@@ -692,6 +692,7 @@ def update_property(request, property_id):
     private_owner_id = data.get('private_owner_id')
     private_owner_ids = data.get('private_owner_ids', [])
     tenants_data = data.get('tenants', [])
+    force_create = data.get('force_create', False)
     
     if not street_number or not street_name or not suburb or not state or not postcode:
         errors = {}
@@ -706,6 +707,39 @@ def update_property(request, property_id):
         if not postcode:
             errors['postcode'] = 'Postcode is required'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if address has changed
+    address_changed = (
+        (unit_number or '') != (property_obj.unit_number or '') or
+        street_number != property_obj.street_number or
+        street_name != property_obj.street_name or
+        suburb != property_obj.suburb or
+        state != property_obj.state or
+        postcode != property_obj.postcode
+    )
+    
+    # Check for duplicate address only if address has changed and force_create is False
+    if address_changed and not force_create:
+        duplicate_query = Property.objects.filter(
+            unit_number__iexact=unit_number if unit_number else None,
+            street_number__iexact=street_number,
+            street_name__iexact=street_name,
+            suburb__iexact=suburb,
+            state__iexact=state,
+            postcode__iexact=postcode
+        ).exclude(id=property_id)  # Exclude the current property being updated
+        
+        if not unit_number:
+            duplicate_query = duplicate_query.filter(unit_number__isnull=True)
+        
+        if duplicate_query.exists():
+            duplicate_property = duplicate_query.first()
+            serializer = PropertySerializer(duplicate_property)
+            return Response({
+                'duplicate': True,
+                'existing_property': serializer.data,
+                'message': 'A property with this address already exists. Do you want to update it anyway?'
+            }, status=status.HTTP_409_CONFLICT)
     
     # Update address fields
     property_obj.unit_number = unit_number if unit_number else None

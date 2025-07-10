@@ -12,6 +12,7 @@ import {
   TenantManagementCard 
 } from '.';
 import { Property, Tenant, PropertyFormData, Agency, PrivateOwner } from '../../types/property';
+import DuplicateAddressModal from '../common/DuplicateAddressModal';
 
 interface EditPropertyFormProps {
   isOpen: boolean;
@@ -58,6 +59,10 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const [localTenants, setLocalTenants] = useState<Tenant[]>([]);
   const [updateSuccessful, setUpdateSuccessful] = useState(false);
 
+  // Duplicate address modal state
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [existingProperty, setExistingProperty] = useState<Property | null>(null);
+
   // Load data when modal opens
   useEffect(() => {
     if (isOpen && property) {
@@ -97,7 +102,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     }
   };
 
-  // Form handlers
   const resetForm = () => {
     if (property) {
       setFormData({
@@ -272,10 +276,28 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       onClose();
     } catch (error: any) {
       console.error('Error updating property:', error);
-      if (error.data) {
-        setFormErrors(error.data);
+      
+      // Handle duplicate address case
+      if (error.message?.includes('409') && error.data?.duplicate) {
+        setExistingProperty(error.data.existing_property);
+        setShowDuplicateModal(true);
+        setFormLoading(false);
+        return;
       }
-      toast.error('Failed to update property');
+      
+      // Handle other API errors
+      if (error.data) {
+        if (typeof error.data === 'object' && error.data.detail) {
+          toast.error(error.data.detail);
+        } else if (typeof error.data === 'object') {
+          console.error('Validation errors:', error.data);
+          setFormErrors(error.data);
+        } else {
+          toast.error('Failed to update property');
+        }
+      } else {
+        toast.error('Failed to update property');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -306,84 +328,106 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   if (!property) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <Modal.Header onClose={onClose}>Edit Property</Modal.Header>
-      <Modal.Body>
-        <form id="edit-property-form" onSubmit={handleEditProperty} className="space-y-6">
-          <PropertyAddressForm 
-            formData={formData} 
-            onChange={handleFormChange} 
-            errors={formErrors}
-          />
-          
-          <OwnerTypeToggle
-            ownerType={ownerType}
-            onChange={handleOwnerTypeChange}
-            disabled={formLoading}
-          />
-          
-          <div className="text-sm text-gray-600 dark:text-gray-400 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-            {getCurrentOwnerDisplay()}
+    <>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <Modal.Header onClose={onClose}>Edit Property</Modal.Header>
+        <Modal.Body>
+          <form id="edit-property-form" onSubmit={handleEditProperty} className="space-y-6">
+            <PropertyAddressForm 
+              formData={formData} 
+              onChange={handleFormChange} 
+              errors={formErrors}
+            />
+            
+            <OwnerTypeToggle
+              ownerType={ownerType}
+              onChange={handleOwnerTypeChange}
+              disabled={formLoading}
+            />
+            
+            <div className="text-sm text-gray-600 dark:text-gray-400 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              {getCurrentOwnerDisplay()}
+            </div>
+            
+            {/* Agency Selection */}
+            {ownerType === 'agency' && (
+              <AgencySelectionCard
+                agencies={agencies}
+                selectedAgencyId={formData.agency_id}
+                onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
+                error={formErrors.agency_id}
+                disabled={formLoading}
+              />
+            )}
+            
+            {/* Private Owner Selection */}
+            {ownerType === 'private' && (
+              <PrivateOwnerSelectionCard
+                privateOwners={privateOwners}
+                selectedOwnerIds={selectedPrivateOwners.map(owner => parseInt(owner.value))}
+                onOwnersChange={(ownerIds) => {
+                  const ownerOptions = ownerIds.map(id => {
+                    const owner = privateOwners.find(o => o.id === id);
+                    return owner ? {
+                      value: owner.id.toString(),
+                      label: `${owner.first_name} ${owner.last_name}`
+                    } : null;
+                  }).filter(Boolean) as { value: string; label: string }[];
+                  setSelectedPrivateOwners(ownerOptions);
+                }}
+                error={formErrors.private_owners}
+                disabled={formLoading}
+              />
+            )}
+            
+            {/* Tenant Management */}
+            <TenantManagementCard
+              tenants={localTenants}
+              onTenantsChange={setLocalTenants}
+              disabled={formLoading}
+            />
+          </form>
+        </Modal.Body>
+        <Modal.Footer>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              disabled={formLoading}
+            >
+              Cancel
+            </Button>
+            <button
+              type="submit"
+              form="edit-property-form"
+              disabled={formLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-blue-600 text-white shadow-sm hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-blue-800"
+            >
+              {formLoading ? 'Updating...' : 'Update Property'}
+            </button>
           </div>
-          
-          {/* Agency Selection */}
-          {ownerType === 'agency' && (
-            <AgencySelectionCard
-              agencies={agencies}
-              selectedAgencyId={formData.agency_id}
-              onAgencySelect={(agencyId) => setFormData(prev => ({ ...prev, agency_id: agencyId }))}
-              error={formErrors.agency_id}
-              disabled={formLoading}
-            />
-          )}
-          
-          {/* Private Owner Selection */}
-          {ownerType === 'private' && (
-            <PrivateOwnerSelectionCard
-              privateOwners={privateOwners}
-              selectedOwnerIds={selectedPrivateOwners.map(owner => parseInt(owner.value))}
-              onOwnersChange={(ownerIds) => {
-                const ownerOptions = ownerIds.map(id => {
-                  const owner = privateOwners.find(o => o.id === id);
-                  return owner ? {
-                    value: owner.id.toString(),
-                    label: `${owner.first_name} ${owner.last_name}`
-                  } : null;
-                }).filter(Boolean) as { value: string; label: string }[];
-                setSelectedPrivateOwners(ownerOptions);
-              }}
-              error={formErrors.private_owners}
-              disabled={formLoading}
-            />
-          )}
-          
-          {/* Tenant Management */}
-          <TenantManagementCard
-            tenants={localTenants}
-            onTenantsChange={setLocalTenants}
-            disabled={formLoading}
-          />
-        </form>
-      </Modal.Body>
-      <Modal.Footer>
-        <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={formLoading}
-          >
-            Cancel
-          </Button>
-          <button
-            type="submit"
-            form="edit-property-form"
-            disabled={formLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg transition px-5 py-3.5 text-sm bg-blue-600 text-white shadow-sm hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700 dark:disabled:bg-blue-800"
-          >
-            {formLoading ? 'Updating...' : 'Update Property'}
-          </button>
-        </div>
-      </Modal.Footer>
-    </Modal>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Duplicate Address Modal */}
+      {existingProperty && (
+        <DuplicateAddressModal
+          isOpen={showDuplicateModal}
+          onClose={() => {
+            setShowDuplicateModal(false);
+            setExistingProperty(null);
+          }}
+          existingProperty={existingProperty}
+          newAddress={{
+            unit_number: formData.unit_number,
+            street_number: formData.street_number,
+            street_name: formData.street_name,
+            suburb: formData.suburb,
+            state: formData.state,
+            postcode: formData.postcode
+          }}
+        />
+      )}
+    </>
   );
 } 
