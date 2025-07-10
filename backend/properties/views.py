@@ -199,41 +199,53 @@ def remove_tenant_from_property(request, property_id, tenant_id):
     serializer = PropertySerializer(property_obj)
     return Response(serializer.data)
 
-@api_view(['PATCH'])
+@api_view(['GET', 'PATCH'])
 @validate_kinde_token
 def update_tenant(request, tenant_id):
-    """Update a tenant's information"""
+    """Get or update a tenant's information"""
     try:
         tenant = Tenant.objects.get(id=tenant_id)
     except Tenant.DoesNotExist:
         return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
     
-    data = request.data.get('data', request.data)
+    if request.method == 'GET':
+        # Return tenant details for GET requests
+        return Response({
+            'id': tenant.id,
+            'first_name': tenant.first_name,
+            'last_name': tenant.last_name,
+            'phone': tenant.phone,
+            'email': tenant.email,
+        })
     
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    phone = data.get('phone')
-    email = data.get('email')
-    
-    if not first_name or not last_name or not phone:
-        errors = {}
-        if not first_name:
-            errors['first_name'] = 'First name is required'
-        if not last_name:
-            errors['last_name'] = 'Last name is required'
-        if not phone:
-            errors['phone'] = 'Phone number is required'
-        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    tenant.first_name = first_name
-    tenant.last_name = last_name
-    tenant.phone = phone
-    tenant.email = email
-    tenant.save()
-    
-    from .serializers import TenantSerializer
-    serializer = TenantSerializer(tenant)
-    return Response(serializer.data)
+    elif request.method == 'PATCH':
+        # Handle updates for PATCH requests
+        data = request.data.get('data', request.data)
+        
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        phone = data.get('phone')
+        email = data.get('email')
+        
+        if not first_name or not last_name or not phone:
+            errors = {}
+            if not first_name:
+                errors['first_name'] = 'First name is required'
+            if not last_name:
+                errors['last_name'] = 'Last name is required'
+            if not phone:
+                errors['phone'] = 'Phone number is required'
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        tenant.first_name = first_name
+        tenant.last_name = last_name
+        tenant.phone = phone
+        tenant.email = email
+        tenant.save()
+        
+        from .serializers import TenantSerializer
+        serializer = TenantSerializer(tenant)
+        return Response(serializer.data)
 
 @api_view(['PATCH'])
 @validate_kinde_token
@@ -807,3 +819,19 @@ def delete_property(request, property_id):
     
     property_obj.delete()
     return Response({'detail': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@validate_kinde_token
+def tenant_detail(request, tenant_id):
+    """Get a specific tenant's details"""
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+        return Response({
+            'id': tenant.id,
+            'first_name': tenant.first_name,
+            'last_name': tenant.last_name,
+            'phone': tenant.phone,
+            'email': tenant.email,
+        })
+    except Tenant.DoesNotExist:
+        return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)

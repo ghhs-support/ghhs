@@ -16,7 +16,7 @@ urlpatterns = [
     path('<int:property_id>/tenants/<int:tenant_id>/', views.update_tenant_in_property, name='update_tenant_in_property'),
     path('<int:property_id>/tenants/<int:tenant_id>/delete/', views.remove_tenant_from_property, name='remove_tenant_from_property'),
     path('<int:property_id>/change_agency/', views.change_property_agency, name='change_property_agency'),
-    path('tenants/<int:tenant_id>/', views.update_tenant, name='update_tenant'),
+    path('tenants/<int:tenant_id>/', views.update_tenant, name='tenant_detail'),  # Now handles both GET and PATCH
     # --- Private Owner Endpoints ---
     path('<int:property_id>/add_private_owner/', views.add_private_owner_to_property, name='add_private_owner_to_property'),
     path('<int:property_id>/remove_private_owner/', views.remove_private_owner_from_property, name='remove_private_owner_from_property'),

@@ -1,3 +1,4 @@
+import re
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import BeepingAlarm, Tenant, IssueType
@@ -11,6 +12,14 @@ from properties.models import Tenant as PropertyTenant, Property
 from django.utils.dateparse import parse_datetime
 import logging
 
+def normalize_phone_number(phone):
+    """
+    Normalize phone number by removing spaces, dashes, parentheses, and other formatting
+    """
+    if not phone:
+        return ''
+    # Remove all non-digit characters except + (for international numbers)
+    return re.sub(r'[^\d+]', '', phone)
 
 @api_view(['GET'])
 @validate_kinde_token
@@ -59,6 +68,7 @@ def tenant_suggestions(request):
     search = request.query_params.get('q', '').strip()
     # Get tenants that are actually used in active BeepingAlarms (exclude completed and cancelled)
     used_tenant_ids = Property.objects.filter(beepingalarm__is_completed=False, beepingalarm__is_cancelled=False).values_list('tenants', flat=True).distinct()
+    
     if len(search) == 0:
         tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).order_by('first_name')[:20]
         tenants = list(tenants)
@@ -71,19 +81,54 @@ def tenant_suggestions(request):
         ]
         return Response(results)
     else:
-        tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).filter(
-            Q(first_name__icontains=search) |
-            Q(last_name__icontains=search) |
-            Q(phone__icontains=search)
-        ).order_by('first_name')[:20]
-        tenants = list(tenants)
-        results = [
-            {
-                'value': str(tenant.id),
-                'label': f"{tenant.first_name} {tenant.last_name} - {tenant.phone}"
-            }
-            for tenant in tenants
-        ]
+        # Check if search contains digits (likely a phone number)
+        contains_digits = re.search(r'\d', search)
+        
+        if contains_digits:
+            # Normalize the search for phone number comparison
+            normalized_search = normalize_phone_number(search)
+            
+            # Get all tenants and filter by both name and normalized phone
+            all_tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids)
+            
+            matching_tenants = []
+            for tenant in all_tenants:
+                # Check name matches
+                if (search.lower() in tenant.first_name.lower() or 
+                    search.lower() in tenant.last_name.lower() or
+                    search in tenant.phone):
+                    matching_tenants.append(tenant)
+                # Check normalized phone matches
+                elif normalized_search and normalized_search in normalize_phone_number(tenant.phone):
+                    matching_tenants.append(tenant)
+            
+            # Remove duplicates and sort
+            matching_tenants = list(set(matching_tenants))
+            matching_tenants.sort(key=lambda t: t.first_name)
+            matching_tenants = matching_tenants[:20]
+            
+            results = [
+                {
+                    'value': str(tenant.id),
+                    'label': f"{tenant.first_name} {tenant.last_name} - {tenant.phone}"
+                }
+                for tenant in matching_tenants
+            ]
+        else:
+            # Text-only search (names)
+            tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            ).order_by('first_name')[:20]
+            
+            results = [
+                {
+                    'value': str(tenant.id),
+                    'label': f"{tenant.first_name} {tenant.last_name} - {tenant.phone}"
+                }
+                for tenant in tenants
+            ]
+        
         return Response(results)
 
 @api_view(['GET'])

@@ -15,18 +15,20 @@ interface PropertiesFiltersCardProps {
   onSuburbChange: (suburb: string | null) => void;
   onStateChange: (state: string | null) => void;
   onPostcodeChange: (postcode: string | null) => void;
-  onOwnerTypeChange: (ownerType: string | null) => void; // Changed from separate isAgency/isPrivate
+  onOwnerTypeChange: (ownerType: string | null) => void;
   onIsActiveChange: (isActive: boolean | null) => void;
   onAgencyChange: (agencyId: string | null) => void;
   onPrivateOwnerChange: (privateOwnerId: string | null) => void;
+  onTenantChange: (tenantId: string | null) => void; // New prop
   currentAddress: string | null;
   currentSuburb: string | null;
   currentState: string | null;
   currentPostcode: string | null;
-  currentOwnerType: string | null; // Changed from separate currentIsAgency/currentIsPrivate
+  currentOwnerType: string | null;
   currentIsActive: boolean | null;
   currentAgency: string | null;
   currentPrivateOwner: string | null;
+  currentTenant: string | null; // New prop
 }
 
 const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
@@ -38,6 +40,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   onIsActiveChange,
   onAgencyChange,
   onPrivateOwnerChange,
+  onTenantChange,
   currentAddress,
   currentSuburb,
   currentState,
@@ -45,12 +48,13 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   currentOwnerType,
   currentIsActive,
   currentAgency,
-  currentPrivateOwner
+  currentPrivateOwner,
+  currentTenant
 }) => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [privateOwners, setPrivateOwners] = useState<PrivateOwner[]>([]);
   const [suburbs, setSuburbs] = useState<Option[]>([]);
   const [postcodes, setPostcodes] = useState<Option[]>([]);
-  const [privateOwners, setPrivateOwners] = useState<PrivateOwner[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { authenticatedGet } = useAuthenticatedApi();
@@ -85,10 +89,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     }))
   , [agencies]);
 
+  // Private owner options
   const privateOwnerOptions = useMemo(() => 
     privateOwners.map(owner => ({
       value: owner.id.toString(),
-      label: `${owner.first_name} ${owner.last_name}`
+      label: `${owner.first_name} ${owner.last_name}${owner.email ? ` (${owner.email})` : ''}`
     }))
   , [privateOwners]);
 
@@ -98,10 +103,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: null as Option | null,
     state: null as Option | null,
     postcode: null as Option | null,
-    ownerType: null as Option | null, // Changed from separate isAgency/isPrivate
+    ownerType: null as Option | null,
     isActive: null as Option | null,
     agency: null as Option | null,
-    privateOwner: null as Option | null
+    privateOwner: null as Option | null,
+    tenant: null as Option | null // New field
   });
 
   // Applied filter values state
@@ -110,10 +116,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: null as Option | null,
     state: null as Option | null,
     postcode: null as Option | null,
-    ownerType: null as Option | null, // Changed from separate isAgency/isPrivate
+    ownerType: null as Option | null,
     isActive: null as Option | null,
     agency: null as Option | null,
-    privateOwner: null as Option | null
+    privateOwner: null as Option | null,
+    tenant: null as Option | null // New field
   });
 
   useEffect(() => {
@@ -126,18 +133,18 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         setLoading(true);
         setError(null);
         
-        const [agenciesResponse, suburbsResponse, postcodesResponse, privateOwnersResponse] = await Promise.all([
+        const [agenciesResponse, privateOwnersResponse, suburbsResponse, postcodesResponse] = await Promise.all([
           authenticatedGet('/properties/agencies/'),
+          authenticatedGet('/properties/private-owners/'),
           authenticatedGet('/properties/suburbs/'),
-          authenticatedGet('/properties/postcodes/'),
-          authenticatedGet('/properties/private-owners/')
+          authenticatedGet('/properties/postcodes/')
         ]);
         
         if (mounted) {
           setAgencies(agenciesResponse);
+          setPrivateOwners(privateOwnersResponse);
           setSuburbs(suburbsResponse);
           setPostcodes(postcodesResponse);
-          setPrivateOwners(privateOwnersResponse);
         }
       } catch (error) {
         if (mounted) {
@@ -162,21 +169,34 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   useEffect(() => {
     const initializeValues = async () => {
       let addressOption = null;
+      let tenantOption = null;
       
       // If there's a currentAddress (property ID), fetch the corresponding address label
       if (currentAddress) {
         try {
-          // Use authenticatedGet directly to avoid the searchService dependency issue
           const addressOptions = await authenticatedGet('/properties/addresses/');
           addressOption = addressOptions.find((option: Option) => option.value === currentAddress) || null;
           
-          // If not found in search, create a fallback option (shouldn't happen with proper data)
           if (!addressOption) {
-            addressOption = { value: currentAddress, label: currentAddress };
+            addressOption = { value: currentAddress, label: `Property ID: ${currentAddress}` };
           }
         } catch (error) {
           console.error('Error fetching address for current value:', error);
-          addressOption = { value: currentAddress, label: currentAddress };
+          addressOption = { value: currentAddress, label: `Property ID: ${currentAddress}` };
+        }
+      }
+
+      // If there's a currentTenant (tenant ID), fetch the corresponding tenant label
+      if (currentTenant) {
+        try {
+          const tenant = await authenticatedGet(`/properties/tenants/${currentTenant}/`);
+          tenantOption = {
+            value: currentTenant,
+            label: `${tenant.first_name} ${tenant.last_name} - ${tenant.phone}`
+          };
+        } catch (error) {
+          console.error('Error fetching tenant for current value:', error);
+          tenantOption = { value: currentTenant, label: `Tenant ID: ${currentTenant}` };
         }
       }
 
@@ -185,10 +205,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         suburb: currentSuburb ? suburbs.find(opt => opt.value === currentSuburb) || { value: currentSuburb, label: currentSuburb } : null,
         state: currentState ? stateOptions.find(opt => opt.value === currentState) || null : null,
         postcode: currentPostcode ? postcodes.find(opt => opt.value === currentPostcode) || { value: currentPostcode, label: currentPostcode } : null,
-        ownerType: currentOwnerType ? ownerTypeOptions.find(opt => opt.value === currentOwnerType) || null : null, // Changed
+        ownerType: currentOwnerType ? ownerTypeOptions.find(opt => opt.value === currentOwnerType) || null : null,
         isActive: currentIsActive !== null ? booleanOptions.find(opt => opt.value === currentIsActive.toString()) || null : null,
-        agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || null : null,
-        privateOwner: currentPrivateOwner ? privateOwnerOptions.find(opt => opt.value === currentPrivateOwner) || null : null
+        agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || { value: currentAgency, label: `Agency ID: ${currentAgency}` } : null,
+        privateOwner: currentPrivateOwner ? privateOwnerOptions.find(opt => opt.value === currentPrivateOwner) || { value: currentPrivateOwner, label: `Owner ID: ${currentPrivateOwner}` } : null,
+        tenant: tenantOption
       };
 
       setLocalValues(initialValues);
@@ -196,7 +217,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     };
 
     initializeValues();
-  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentOwnerType, currentIsActive, currentAgency, currentPrivateOwner, suburbs, postcodes, agencyOptions, privateOwnerOptions, authenticatedGet]);
+  }, [currentAddress, currentSuburb, currentState, currentPostcode, currentOwnerType, currentIsActive, currentAgency, currentPrivateOwner, currentTenant, suburbs, postcodes, agencyOptions, privateOwnerOptions, authenticatedGet]);
 
   const handleFilterChange = (filterId: string, value: Option | null) => {
     setLocalValues(prev => ({ ...prev, [filterId]: value }));
@@ -211,10 +232,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     onSuburbChange(isOption(localValues.suburb) ? localValues.suburb.value : null);
     onPostcodeChange(isOption(localValues.postcode) ? localValues.postcode.value : null);
     onStateChange(isOption(localValues.state) ? localValues.state.value : null);
-    onOwnerTypeChange(isOption(localValues.ownerType) ? localValues.ownerType.value : null); // Changed
+    onOwnerTypeChange(isOption(localValues.ownerType) ? localValues.ownerType.value : null);
     onIsActiveChange(isOption(localValues.isActive) ? localValues.isActive.value === 'true' : null);
     onAgencyChange(isOption(localValues.agency) ? localValues.agency.value : null);
     onPrivateOwnerChange(isOption(localValues.privateOwner) ? localValues.privateOwner.value : null);
+    onTenantChange(isOption(localValues.tenant) ? localValues.tenant.value : null); // New field
 
     setAppliedValues(localValues);
   };
@@ -225,10 +247,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       suburb: null,
       state: null,
       postcode: null,
-      ownerType: null, // Changed
+      ownerType: null,
       isActive: null,
       agency: null,
-      privateOwner: null
+      privateOwner: null,
+      tenant: null // New field
     };
 
     setLocalValues(clearedValues);
@@ -238,10 +261,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     onSuburbChange(null);
     onPostcodeChange(null);
     onStateChange(null);
-    onOwnerTypeChange(null); // Changed
+    onOwnerTypeChange(null);
     onIsActiveChange(null);
     onAgencyChange(null);
     onPrivateOwnerChange(null);
+    onTenantChange(null); // New field
   };
 
   const handleIndividualFilterClear = (filterId: string) => {
@@ -262,7 +286,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       case 'postcode':
         onPostcodeChange(null);
         break;
-      case 'ownerType': // Changed
+      case 'ownerType':
         onOwnerTypeChange(null);
         break;
       case 'isActive':
@@ -274,6 +298,9 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       case 'privateOwner':
         onPrivateOwnerChange(null);
         break;
+      case 'tenant': // New case
+        onTenantChange(null);
+        break;
     }
   };
 
@@ -284,10 +311,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     suburb: 'Suburb',
     state: 'State',
     postcode: 'Postcode',
-    ownerType: 'Owner Type', // Changed
+    ownerType: 'Owner Type',
     isActive: 'Active',
     agency: 'Agency',
-    privateOwner: 'Private Owner'
+    privateOwner: 'Private Owner',
+    tenant: 'Tenant' // New label
   };
 
   const activeFilters = Object.entries(appliedValues)
@@ -400,6 +428,17 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         allOptionLabel="All Private Owners"
         loading={loading}
         error={error}
+        showApplyButton={false}
+        showClearButton={true}
+      />
+
+      <SearchableDropdown
+        label="Tenant"
+        value={localValues.tenant}
+        onChange={(option) => handleFilterChange('tenant', option)}
+        onSearch={searchService.searchTenants}
+        placeholder="Search by tenant name or mobile..."
+        allOptionLabel="All Tenants"
         showApplyButton={false}
         showClearButton={true}
       />

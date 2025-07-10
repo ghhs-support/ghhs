@@ -22,7 +22,8 @@ interface PropertiesTableProps {
     ownerType?: string | null;
     isActive?: boolean | null;
     agency?: string | null;
-    privateOwner?: string | null; // Added missing private owner filter
+    privateOwner?: string | null;
+    tenant?: string | null; // New filter
   };
 }
 
@@ -40,7 +41,8 @@ const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
     ...(filters.ownerType && { owner_type: filters.ownerType }),
     ...(filters.isActive !== null && { is_active: filters.isActive }),
     ...(filters.agency && { agency: filters.agency }),
-    ...(filters.privateOwner && { private_owner: filters.privateOwner }), // Added missing private owner filter
+    ...(filters.privateOwner && { private_owner: filters.privateOwner }),
+    ...(filters.tenant && { tenant: filters.tenant }), // New filter
   };
 
   const {

@@ -1,6 +1,6 @@
 import django_filters as filters
 from django.db.models import Q
-from .models import Property, Agency, PrivateOwner, Tenant, PropertyManager
+from .models import Property, Agency, PrivateOwner, Tenant
 
 
 class PropertyFilter(filters.FilterSet):
@@ -19,10 +19,15 @@ class PropertyFilter(filters.FilterSet):
         queryset=Agency.objects.filter(is_active=True)
     )
     
-    # This should filter properties that have this specific private owner
     private_owner = filters.ModelChoiceFilter(
         field_name='private_owners',
         queryset=PrivateOwner.objects.filter(is_active=True)
+    )
+    
+    # Add tenant filter
+    tenant = filters.ModelChoiceFilter(
+        field_name='tenants',
+        queryset=Tenant.objects.all()
     )
     
     ordering = filters.OrderingFilter(
