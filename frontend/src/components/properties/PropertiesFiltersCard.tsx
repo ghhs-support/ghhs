@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import ComponentCard from '../common/ComponentCard';
+import LayoutFiltersCard from '../common/FiltersCard';
 import SearchableDropdown from '../common/SearchableDropdown';
-import Button from '../ui/button/Button';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { useSearchService } from '../../services/search';
 import { Agency } from '../../types/property';
@@ -240,167 +239,130 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   };
 
   const hasPendingChanges = JSON.stringify(localValues) !== JSON.stringify(appliedValues);
-  const hasActiveFilters = Object.values(appliedValues).some(value => value !== null);
+
+  const filterLabels = {
+    address: 'Address',
+    suburb: 'Suburb',
+    state: 'State',
+    postcode: 'Postcode',
+    isAgency: 'Agency Managed',
+    isPrivate: 'Privately Owned',
+    isActive: 'Active',
+    agency: 'Agency'
+  };
+
+  const activeFilters = Object.entries(appliedValues)
+    .filter(([, value]) => value !== null)
+    .map(([filterId, value]) => ({
+      id: filterId,
+      label: filterLabels[filterId as keyof typeof filterLabels],
+      value: value!.label,
+      onClear: () => handleIndividualFilterClear(filterId)
+    }));
 
   return (
-    <ComponentCard
+    <LayoutFiltersCard
       title="Property Filters"
-      desc="Filter properties by various criteria"
+      description="Filter properties by various criteria"
+      activeFilters={activeFilters}
+      onApply={handleApply}
+      onClearAll={handleClear}
+      hasPendingChanges={hasPendingChanges}
     >
-      <div className="space-y-4">
-        {/* Active filters display */}
-        {hasActiveFilters && (
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(appliedValues).map(([filterId, value]) => {
-              if (value === null) return null;
+      <SearchableDropdown
+        label="Address"
+        value={localValues.address}
+        onChange={(option) => handleFilterChange('address', option)}
+        onSearch={searchService.searchAddresses}
+        placeholder="Search by address..."
+        allOptionLabel="All Addresses"
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-              const filterLabels = {
-                address: 'Address',
-                suburb: 'Suburb',
-                state: 'State',
-                postcode: 'Postcode',
-                isAgency: 'Agency Managed',
-                isPrivate: 'Privately Owned',
-                isActive: 'Active',
-                agency: 'Agency'
-              };
+      <SearchableDropdown
+        label="Suburb"
+        value={localValues.suburb}
+        onChange={(option) => handleFilterChange('suburb', option)}
+        options={suburbs}
+        placeholder="Select suburb..."
+        allOptionLabel="All Suburbs"
+        loading={loading}
+        error={error}
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-              return (
-                <span
-                  key={filterId}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-full dark:bg-blue-900/20 dark:text-blue-300"
-                >
-                  <span className="font-medium">{filterLabels[filterId as keyof typeof filterLabels]}:</span>
-                  <span>{value.label}</span>
-                  <button
-                    onClick={() => handleIndividualFilterClear(filterId)}
-                    className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
-                    title="Clear filter"
-                  >
-                    ×
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
+      <SearchableDropdown
+        label="State"
+        value={localValues.state}
+        onChange={(option) => handleFilterChange('state', option)}
+        options={stateOptions}
+        placeholder="Select state..."
+        allOptionLabel="All States"
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-        {/* Filter inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <SearchableDropdown
-            label="Address"
-            value={localValues.address}
-            onChange={(option) => handleFilterChange('address', option)}
-            onSearch={searchService.searchAddresses}
-            placeholder="Search by address..."
-            allOptionLabel="All Addresses"
-            showApplyButton={false}
-            showClearButton={true}
-          />
+      <SearchableDropdown
+        label="Postcode"
+        value={localValues.postcode}
+        onChange={(option) => handleFilterChange('postcode', option)}
+        options={postcodes}
+        placeholder="Select postcode..."
+        allOptionLabel="All Postcodes"
+        loading={loading}
+        error={error}
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-          <SearchableDropdown
-            label="Suburb"
-            value={localValues.suburb}
-            onChange={(option) => handleFilterChange('suburb', option)}
-            options={suburbs}
-            placeholder="Select suburb..."
-            allOptionLabel="All Suburbs"
-            loading={loading}
-            error={error}
-            showApplyButton={false}
-            showClearButton={true}
-          />
+      <SearchableDropdown
+        label="Agency Managed"
+        value={localValues.isAgency}
+        onChange={(option) => handleFilterChange('isAgency', option)}
+        options={booleanOptions}
+        placeholder="Select option..."
+        allOptionLabel="All Properties"
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-          <SearchableDropdown
-            label="State"
-            value={localValues.state}
-            onChange={(option) => handleFilterChange('state', option)}
-            options={stateOptions}
-            placeholder="Select state..."
-            allOptionLabel="All States"
-            showApplyButton={false}
-            showClearButton={true}
-          />
+      <SearchableDropdown
+        label="Privately Owned"
+        value={localValues.isPrivate}
+        onChange={(option) => handleFilterChange('isPrivate', option)}
+        options={booleanOptions}
+        placeholder="Select option..."
+        allOptionLabel="All Properties"
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-          <SearchableDropdown
-            label="Postcode"
-            value={localValues.postcode}
-            onChange={(option) => handleFilterChange('postcode', option)}
-            options={postcodes}
-            placeholder="Select postcode..."
-            allOptionLabel="All Postcodes"
-            loading={loading}
-            error={error}
-            showApplyButton={false}
-            showClearButton={true}
-          />
+      <SearchableDropdown
+        label="Active"
+        value={localValues.isActive}
+        onChange={(option) => handleFilterChange('isActive', option)}
+        options={booleanOptions}
+        placeholder="Select option..."
+        allOptionLabel="All Properties"
+        showApplyButton={false}
+        showClearButton={true}
+      />
 
-          <SearchableDropdown
-            label="Agency Managed"
-            value={localValues.isAgency}
-            onChange={(option) => handleFilterChange('isAgency', option)}
-            options={booleanOptions}
-            placeholder="Select option..."
-            allOptionLabel="All Properties"
-            showApplyButton={false}
-            showClearButton={true}
-          />
-
-          <SearchableDropdown
-            label="Privately Owned"
-            value={localValues.isPrivate}
-            onChange={(option) => handleFilterChange('isPrivate', option)}
-            options={booleanOptions}
-            placeholder="Select option..."
-            allOptionLabel="All Properties"
-            showApplyButton={false}
-            showClearButton={true}
-          />
-
-          <SearchableDropdown
-            label="Active"
-            value={localValues.isActive}
-            onChange={(option) => handleFilterChange('isActive', option)}
-            options={booleanOptions}
-            placeholder="Select option..."
-            allOptionLabel="All Properties"
-            showApplyButton={false}
-            showClearButton={true}
-          />
-
-          <SearchableDropdown
-            label="Agency"
-            value={localValues.agency}
-            onChange={(option) => handleFilterChange('agency', option)}
-            options={agencyOptions}
-            placeholder="Select agency..."
-            allOptionLabel="All Agencies"
-            loading={loading}
-            error={error}
-            showApplyButton={false}
-            showClearButton={true}
-          />
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={handleClear}
-            disabled={!hasActiveFilters}
-          >
-            Clear All
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleApply}
-            disabled={!hasPendingChanges}
-          >
-            Apply Filters
-          </Button>
-        </div>
-      </div>
-    </ComponentCard>
+      <SearchableDropdown
+        label="Agency"
+        value={localValues.agency}
+        onChange={(option) => handleFilterChange('agency', option)}
+        options={agencyOptions}
+        placeholder="Select agency..."
+        allOptionLabel="All Agencies"
+        loading={loading}
+        error={error}
+        showApplyButton={false}
+        showClearButton={true}
+      />
+    </LayoutFiltersCard>
   );
 };
 
