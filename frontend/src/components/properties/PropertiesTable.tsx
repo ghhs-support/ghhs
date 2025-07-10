@@ -110,6 +110,10 @@ const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
           aValue = a.tenants.length;
           bValue = b.tenants.length;
           break;
+        case 'status':
+          aValue = a.is_active ? 1 : 0;
+          bValue = b.is_active ? 1 : 0;
+          break;
         case 'street_name':
           aValue = a.street_name.toLowerCase();
           bValue = b.street_name.toLowerCase();
@@ -221,6 +225,20 @@ const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
     );
   };
 
+  const renderStatus = (isActive: boolean) => {
+    return (
+      <div className="flex justify-center">
+        <Badge 
+          size="sm" 
+          color={isActive ? "success" : "error"}
+          className="font-medium"
+        >
+          {isActive ? 'Active' : 'Inactive'}
+        </Badge>
+      </div>
+    );
+  };
+
   const renderRow = useCallback((property: Property) => (
     <TableRow 
       key={property.id}
@@ -239,6 +257,9 @@ const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
       </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         {renderTenants(property.tenants)}
+      </TableCell>
+      <TableCell className="w-32 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+        {renderStatus(property.is_active)}
       </TableCell>
     </TableRow>
   ), [navigate]);

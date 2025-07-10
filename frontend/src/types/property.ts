@@ -148,7 +148,7 @@ export const propertyToFormData = (property: Property): PropertyFormData => ({
 
 // Add these new types
 export interface PropertyTableColumn {
-  key: 'address' | 'owner' | 'tenants';
+  key: 'address' | 'owner' | 'tenants' | 'status';
   label: string;
   width: string;
   align: 'left' | 'center' | 'right';
@@ -171,6 +171,12 @@ export const PROPERTY_TABLE_COLUMNS: PropertyTableColumn[] = [
     key: 'tenants',
     label: 'Tenants',
     width: 'w-40',
+    align: 'center'
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    width: 'w-32',
     align: 'center'
   }
 ];
