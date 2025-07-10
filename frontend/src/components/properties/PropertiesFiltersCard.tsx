@@ -3,12 +3,15 @@ import LayoutFiltersCard from '../common/FiltersCard';
 import SearchableDropdown from '../common/SearchableDropdown';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { useSearchService } from '../../services/search';
-import { Agency, PrivateOwner } from '../../types/property';
-
-export interface Option {
-  value: string;
-  label: string;
-}
+import { 
+  Agency, 
+  PrivateOwner, 
+  Option, 
+  AUSTRALIAN_STATE_OPTIONS, 
+  BOOLEAN_OPTIONS, 
+  OWNER_TYPE_OPTIONS, 
+  PROPERTY_FILTER_LABELS 
+} from '../../types/property';
 
 interface PropertiesFiltersCardProps {
   onAddressChange: (address: string | null) => void;
@@ -19,7 +22,7 @@ interface PropertiesFiltersCardProps {
   onIsActiveChange: (isActive: boolean | null) => void;
   onAgencyChange: (agencyId: string | null) => void;
   onPrivateOwnerChange: (privateOwnerId: string | null) => void;
-  onTenantChange: (tenantId: string | null) => void; // New prop
+  onTenantChange: (tenantId: string | null) => void;
   currentAddress: string | null;
   currentSuburb: string | null;
   currentState: string | null;
@@ -28,7 +31,7 @@ interface PropertiesFiltersCardProps {
   currentIsActive: boolean | null;
   currentAgency: string | null;
   currentPrivateOwner: string | null;
-  currentTenant: string | null; // New prop
+  currentTenant: string | null;
 }
 
 const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
@@ -60,28 +63,6 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
   const { authenticatedGet } = useAuthenticatedApi();
   const searchService = useSearchService();
 
-  const stateOptions = [
-    { value: 'NSW', label: 'New South Wales' },
-    { value: 'VIC', label: 'Victoria' },
-    { value: 'QLD', label: 'Queensland' },
-    { value: 'WA', label: 'Western Australia' },
-    { value: 'SA', label: 'South Australia' },
-    { value: 'TAS', label: 'Tasmania' },
-    { value: 'NT', label: 'Northern Territory' },
-    { value: 'ACT', label: 'Australian Capital Territory' }
-  ];
-
-  const booleanOptions = [
-    { value: 'true', label: 'Yes' },
-    { value: 'false', label: 'No' }
-  ];
-
-  // Owner type options
-  const ownerTypeOptions = [
-    { value: 'agency', label: 'Agency Managed' },
-    { value: 'private', label: 'Privately Owned' }
-  ];
-
   const agencyOptions = useMemo(() => 
     agencies.map(agency => ({
       value: agency.id.toString(),
@@ -89,7 +70,6 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
     }))
   , [agencies]);
 
-  // Private owner options
   const privateOwnerOptions = useMemo(() => 
     privateOwners.map(owner => ({
       value: owner.id.toString(),
@@ -203,10 +183,10 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       const initialValues = {
         address: addressOption,
         suburb: currentSuburb ? suburbs.find(opt => opt.value === currentSuburb) || { value: currentSuburb, label: currentSuburb } : null,
-        state: currentState ? stateOptions.find(opt => opt.value === currentState) || null : null,
+        state: currentState ? AUSTRALIAN_STATE_OPTIONS.find(opt => opt.value === currentState) || null : null,
         postcode: currentPostcode ? postcodes.find(opt => opt.value === currentPostcode) || { value: currentPostcode, label: currentPostcode } : null,
-        ownerType: currentOwnerType ? ownerTypeOptions.find(opt => opt.value === currentOwnerType) || null : null,
-        isActive: currentIsActive !== null ? booleanOptions.find(opt => opt.value === currentIsActive.toString()) || null : null,
+        ownerType: currentOwnerType ? OWNER_TYPE_OPTIONS.find(opt => opt.value === currentOwnerType) || null : null,
+        isActive: currentIsActive !== null ? BOOLEAN_OPTIONS.find(opt => opt.value === currentIsActive.toString()) || null : null,
         agency: currentAgency ? agencyOptions.find(opt => opt.value === currentAgency) || { value: currentAgency, label: `Agency ID: ${currentAgency}` } : null,
         privateOwner: currentPrivateOwner ? privateOwnerOptions.find(opt => opt.value === currentPrivateOwner) || { value: currentPrivateOwner, label: `Owner ID: ${currentPrivateOwner}` } : null,
         tenant: tenantOption
@@ -306,23 +286,11 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
 
   const hasPendingChanges = JSON.stringify(localValues) !== JSON.stringify(appliedValues);
 
-  const filterLabels = {
-    address: 'Address',
-    suburb: 'Suburb',
-    state: 'State',
-    postcode: 'Postcode',
-    ownerType: 'Owner Type',
-    isActive: 'Active',
-    agency: 'Agency',
-    privateOwner: 'Private Owner',
-    tenant: 'Tenant' // New label
-  };
-
   const activeFilters = Object.entries(appliedValues)
     .filter(([, value]) => value !== null)
     .map(([filterId, value]) => ({
       id: filterId,
-      label: filterLabels[filterId as keyof typeof filterLabels],
+      label: PROPERTY_FILTER_LABELS[filterId as keyof typeof PROPERTY_FILTER_LABELS],
       value: value!.label,
       onClear: () => handleIndividualFilterClear(filterId)
     }));
@@ -364,7 +332,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         label="State"
         value={localValues.state}
         onChange={(option) => handleFilterChange('state', option)}
-        options={stateOptions}
+        options={AUSTRALIAN_STATE_OPTIONS}
         placeholder="Select state..."
         allOptionLabel="All States"
         showApplyButton={false}
@@ -388,7 +356,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         label="Owner Type"
         value={localValues.ownerType}
         onChange={(option) => handleFilterChange('ownerType', option)}
-        options={ownerTypeOptions}
+        options={OWNER_TYPE_OPTIONS}
         placeholder="Select owner type..."
         allOptionLabel="All Properties"
         showApplyButton={false}
@@ -399,7 +367,7 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
         label="Active"
         value={localValues.isActive}
         onChange={(option) => handleFilterChange('isActive', option)}
-        options={booleanOptions}
+        options={BOOLEAN_OPTIONS}
         placeholder="Select option..."
         allOptionLabel="All Properties"
         showApplyButton={false}

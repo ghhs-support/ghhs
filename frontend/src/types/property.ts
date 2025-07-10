@@ -281,3 +281,41 @@ export const validatePropertyFormWithOwner = (
   
   return errors;
 };
+
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export const AUSTRALIAN_STATE_OPTIONS: Option[] = [
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'NT', label: 'Northern Territory' },
+  { value: 'ACT', label: 'Australian Capital Territory' }
+];
+
+export const BOOLEAN_OPTIONS: Option[] = [
+  { value: 'true', label: 'Yes' },
+  { value: 'false', label: 'No' }
+];
+
+export const OWNER_TYPE_OPTIONS: Option[] = [
+  { value: 'agency', label: 'Agency Managed' },
+  { value: 'private', label: 'Privately Owned' }
+];
+
+export const PROPERTY_FILTER_LABELS = {
+  address: 'Address',
+  suburb: 'Suburb',
+  state: 'State',
+  postcode: 'Postcode',
+  ownerType: 'Owner Type',
+  isActive: 'Active',
+  agency: 'Agency',
+  privateOwner: 'Private Owner',
+  tenant: 'Tenant'
+};
