@@ -82,7 +82,8 @@ export const formatPropertyAddress = (property: Property) => {
     property.street_name,
     property.suburb,
     property.state,
-    property.postcode
+    property.postcode,
+    property.country && property.country.trim() !== '' ? property.country : null
   ].filter(Boolean);
   
   return parts.join(' ');

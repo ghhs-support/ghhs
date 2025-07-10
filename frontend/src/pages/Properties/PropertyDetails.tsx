@@ -151,6 +151,9 @@ export default function PropertyDetails() {
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   {property.suburb}, {property.state} {property.postcode}
+                  {property.country && property.country.trim() !== '' && (
+                    <span>, {property.country}</span>
+                  )}
                 </div>
               </div>
             </div>

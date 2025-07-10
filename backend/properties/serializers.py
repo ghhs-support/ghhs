@@ -30,4 +30,4 @@ class PropertySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Property
-        fields = ['id', 'unit_number', 'street_number', 'street_name', 'suburb', 'state', 'postcode', 'tenants', 'agency', 'private_owners', 'is_agency', 'is_private', 'is_active'] 
+        fields = ['id', 'unit_number', 'street_number', 'street_name', 'suburb', 'state', 'postcode', 'country', 'latitude', 'longitude', 'tenants', 'agency', 'private_owners', 'is_agency', 'is_private', 'is_active'] 
