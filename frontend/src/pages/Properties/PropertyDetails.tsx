@@ -7,13 +7,13 @@ import EditPropertyForm from '../../components/properties/EditPropertyForm';
 import toast from 'react-hot-toast';
 import { 
   PencilIcon, 
-  ArrowLeftIcon,
-  BuildingOfficeIcon,
-  MapPinIcon} from '@heroicons/react/24/outline';
+  ArrowLeftIcon
+} from '@heroicons/react/24/outline';
 import { 
   TenantDisplayCard, 
   AgencyDisplayCard, 
-  PrivateOwnerDisplayCard 
+  PrivateOwnerDisplayCard,
+  PropertyInformationCard
 } from '../../components/properties';
 import { Property, Tenant, formatPropertyAddress } from '../../types/property';
 
@@ -135,30 +135,10 @@ export default function PropertyDetails() {
       </div>
 
       <div className="flex flex-col gap-6">
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BuildingOfficeIcon className="w-5 h-5 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Property Information</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <MapPinIcon className="w-4 h-4 text-gray-400" />
-              <div>
-                <div className="font-medium text-gray-900 dark:text-gray-100">
-                  {property.unit_number ? `Unit ${property.unit_number}, ` : ''}
-                  {property.street_number} {property.street_name}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {property.suburb}, {property.state} {property.postcode}
-                  {property.country && property.country.trim() !== '' && (
-                    <span>, {property.country}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PropertyInformationCard
+          property={property}
+          loading={loading}
+        />
 
         {property.agency ? (
           <AgencyDisplayCard

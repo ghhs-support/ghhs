@@ -10,3 +10,4 @@ export { default as EditPropertyForm } from './EditPropertyForm';
 export { default as PropertiesTable } from './PropertiesTable';
 export { default as PropertyAddressForm } from './PropertyAddressForm';
 export { default as OwnerTypeToggle } from './OwnerTypeToggle';
+export { default as PropertyInformationCard } from './PropertyInformationCard';
