@@ -134,32 +134,40 @@ export default function PropertyDetails() {
         <p className="text-gray-600 dark:text-gray-400">{formatPropertyAddress(property)}</p>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="space-y-6">
+        {/* Property Info - Full width on all screens */}
         <PropertyInformationCard
           property={property}
           loading={loading}
         />
-
-        {property.agency ? (
-          <AgencyDisplayCard
-            agency={property.agency}
-            loading={loading}
-          />
-        ) : (
-          <PrivateOwnerDisplayCard
-            privateOwners={property.private_owners || []}
-            loading={loading}
-          />
-        )}
-
-        <TenantDisplayCard
-          tenants={tenants}
-          onTenantsChange={handleTenantsChange}
-          allowAdd={false}
-          allowRemove={false}
-          disabled={false}
-          loading={loading}
-        />
+        
+        {/* Agency/Owner and Tenants - Side by side on larger screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            {property.agency ? (
+              <AgencyDisplayCard
+                agency={property.agency}
+                loading={loading}
+              />
+            ) : (
+              <PrivateOwnerDisplayCard
+                privateOwners={property.private_owners || []}
+                loading={loading}
+              />
+            )}
+          </div>
+          
+          <div>
+            <TenantDisplayCard
+              tenants={tenants}
+              onTenantsChange={handleTenantsChange}
+              allowAdd={false}
+              allowRemove={false}
+              disabled={false}
+              loading={loading}
+            />
+          </div>
+        </div>
       </div>
 
       <EditPropertyForm
