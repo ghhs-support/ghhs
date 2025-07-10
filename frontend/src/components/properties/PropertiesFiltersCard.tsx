@@ -301,7 +301,6 @@ const PropertiesFiltersCard: React.FC<PropertiesFiltersCardProps> = ({
       activeFilters={activeFilters}
       onApply={handleApply}
       onClearAll={handleClear}
-      hasPendingChanges={hasPendingChanges}
     >
       <SearchableDropdown
         label="Address"
