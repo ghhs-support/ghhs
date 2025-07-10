@@ -583,6 +583,9 @@ def create_property(request):
     suburb = data.get('suburb')
     state = data.get('state')
     postcode = data.get('postcode')
+    country = data.get('country')
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
     agency_id = data.get('agency_id')
     private_owner_ids = data.get('private_owner_ids', [])
     force_create = data.get('force_create', False)
@@ -632,6 +635,9 @@ def create_property(request):
         'suburb': suburb,
         'state': state,
         'postcode': postcode,
+        'country': country if country else '',
+        'latitude': float(latitude) if latitude and latitude.strip() else None,
+        'longitude': float(longitude) if longitude and longitude.strip() else None,
     }
     
     # Set agency if provided
