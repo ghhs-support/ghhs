@@ -5,8 +5,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Agency, PrivateOwner, Property, Tenant, PropertyManager
 from .serializers import AgencySerializer, PrivateOwnerSerializer, PropertySerializer, PropertyManagerSerializer
+from .filters import PropertyFilter
 from backend.authentication import validate_kinde_token
 from common.pagination import CustomPageNumberPagination
+from django_filters import FilterSet
+from django.forms import forms
 
 # Create your views here.
 
@@ -30,37 +33,28 @@ def properties(request):
     # Get the queryset with all relations
     queryset = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()
     
-    # Handle search
-    search = request.query_params.get('search', '')
-    if search:
-        queryset = queryset.filter(
-            Q(street_name__icontains=search) |
-            Q(street_number__icontains=search) |
-            Q(suburb__icontains=search) |
-            Q(agency__name__icontains=search) |
-            Q(private_owners__first_name__icontains=search) |
-            Q(private_owners__last_name__icontains=search)
-        ).distinct()
+    # Apply Django Filter
+    filterset = PropertyFilter(request.query_params, queryset=queryset)
+    if not filterset.is_valid():
+        return Response(filterset.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Handle sorting
+    queryset = filterset.qs
+    
+    # Handle legacy ordering mapping for backward compatibility
     ordering = request.query_params.get('ordering', 'street_name')
-    # Map frontend sort fields to actual database fields
-    ordering_map = {
-        'address': 'street_name',  # Default to street_name for address sorting
-        'owner': 'agency__name',   # Default to agency name for owner sorting
-        'street_name': 'street_name',
-        'street_number': 'street_number',
-        'suburb': 'suburb',
-        'state': 'state',
-        'postcode': 'postcode'
+    legacy_ordering_map = {
+        'address': 'street_name',
+        'owner': 'agency__name',
     }
     
-    # Get the actual database field for sorting
-    sort_field = ordering_map.get(ordering.replace('-', ''), 'street_name')
-    if ordering.startswith('-'):
-        sort_field = f'-{sort_field}'
-        
-    queryset = queryset.order_by(sort_field)
+    # Map legacy ordering to actual fields if needed
+    if ordering in legacy_ordering_map:
+        ordering = legacy_ordering_map[ordering]
+    elif ordering.startswith('-') and ordering[1:] in legacy_ordering_map:
+        ordering = f'-{legacy_ordering_map[ordering[1:]]}'
+    
+    # Apply final ordering (this will override any ordering from the filter)
+    queryset = queryset.order_by(ordering)
     
     # Apply pagination
     paginator = CustomPageNumberPagination()
