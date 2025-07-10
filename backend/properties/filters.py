@@ -5,6 +5,7 @@ from .models import Property, Agency, PrivateOwner, Tenant, PropertyManager
 
 class PropertyFilter(filters.FilterSet):
     search = filters.CharFilter(method='filter_search')
+    address = filters.CharFilter(method='filter_address')
     
     suburb = filters.CharFilter(field_name='suburb', lookup_expr='icontains')
     state = filters.CharFilter(field_name='state', lookup_expr='exact')
@@ -57,6 +58,27 @@ class PropertyFilter(filters.FilterSet):
                 Q(agency__name__icontains=term) |
                 Q(private_owners__first_name__icontains=term) |
                 Q(private_owners__last_name__icontains=term)
+            )
+            q_objects &= term_q
+            
+        return queryset.filter(q_objects).distinct()
+    
+    def filter_address(self, queryset, name, value):
+        """
+        Search specifically across property address fields
+        """
+        if not value:
+            return queryset
+            
+        search_terms = value.split()
+        q_objects = Q()
+        
+        for term in search_terms:
+            term_q = (
+                Q(street_name__icontains=term) |
+                Q(street_number__icontains=term) |
+                Q(suburb__icontains=term) |
+                Q(unit_number__icontains=term)
             )
             q_objects &= term_q
             

@@ -33,6 +33,65 @@ def private_owners(request):
 
 @api_view(['GET'])
 @validate_kinde_token
+def suburbs(request):
+    """Get distinct suburbs from properties"""
+    suburbs = Property.objects.values_list('suburb', flat=True).distinct().order_by('suburb')
+    suburbs_list = [{'value': suburb, 'label': suburb} for suburb in suburbs if suburb]
+    return Response(suburbs_list)
+
+@api_view(['GET'])
+@validate_kinde_token
+def postcodes(request):
+    """Get distinct postcodes from properties"""
+    postcodes = Property.objects.values_list('postcode', flat=True).distinct().order_by('postcode')
+    postcodes_list = [{'value': postcode, 'label': postcode} for postcode in postcodes if postcode]
+    return Response(postcodes_list)
+
+@api_view(['GET'])
+@validate_kinde_token
+def addresses(request):
+    """Get formatted addresses from properties"""
+    query = request.GET.get('q', '')
+    properties = Property.objects.all().order_by('street_name', 'street_number')
+    addresses_list = []
+    
+    for property in properties:
+        # Format address similar to formatPropertyAddress in frontend
+        address_parts = []
+        if property.unit_number:
+            address_parts.append(f"Unit {property.unit_number}")
+        if property.street_number:
+            address_parts.append(str(property.street_number))
+        if property.street_name:
+            address_parts.append(property.street_name)
+        if property.suburb:
+            address_parts.append(property.suburb)
+        if property.state:
+            address_parts.append(property.state)
+        if property.postcode:
+            address_parts.append(property.postcode)
+        
+        full_address = ', '.join(address_parts)
+        if full_address:
+            # Filter by query if provided
+            if not query or query.lower() in full_address.lower():
+                addresses_list.append({
+                    'value': full_address,
+                    'label': full_address
+                })
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_addresses = []
+    for addr in addresses_list:
+        if addr['value'] not in seen:
+            seen.add(addr['value'])
+            unique_addresses.append(addr)
+    
+    return Response(unique_addresses)
+
+@api_view(['GET'])
+@validate_kinde_token
 def properties(request):
     """Get paginated properties with their tenants, agency, and private owner"""
     queryset = Property.objects.prefetch_related('tenants', 'agency', 'private_owners').all()

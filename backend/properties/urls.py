@@ -4,6 +4,9 @@ from . import views
 urlpatterns = [
     path('agencies/', views.agencies, name='agencies'),
     path('private-owners/', views.private_owners, name='private_owners'),
+    path('addresses/', views.addresses, name='addresses'),
+    path('suburbs/', views.suburbs, name='suburbs'),
+    path('postcodes/', views.postcodes, name='postcodes'),
     path('properties/', views.properties, name='properties'),
     path('create/', views.create_property, name='create_property'),
     path('<int:property_id>/', views.property_detail, name='property_detail'),

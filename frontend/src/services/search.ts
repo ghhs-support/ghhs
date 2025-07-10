@@ -10,6 +10,7 @@ export interface SearchService {
   searchTenants: (query: string) => Promise<SearchOption[]>;
   searchUsers: (query: string) => Promise<SearchOption[]>;
   searchAgencies: (query: string) => Promise<SearchOption[]>;
+  searchAddresses: (query: string) => Promise<SearchOption[]>;
 }
 
 /**
@@ -109,6 +110,33 @@ export const createSearchService = (authenticatedGet: any): SearchService => {
         return [];
       } catch (error) {
         console.error('Error fetching agency suggestions:', error);
+        return [];
+      }
+    },
+
+    searchAddresses: async (query: string): Promise<SearchOption[]> => {
+      console.log('Searching for addresses with query:', query);
+      try {
+        const response = await authenticatedGet('/properties/addresses/', {
+          params: { q: query }
+        });
+        console.log('Addresses search response:', response);
+        
+        // If no query, return all addresses
+        if (!query) {
+          return response || [];
+        }
+        
+        // Filter addresses based on query
+        if (Array.isArray(response)) {
+          return response.filter((address: any) => 
+            address.label.toLowerCase().includes(query.toLowerCase())
+          );
+        }
+        
+        return [];
+      } catch (error) {
+        console.error('Error fetching address suggestions:', error);
         return [];
       }
     }

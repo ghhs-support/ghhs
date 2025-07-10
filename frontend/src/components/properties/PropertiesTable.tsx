@@ -13,10 +13,35 @@ import {
   PrivateOwner
 } from '../../types/property';
 
-const PropertiesTable: React.FC = () => {
+interface PropertiesTableProps {
+  filters?: {
+    address?: string | null;
+    suburb?: string | null;
+    state?: string | null;
+    postcode?: string | null;
+    isAgency?: boolean | null;
+    isPrivate?: boolean | null;
+    isActive?: boolean | null;
+    agency?: string | null;
+  };
+}
+
+const PropertiesTable: React.FC<PropertiesTableProps> = ({ filters = {} }) => {
   const navigate = useNavigate();
   const [localSortField, setLocalSortField] = useState<string | null>('street_name');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Convert filters to the format expected by useDataTable
+  const tableFilters = {
+    ...(filters.address && { address: filters.address }),
+    ...(filters.suburb && { suburb: filters.suburb }),
+    ...(filters.state && { state: filters.state }),
+    ...(filters.postcode && { postcode: filters.postcode }),
+    ...(filters.isAgency !== null && { is_agency: filters.isAgency }),
+    ...(filters.isPrivate !== null && { is_private: filters.isPrivate }),
+    ...(filters.isActive !== null && { is_active: filters.isActive }),
+    ...(filters.agency && { agency: filters.agency }),
+  };
 
   const {
     data: properties,
@@ -32,7 +57,8 @@ const PropertiesTable: React.FC = () => {
     handleEntriesPerPageChange,
   } = useDataTable<Property>({
     endpoint: '/properties/properties/',
-    defaultEntriesPerPage: '10'
+    defaultEntriesPerPage: '10',
+    filters: tableFilters
   });
 
   const handleLocalSort = useCallback((field: string) => {
