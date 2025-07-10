@@ -30,7 +30,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [privateOwners, setPrivateOwners] = useState<PrivateOwner[]>([]);
   
-  // Form states
   const [formData, setFormData] = useState<PropertyFormData>({
     unit_number: '',
     street_number: '',
@@ -43,27 +42,41 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     longitude: '',
     agency_id: null,
   });
+  
+  const [originalAddressData, setOriginalAddressData] = useState<{
+    unit_number: string;
+    street_number: string;
+    street_name: string;
+    suburb: string;
+    state: string;
+    postcode: string;
+    country: string;
+    latitude: string;
+    longitude: string;
+  }>({
+    unit_number: '',
+    street_number: '',
+    street_name: '',
+    suburb: '',
+    state: '',
+    postcode: '',
+    country: '',
+    latitude: '',
+    longitude: '',
+  });
+  
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formLoading, setFormLoading] = useState(false);
-
-  // Owner type and private owners
   const [ownerType, setOwnerType] = useState<'agency' | 'private'>('agency');
   const [selectedPrivateOwners, setSelectedPrivateOwners] = useState<{ value: string; label: string }[]>([]);
   const [tempSelectedOwner, setTempSelectedOwner] = useState<{ value: string; label: string } | null>(null);
-  
-  // Store selections when switching owner types (for draft mode)
   const [draftAgencyId, setDraftAgencyId] = useState<number | null>(null);
   const [draftPrivateOwners, setDraftPrivateOwners] = useState<{ value: string; label: string }[]>([]);
-
-  // Tenant management state - local state for modal only
   const [localTenants, setLocalTenants] = useState<Tenant[]>([]);
   const [updateSuccessful, setUpdateSuccessful] = useState(false);
-
-  // Duplicate address modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [existingProperty, setExistingProperty] = useState<Property | null>(null);
 
-  // Load data when modal opens
   useEffect(() => {
     if (isOpen && property) {
       loadAgencies();
@@ -74,7 +87,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
   useEffect(() => {
     if (!isOpen) {
-      // Show toast after modal is fully closed if update was successful
       if (updateSuccessful) {
         setTimeout(() => {
           toast.success('Property updated successfully!');
@@ -104,7 +116,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
 
   const resetForm = () => {
     if (property) {
-      setFormData({
+      const addressData = {
         unit_number: property.unit_number || '',
         street_number: property.street_number,
         street_name: property.street_name,
@@ -114,15 +126,19 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         country: property.country || '',
         latitude: property.latitude || '',
         longitude: property.longitude || '',
+      };
+      
+      setFormData({
+        ...addressData,
         agency_id: property.agency?.id || null,
       });
       
-      // Determine owner type and set up the form accordingly
+      setOriginalAddressData(addressData);
+      
       if (property.agency) {
         setOwnerType('agency');
         setSelectedPrivateOwners([]);
         setTempSelectedOwner(null);
-        // Reset draft selections
         setDraftAgencyId(property.agency.id);
         setDraftPrivateOwners([]);
       } else if (property.private_owners.length > 0) {
@@ -133,23 +149,26 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         }));
         setSelectedPrivateOwners(privateOwnersList);
         setTempSelectedOwner(null);
-        // Reset draft selections
         setDraftAgencyId(null);
         setDraftPrivateOwners(privateOwnersList);
       } else {
-        // Default to agency if no owner is set
         setOwnerType('agency');
         setSelectedPrivateOwners([]);
         setTempSelectedOwner(null);
-        // Reset draft selections
         setDraftAgencyId(null);
         setDraftPrivateOwners([]);
       }
       
-      // Initialize local tenants with current property tenants
       setLocalTenants(property.tenants);
     }
     setFormErrors({});
+  };
+
+  const resetAddressToOriginal = () => {
+    setFormData(prev => ({
+      ...prev,
+      ...originalAddressData
+    }));
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +178,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -170,7 +188,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
   };
 
   const handleOwnerTypeChange = (newOwnerType: 'agency' | 'private') => {
-    // Store current selections before switching
     if (ownerType === 'agency' && formData.agency_id) {
       setDraftAgencyId(formData.agency_id);
     }
@@ -180,20 +197,16 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     
     setOwnerType(newOwnerType);
     
-    // Restore previous selections for the new type
     if (newOwnerType === 'agency') {
-      // Switching to agency - restore agency selection if available
       const agencyToRestore = draftAgencyId || formData.agency_id;
       setFormData(prev => ({ ...prev, agency_id: agencyToRestore }));
       setSelectedPrivateOwners([]);
     } else {
-      // Switching to private - restore private owners selection if available
       const privateOwnersToRestore = draftPrivateOwners.length > 0 ? draftPrivateOwners : selectedPrivateOwners;
       setSelectedPrivateOwners(privateOwnersToRestore);
       setFormData(prev => ({ ...prev, agency_id: null }));
     }
     
-    // Clear the temp selection for the dropdown
     setTempSelectedOwner(null);
   };
 
@@ -216,7 +229,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       newErrors.postcode = 'Postcode is required';
     }
     
-    // Validate owner type selection
     if (ownerType === 'agency' && !formData.agency_id) {
       newErrors.agency_id = 'Please select an agency';
     }
@@ -236,11 +248,9 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       setFormLoading(true);
       let data: any = { ...formData };
       
-      // Clear all owner data first, then set based on toggle position
       data.agency_id = null;
       data.private_owner_ids = [];
       
-      // Set the correct owner type based on toggle
       if (ownerType === 'agency') {
         data.agency_id = formData.agency_id;
         data.private_owner_ids = [];
@@ -249,7 +259,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         data.private_owner_ids = selectedPrivateOwners.map(owner => parseInt(owner.value));
       }
       
-      // Add tenant data
       data.tenants = localTenants.map(tenant => ({
         id: tenant.id,
         first_name: tenant.first_name,
@@ -258,10 +267,7 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         email: tenant.email || ''
       }));
       
-      console.log('Updating property with data:', data);
-      
       const response = await authenticatedPatch(`/properties/${property.id}/update/`, { data });
-      console.log('Property updated:', response);
       
       setUpdateSuccessful(true);
       
@@ -275,9 +281,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
       
       onClose();
     } catch (error: any) {
-      console.error('Error updating property:', error);
-      
-      // Handle duplicate address case
       if (error.message?.includes('409') && error.data?.duplicate) {
         setExistingProperty(error.data.existing_property);
         setShowDuplicateModal(true);
@@ -285,12 +288,10 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         return;
       }
       
-      // Handle other API errors
       if (error.data) {
         if (typeof error.data === 'object' && error.data.detail) {
           toast.error(error.data.detail);
         } else if (typeof error.data === 'object') {
-          console.error('Validation errors:', error.data);
           setFormErrors(error.data);
         } else {
           toast.error('Failed to update property');
@@ -301,6 +302,12 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleDuplicateModalClose = () => {
+    setShowDuplicateModal(false);
+    setExistingProperty(null);
+    resetAddressToOriginal();
   };
 
   const getSelectedAgencyOption = () => {
@@ -349,7 +356,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               {getCurrentOwnerDisplay()}
             </div>
             
-            {/* Agency Selection */}
             {ownerType === 'agency' && (
               <AgencySelectionCard
                 agencies={agencies}
@@ -360,7 +366,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               />
             )}
             
-            {/* Private Owner Selection */}
             {ownerType === 'private' && (
               <PrivateOwnerSelectionCard
                 privateOwners={privateOwners}
@@ -380,7 +385,6 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
               />
             )}
             
-            {/* Tenant Management */}
             <TenantManagementCard
               tenants={localTenants}
               onTenantsChange={setLocalTenants}
@@ -409,14 +413,10 @@ export default function EditPropertyForm({ isOpen, onClose, property, onSuccess,
         </Modal.Footer>
       </Modal>
 
-      {/* Duplicate Address Modal */}
       {existingProperty && (
         <DuplicateAddressModal
           isOpen={showDuplicateModal}
-          onClose={() => {
-            setShowDuplicateModal(false);
-            setExistingProperty(null);
-          }}
+          onClose={handleDuplicateModalClose}
           existingProperty={existingProperty}
           newAddress={{
             unit_number: formData.unit_number,
