@@ -10,8 +10,8 @@ export default function BeepingAlarmDetailsCard({
 }: BeepingAlarmDetailsCardProps) {
   if (loading) {
     return (
-      <div className="border border-red-200 dark:border-red-700 rounded-lg p-4 bg-red-50 dark:bg-gray-800">
-        <div className="text-red-600 dark:text-red-400 text-sm py-4 text-center">
+      <div className="border border-red-200 dark:border-red-700 rounded-lg p-6 bg-red-50 dark:bg-gray-800 h-[500px] min-h-[500px] flex items-center justify-center">
+        <div className="text-red-600 dark:text-red-400 text-center">
           Loading alarm information...
         </div>
       </div>
@@ -56,25 +56,25 @@ export default function BeepingAlarmDetailsCard({
   };
 
   return (
-    <div className="border border-red-200 dark:border-red-700 rounded-lg p-4 bg-red-50 dark:bg-red-900/20">
-      <div className="flex items-center justify-between mb-4">
-        <Label className="text-base font-medium text-red-900 dark:text-red-200">
+    <div className="border border-red-200 dark:border-red-700 rounded-lg p-6 bg-red-50 dark:bg-red-900/20 h-[500px] min-h-[500px] flex flex-col">
+      <div className="flex items-start justify-between mb-6">
+        <Label className="text-lg font-semibold text-red-900 dark:text-red-200">
           <ExclamationTriangleIcon className="w-5 h-5 inline mr-2" />
           Beeping Alarm #{alarm.id}
         </Label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
           {getStatusBadge(alarm.status)}
           {getBooleanBadge(alarm.is_customer_contacted, "Customer Contacted", "Not Contacted")}
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 flex-shrink-0">
+        <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-2 block">
               Issue Type
             </Label>
-            <div className="text-sm text-gray-900 dark:text-gray-100">
+            <div className="text-sm text-gray-900 dark:text-gray-100 font-medium">
               {alarm.issue_type?.name || 'N/A'}
             </div>
             {alarm.issue_type?.description && (
@@ -85,7 +85,7 @@ export default function BeepingAlarmDetailsCard({
           </div>
 
           <div>
-            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-2 block">
               Created At
             </Label>
             <div className="text-sm text-gray-900 dark:text-gray-100">
@@ -94,19 +94,19 @@ export default function BeepingAlarmDetailsCard({
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+            <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-2 block">
               Allocated To
             </Label>
             {alarm.allocation && alarm.allocation.length > 0 ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {alarm.allocation.map((user) => (
                   <div key={user.id} className="flex items-center space-x-2">
-                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
                       {(user.first_name?.[0] || user.username?.[0] || '?').toUpperCase()}
                     </div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">
+                    <div className="text-sm text-gray-900 dark:text-gray-100 truncate">
                       {user.first_name && user.last_name 
                         ? `${user.first_name} ${user.last_name}` 
                         : user.username}
@@ -121,12 +121,12 @@ export default function BeepingAlarmDetailsCard({
         </div>
       </div>
 
-      <div className="mt-4">
-        <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-2">
+      <div className="flex-1 flex flex-col min-h-0">
+        <Label className="text-sm font-medium text-red-900 dark:text-red-200 mb-3 block flex-shrink-0">
           Notes
         </Label>
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-red-200 dark:border-red-700">
-          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-red-200 dark:border-red-700 flex-1 min-h-0">
+          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed h-full overflow-y-auto">
             {alarm.notes || 'No notes provided'}
           </p>
         </div>

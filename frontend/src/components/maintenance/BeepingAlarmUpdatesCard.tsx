@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { ChatBubbleLeftEllipsisIcon, PaperAirplaneIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftEllipsisIcon, PaperAirplaneIcon} from '@heroicons/react/24/outline';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import { BeepingAlarmUpdatesCardProps, BeepingAlarmUpdateFormData, BEEPING_ALARM_STATUS_OPTIONS, BeepingAlarmStatus } from '../../types/maintenance';
 import Label from '../form/Label';
@@ -133,8 +133,8 @@ export default function BeepingAlarmUpdatesCard({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="text-gray-600 dark:text-gray-400 text-center py-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 h-[500px] min-h-[500px] flex items-center justify-center">
+        <div className="text-gray-600 dark:text-gray-400 text-center">
           Loading updates...
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function BeepingAlarmUpdatesCard({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 h-[500px] min-h-[500px] flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <ChatBubbleLeftEllipsisIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -165,7 +165,7 @@ export default function BeepingAlarmUpdatesCard({
       </div>
 
       {showAddForm && (
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
           <Label className="text-base font-medium text-gray-900 dark:text-gray-100 mb-4">
             Add New Update
           </Label>
@@ -210,7 +210,6 @@ export default function BeepingAlarmUpdatesCard({
                 type="submit"
                 variant="primary"
                 disabled={submitting}
-                loading={submitting}
               >
                 {submitting ? 'Adding...' : 'Add Update'}
               </Button>
@@ -219,42 +218,54 @@ export default function BeepingAlarmUpdatesCard({
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="flex-1 flex flex-col min-h-0">
         {updates.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <ChatBubbleLeftEllipsisIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No updates yet</p>
-            <p className="text-sm">Be the first to add an update!</p>
+          <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
+            <div className="text-center">
+              <ChatBubbleLeftEllipsisIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No updates yet</p>
+              <p className="text-sm">Be the first to add an update!</p>
+            </div>
           </div>
         ) : (
-          updates.map((update) => (
-            <div
-              key={update.id}
-              className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
-            >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  {getUserInitials(update.update_by)}
+          <>
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0">
+              {updates.map((update) => (
+                <div
+                  key={update.id}
+                  className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {getUserInitials(update.update_by)}
+                    </div>
+                  </div>
+                  
+                  <div className="flex-grow min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {getUserDisplayName(update.update_by)}
+                      </p>
+                      {getStatusBadge(update.status)}
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatDate(update.created_at)}
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
+                      {update.notes}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex-grow min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {getUserDisplayName(update.update_by)}
-                  </p>
-                  {getStatusBadge(update.status)}
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatDate(update.created_at)}
-                  </span>
-                </div>
-                
-                <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {update.notes}
-                </div>
-              </div>
+              ))}
             </div>
-          ))
+
+            {updates.length > 3 && (
+              <div className="text-center mt-4 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                Scroll to view all {updates.length} updates
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
