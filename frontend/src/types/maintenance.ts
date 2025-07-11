@@ -16,6 +16,8 @@ export interface BeepingAlarm {
   created_at: string;
   updated_at: string;
   allocation: Array<User>;
+  is_completed: boolean;
+  is_cancelled: boolean;
 }
 
 export interface IssueType {

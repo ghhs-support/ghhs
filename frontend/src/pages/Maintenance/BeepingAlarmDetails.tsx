@@ -6,6 +6,7 @@ import PropertyInformationCard from '../../components/properties/PropertyInforma
 import TenantDisplayCard from '../../components/properties/TenantDisplayCard';
 import AgencyDisplayCard from '../../components/properties/AgencyDisplayCard';
 import PrivateOwnerDisplayCard from '../../components/properties/PrivateOwnerDisplayCard';
+import BeepingAlarmDetailsCard from '../../components/maintenance/BeepingAlarmDetailsCard';
 import { BeepingAlarm } from '../../types/maintenance';
 import { Tenant } from '../../types/property';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
@@ -42,7 +43,6 @@ export default function BeepingAlarmDetails() {
   }, [alarmId]);
 
   const handleTenantsChange = (updatedTenants: Tenant[]) => {
-    // For display-only purposes, we don't need to handle changes
     console.log('Tenants changed:', updatedTenants);
   };
 
@@ -69,6 +69,8 @@ export default function BeepingAlarmDetails() {
 
         <div className="space-y-6">
           <PropertyInformationCard property={{} as any} loading={true} />
+          
+          <BeepingAlarmDetailsCard alarm={{} as any} loading={true} />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AgencyDisplayCard agency={null} loading={true} />
@@ -126,6 +128,8 @@ export default function BeepingAlarmDetails() {
           property={alarm.property}
           loading={loading}
         />
+        
+        <BeepingAlarmDetailsCard alarm={alarm} loading={loading} />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
