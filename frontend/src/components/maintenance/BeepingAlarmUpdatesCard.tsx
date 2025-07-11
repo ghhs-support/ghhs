@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ChatBubbleLeftEllipsisIcon, PaperAirplaneIcon} from '@heroicons/react/24/outline';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
-import { BeepingAlarmUpdatesCardProps, BeepingAlarmUpdateFormData, BEEPING_ALARM_STATUS_OPTIONS, BeepingAlarmStatus } from '../../types/maintenance';
+import { BeepingAlarmUpdatesCardProps, BeepingAlarmUpdateFormData, UPDATE_STATUS_OPTIONS, BeepingAlarmStatus } from '../../types/maintenance';
 import Label from '../form/Label';
 import Button from '../ui/button/Button';
 import Badge from '../ui/badge/Badge';
@@ -20,7 +20,7 @@ export default function BeepingAlarmUpdatesCard({
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<BeepingAlarmUpdateFormData>({
-    status: 'new',
+    status: 'update',
     notes: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,6 +51,8 @@ export default function BeepingAlarmUpdatesCard({
         return <Badge size="sm" color="success">Completed</Badge>;
       case 'cancelled':
         return <Badge size="sm" color="error">Cancelled</Badge>;
+      case 'update':
+        return <Badge size="sm" color="info">Update</Badge>;
       default:
         return <Badge size="sm" color="error">{status || 'Unknown'}</Badge>;
     }
@@ -108,9 +110,11 @@ export default function BeepingAlarmUpdatesCard({
         notes: formData.notes
       };
       
-      await authenticatedPost('/beeping_alarm_updates/', { data: payload });
+      console.log('Sending update payload:', payload);
+      const response = await authenticatedPost('/beeping_alarm_updates/', { data: payload });
+      console.log('Update response:', response);
       
-      setFormData({ status: 'new', notes: '' });
+      setFormData({ status: 'update', notes: '' });
       setShowAddForm(false);
       onUpdateSubmitted();
       toast.success('Update added successfully!');
@@ -126,7 +130,7 @@ export default function BeepingAlarmUpdatesCard({
   };
 
   const handleCancel = () => {
-    setFormData({ status: 'new', notes: '' });
+    setFormData({ status: 'update', notes: '' });
     setErrors({});
     setShowAddForm(false);
   };
@@ -175,7 +179,7 @@ export default function BeepingAlarmUpdatesCard({
                 id="status"
                 label="Status"
                 value={formData.status}
-                options={BEEPING_ALARM_STATUS_OPTIONS}
+                options={UPDATE_STATUS_OPTIONS}  
                 onChange={(value) => handleInputChange('status', value as BeepingAlarmStatus)}
                 placeholder="Select status..."
               />

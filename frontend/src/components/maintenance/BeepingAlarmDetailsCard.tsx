@@ -44,6 +44,8 @@ export default function BeepingAlarmDetailsCard({
         return <Badge size="md" color="success">Completed</Badge>;
       case 'cancelled':
         return <Badge size="md" color="error">Cancelled</Badge>;
+      case 'update':
+        return <Badge size="md" color="info">Update</Badge>;
       default:
         return <Badge size="md" color="error">{status || 'Unknown'}</Badge>;
     }

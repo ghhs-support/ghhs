@@ -330,6 +330,8 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         return <Badge size="sm" color="success">Completed</Badge>;
       case 'cancelled':
         return <Badge size="sm" color="error">Cancelled</Badge>;
+      case 'update':
+        return <Badge size="sm" color="info">Update</Badge>;
       default:
         return <Badge size="sm" color="error">{status || 'Unknown'}</Badge>;
     }

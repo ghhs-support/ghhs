@@ -38,7 +38,7 @@ export interface User {
   email: string;
 }
 
-export type BeepingAlarmStatus = 'new' | 'requires_call_back' | 'awaiting_response' | 'to_be_scheduled' | 'to_be_quoted' | 'completed' | 'cancelled';
+export type BeepingAlarmStatus = 'new' | 'requires_call_back' | 'awaiting_response' | 'to_be_scheduled' | 'to_be_quoted' | 'completed' | 'cancelled' | 'update';
 
 export interface Option {
   value: string;
@@ -52,7 +52,8 @@ export const BEEPING_ALARM_STATUS_OPTIONS: Option[] = [
   { value: 'to_be_scheduled', label: 'To Be Scheduled' },
   { value: 'to_be_quoted', label: 'To Be Quoted' },
   { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' }
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'update', label: 'Update' }
 ];
 
 export const CUSTOMER_CONTACTED_OPTIONS = [
@@ -130,4 +131,12 @@ export interface BeepingAlarmUpdatesCardProps {
   onUpdateSubmitted: () => void;
   loading?: boolean;
 }
+
+export const UPDATE_STATUS_OPTIONS: Option[] = [
+  { value: 'update', label: 'Update' },
+  { value: 'requires_call_back', label: 'Requires Call Back' },
+  { value: 'awaiting_response', label: 'Awaiting Response' },
+  { value: 'to_be_scheduled', label: 'To Be Scheduled' },
+  { value: 'to_be_quoted', label: 'To Be Quoted' },
+];
 
