@@ -23,6 +23,7 @@ class BeepingAlarm(models.Model):
         ('to_be_quoted', 'To Be Quoted'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
+        ('update', 'Update'),        
     ]
 
     uid = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
