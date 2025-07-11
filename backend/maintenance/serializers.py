@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import BeepingAlarm, IssueType
+from .models import BeepingAlarm, IssueType, BeepingAlarmUpdate
 from properties.models import Property, Tenant
 from common.serializer import UserSerializer
 from properties.serializers import PropertySerializer
@@ -56,3 +56,23 @@ class BeepingAlarmCreateSerializer(serializers.ModelSerializer):
             beeping_alarm.allocation.set(allocation_data)
         
         return beeping_alarm
+
+class BeepingAlarmUpdateSerializer(serializers.ModelSerializer):
+    update_by = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = BeepingAlarmUpdate
+        fields = [
+            'id', 'uid', 'beeping_alarm', 'status', 'created_at', 'notes', 'update_by'
+        ]
+
+class BeepingAlarmUpdateCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BeepingAlarmUpdate
+        fields = ['beeping_alarm', 'status', 'notes']
+    
+    def create(self, validated_data):
+        # Get the current user from the context
+        user = self.context['request'].user
+        validated_data['update_by'] = user
+        return super().create(validated_data)

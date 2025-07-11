@@ -1,8 +1,11 @@
 import re
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import BeepingAlarm, Tenant, IssueType
-from .serializers import BeepingAlarmSerializer, BeepingAlarmCreateSerializer, IssueTypeSerializer
+from .models import BeepingAlarm, Tenant, IssueType, BeepingAlarmUpdate
+from .serializers import (
+    BeepingAlarmSerializer, BeepingAlarmCreateSerializer, IssueTypeSerializer,
+    BeepingAlarmUpdateSerializer, BeepingAlarmUpdateCreateSerializer
+)
 from .filters import BeepingAlarmFilter
 from rest_framework import status
 from backend.authentication import validate_kinde_token
@@ -19,7 +22,6 @@ def normalize_phone_number(phone):
     """
     if not phone:
         return ''
-    # Remove all non-digit characters except + (for international numbers)
     return re.sub(r'[^\d+]', '', phone)
 
 @api_view(['GET'])
@@ -37,6 +39,26 @@ def beeping_alarm_detail(request, alarm_id):
     alarm = get_object_or_404(BeepingAlarm, id=alarm_id)
     serializer = BeepingAlarmSerializer(alarm)
     return Response(serializer.data)
+
+@api_view(['GET'])
+@validate_kinde_token
+def beeping_alarm_updates(request, alarm_id):
+    """Get all updates for a specific beeping alarm"""
+    alarm = get_object_or_404(BeepingAlarm, id=alarm_id)
+    updates = BeepingAlarmUpdate.objects.filter(beeping_alarm=alarm).order_by('-created_at')
+    serializer = BeepingAlarmUpdateSerializer(updates, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@validate_kinde_token
+def beeping_alarm_updates_create(request):
+    """Create a new beeping alarm update"""
+    serializer = BeepingAlarmUpdateCreateSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        update = serializer.save()
+        response_serializer = BeepingAlarmUpdateSerializer(update)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET', 'POST'])
 @validate_kinde_token
@@ -75,7 +97,6 @@ def beeping_alarms(request):
 @validate_kinde_token
 def tenant_suggestions(request):
     search = request.query_params.get('q', '').strip()
-    # Get tenants that are actually used in active BeepingAlarms (exclude completed and cancelled)
     used_tenant_ids = Property.objects.filter(beepingalarm__is_completed=False, beepingalarm__is_cancelled=False).values_list('tenants', flat=True).distinct()
     
     if len(search) == 0:
@@ -90,28 +111,22 @@ def tenant_suggestions(request):
         ]
         return Response(results)
     else:
-        # Check if search contains digits (likely a phone number)
         contains_digits = re.search(r'\d', search)
         
         if contains_digits:
-            # Normalize the search for phone number comparison
             normalized_search = normalize_phone_number(search)
             
-            # Get all tenants and filter by both name and normalized phone
             all_tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids)
             
             matching_tenants = []
             for tenant in all_tenants:
-                # Check name matches
                 if (search.lower() in tenant.first_name.lower() or 
                     search.lower() in tenant.last_name.lower() or
                     search in tenant.phone):
                     matching_tenants.append(tenant)
-                # Check normalized phone matches
                 elif normalized_search and normalized_search in normalize_phone_number(tenant.phone):
                     matching_tenants.append(tenant)
             
-            # Remove duplicates and sort
             matching_tenants = list(set(matching_tenants))
             matching_tenants.sort(key=lambda t: t.first_name)
             matching_tenants = matching_tenants[:20]
@@ -124,7 +139,6 @@ def tenant_suggestions(request):
                 for tenant in matching_tenants
             ]
         else:
-            # Text-only search (names)
             tenants = PropertyTenant.objects.filter(id__in=used_tenant_ids).filter(
                 Q(first_name__icontains=search) |
                 Q(last_name__icontains=search)
@@ -158,11 +172,9 @@ def property_suggestions(request):
         
         return Response(results)
     
-    # If search is too short but not empty, return empty to avoid too many results while typing
     if len(search) < 2:
         return Response([])
     
-    # Build the search query for property address components
     query_filter = (
         Q(street_number__icontains=search) |
         Q(street_name__icontains=search) |
@@ -172,10 +184,8 @@ def property_suggestions(request):
         Q(unit_number__icontains=search)
     )
     
-    # Search in properties that are used by BeepingAlarms
     properties = Property.objects.filter(id__in=used_property_ids).filter(query_filter).order_by('street_name', 'street_number')[:10]
     
-    # Format results
     results = [
         {
             'value': str(prop.id),

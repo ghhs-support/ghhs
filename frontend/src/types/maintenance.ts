@@ -109,3 +109,25 @@ export interface BeepingAlarmDetailsCardProps {
   loading?: boolean;
 }
 
+export interface BeepingAlarmUpdate {
+  id: number;
+  uid: string;
+  beeping_alarm: number;
+  status: BeepingAlarmStatus;
+  created_at: string;
+  notes: string;
+  update_by: User;
+}
+
+export interface BeepingAlarmUpdateFormData {
+  status: BeepingAlarmStatus;
+  notes: string;
+}
+
+export interface BeepingAlarmUpdatesCardProps {
+  alarmId: number;
+  updates: BeepingAlarmUpdate[];
+  onUpdateSubmitted: () => void;
+  loading?: boolean;
+}
+

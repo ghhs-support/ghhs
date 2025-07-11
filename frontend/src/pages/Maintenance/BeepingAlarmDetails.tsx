@@ -7,7 +7,8 @@ import TenantDisplayCard from '../../components/properties/TenantDisplayCard';
 import AgencyDisplayCard from '../../components/properties/AgencyDisplayCard';
 import PrivateOwnerDisplayCard from '../../components/properties/PrivateOwnerDisplayCard';
 import BeepingAlarmDetailsCard from '../../components/maintenance/BeepingAlarmDetailsCard';
-import { BeepingAlarm } from '../../types/maintenance';
+import BeepingAlarmUpdatesCard from '../../components/maintenance/BeepingAlarmUpdatesCard';
+import { BeepingAlarm, BeepingAlarmUpdate } from '../../types/maintenance';
 import { Tenant } from '../../types/property';
 import { useAuthenticatedApi } from '../../hooks/useAuthenticatedApi';
 import useGoBack from '../../hooks/useGoBack';
@@ -17,7 +18,10 @@ export default function BeepingAlarmDetails() {
   const goBack = useGoBack();
   const api = useAuthenticatedApi();
   const [alarm, setAlarm] = useState<BeepingAlarm | null>(null);
+  const [updates, setUpdates] = useState<BeepingAlarmUpdate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatesLoading, setUpdatesLoading] = useState(true);
+  const [alarmDetailsLoading, setAlarmDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,20 +31,58 @@ export default function BeepingAlarmDetails() {
       return;
     }
 
-    const fetchAlarmDetails = async () => {
-      try {
-        const response = await api.authenticatedGet(`/beeping_alarms/${alarmId}/`);
-        setAlarm(response);
-      } catch (err) {
-        console.error('Error fetching alarm details:', err);
-        setError('Failed to load alarm details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAlarmDetails();
+    fetchInitialData();
   }, [alarmId]);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const [alarmResponse, updatesResponse] = await Promise.all([
+        api.authenticatedGet(`/beeping_alarms/${alarmId}/`),
+        api.authenticatedGet(`/beeping_alarms/${alarmId}/updates/`)
+      ]);
+      setAlarm(alarmResponse);
+      setUpdates(updatesResponse);
+    } catch (err) {
+      console.error('Error fetching initial data:', err);
+      setError('Failed to load alarm details');
+    } finally {
+      setLoading(false);
+      setUpdatesLoading(false);
+    }
+  };
+
+  const fetchAlarmDetailsOnly = async () => {
+    try {
+      setAlarmDetailsLoading(true);
+      const response = await api.authenticatedGet(`/beeping_alarms/${alarmId}/`);
+      setAlarm(response);
+    } catch (err) {
+      console.error('Error fetching alarm details:', err);
+    } finally {
+      setAlarmDetailsLoading(false);
+    }
+  };
+
+  const fetchUpdatesOnly = async () => {
+    try {
+      setUpdatesLoading(true);
+      const response = await api.authenticatedGet(`/beeping_alarms/${alarmId}/updates/`);
+      setUpdates(response);
+    } catch (err) {
+      console.error('Error fetching updates:', err);
+    } finally {
+      setUpdatesLoading(false);
+    }
+  };
+
+  const handleUpdateSubmitted = async () => {
+    // Fetch both updates and alarm details, but only show loading on the specific cards
+    await Promise.all([
+      fetchUpdatesOnly(),
+      fetchAlarmDetailsOnly()
+    ]);
+  };
 
   const handleTenantsChange = (updatedTenants: Tenant[]) => {
     console.log('Tenants changed:', updatedTenants);
@@ -70,7 +112,15 @@ export default function BeepingAlarmDetails() {
         <div className="space-y-6">
           <PropertyInformationCard property={{} as any} loading={true} />
           
-          <BeepingAlarmDetailsCard alarm={{} as any} loading={true} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <BeepingAlarmDetailsCard alarm={{} as any} loading={true} />
+            <BeepingAlarmUpdatesCard
+              alarmId={0}
+              updates={[]}
+              onUpdateSubmitted={() => {}}
+              loading={true}
+            />
+          </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AgencyDisplayCard agency={null} loading={true} />
@@ -126,22 +176,33 @@ export default function BeepingAlarmDetails() {
       <div className="space-y-6">
         <PropertyInformationCard
           property={alarm.property}
-          loading={loading}
+          loading={false}
         />
         
-        <BeepingAlarmDetailsCard alarm={alarm} loading={loading} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <BeepingAlarmDetailsCard 
+            alarm={alarm} 
+            loading={alarmDetailsLoading}
+          />
+          <BeepingAlarmUpdatesCard
+            alarmId={alarm.id}
+            updates={updates}
+            onUpdateSubmitted={handleUpdateSubmitted}
+            loading={updatesLoading}
+          />
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             {alarm.property.agency ? (
               <AgencyDisplayCard
                 agency={alarm.property.agency}
-                loading={loading}
+                loading={false}
               />
             ) : (
               <PrivateOwnerDisplayCard
                 privateOwners={alarm.property.private_owners || []}
-                loading={loading}
+                loading={false}
               />
             )}
           </div>
@@ -153,7 +214,7 @@ export default function BeepingAlarmDetails() {
               allowAdd={false}
               allowRemove={false}
               disabled={false}
-              loading={loading}
+              loading={false}
             />
           </div>
         </div>
