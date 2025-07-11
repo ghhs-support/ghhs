@@ -1,5 +1,4 @@
-import React from 'react';
-import { ExclamationTriangleIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon} from '@heroicons/react/24/outline';
 import { format, parseISO } from 'date-fns';
 import Label from '../form/Label';
 import Badge from '../ui/badge/Badge';
