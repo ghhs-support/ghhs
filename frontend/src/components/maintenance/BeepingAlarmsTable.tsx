@@ -147,6 +147,12 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   // Define table columns
   const sortFields: SortField[] = [
     {
+      key: 'id',
+      label: 'ID',
+      width: 'w-20',
+      align: 'center'
+    },
+    {
       key: 'allocation',
       label: 'Allocation',
       width: 'w-40',
@@ -220,6 +226,11 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       let bValue: any;
 
       switch (localSortField) {
+        case 'id':
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        
         case 'allocation':
           aValue = a.allocation?.[0]?.first_name || '';
           bValue = b.allocation?.[0]?.first_name || '';
@@ -412,6 +423,11 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
       className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
       onClick={() => navigate(`/maintenance/beeping-alarms/${alarm.id}`)}
     >
+      <TableCell className="w-20 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
+        <div className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
+          #{alarm.id}
+        </div>
+      </TableCell>
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
           {formatAllocation(alarm.allocation)}
