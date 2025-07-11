@@ -12,7 +12,8 @@ class IssueType(models.Model):
 
     def __str__(self):
         return self.name
-    
+
+  
 class BeepingAlarm(models.Model):
     STATUS_CHOICES = [
         ('new', 'New'),
@@ -38,10 +39,6 @@ class BeepingAlarm(models.Model):
     is_cancelled = models.BooleanField(default=False)
 
     def clean(self):
-        """
-        Validate that is_completed and is_cancelled are mutually exclusive.
-        Both can be False, but not both True.
-        """
         super().clean()
         if self.is_completed and self.is_cancelled:
             raise ValidationError({
@@ -50,9 +47,6 @@ class BeepingAlarm(models.Model):
             })
 
     def save(self, *args, **kwargs):
-        """
-        Override save to call clean() validation.
-        """
         self.clean()
         super().save(*args, **kwargs)
 
@@ -60,6 +54,6 @@ class BeepingAlarmUpdate(models.Model):
     uid = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
     beeping_alarm = models.ForeignKey(BeepingAlarm, on_delete=models.CASCADE)
     status = models.CharField(max_length=100, choices=BeepingAlarm.STATUS_CHOICES)
-    date = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(max_length=1000)
     update_by = models.ForeignKey(User, on_delete=models.CASCADE)
