@@ -2,6 +2,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPinIcon } from '@heroicons/react/24/outline';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { Modal } from '../ui/modal';
+import { useModal } from '../../hooks/useModal';
 
 // Fix for default markers in Leaflet with React
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -26,6 +28,7 @@ export default function PropertyMap({
   height = "h-full",
   className = "" 
 }: PropertyMapProps) {
+  const { isOpen, openModal, closeModal } = useModal();
   const lat = parseFloat(latitude);
   const lng = parseFloat(longitude);
   
@@ -41,23 +44,54 @@ export default function PropertyMap({
   }
 
   return (
-    <div className={`${height} rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 ${className}`}>
-      <MapContainer
-        center={[lat, lng]}
-        zoom={15}
-        style={{ height: '100%', width: '100%' }}
-        className="rounded-lg"
-        attributionControl={false}
+    <>
+      <div 
+        className={`${height} rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 cursor-pointer hover:shadow-lg transition-shadow ${className}`}
+        onClick={openModal}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[lat, lng]}>
-          <Popup>
-            {address || 'Property Location'}
-          </Popup>
-        </Marker>
-      </MapContainer>
-    </div>
+        <MapContainer
+          center={[lat, lng]}
+          zoom={15}
+          style={{ height: '100%', width: '100%' }}
+          className="rounded-lg"
+          attributionControl={false}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={[lat, lng]}>
+            <Popup>
+              {address || 'Property Location'}
+            </Popup>
+          </Marker>
+        </MapContainer>
+      </div>
+
+      <Modal isOpen={isOpen} onClose={closeModal} size="xl">
+        <Modal.Header onClose={closeModal}>
+          Property Location
+        </Modal.Header>
+        <Modal.Body className="p-0 h-full">
+          <div className="h-full w-full">
+            <MapContainer
+              center={[lat, lng]}
+              zoom={16}
+              style={{ height: '100%', width: '100%' }}
+              className="rounded-lg"
+              attributionControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Marker position={[lat, lng]}>
+                <Popup>
+                  {address || 'Property Location'}
+                </Popup>
+              </Marker>
+            </MapContainer>
+          </div>
+        </Modal.Body>
+      </Modal>
+    </>
   );
 } 
