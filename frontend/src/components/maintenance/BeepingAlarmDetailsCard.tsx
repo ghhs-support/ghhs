@@ -2,12 +2,7 @@ import { ExclamationTriangleIcon} from '@heroicons/react/24/outline';
 import { format, parseISO } from 'date-fns';
 import Label from '../form/Label';
 import Badge from '../ui/badge/Badge';
-import { BeepingAlarm } from '../../types/maintenance';
-
-interface BeepingAlarmDetailsCardProps {
-  alarm: BeepingAlarm;
-  loading?: boolean;
-}
+import { BeepingAlarmDetailsCardProps } from '../../types/maintenance';
 
 export default function BeepingAlarmDetailsCard({
   alarm,

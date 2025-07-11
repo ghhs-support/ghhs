@@ -104,3 +104,8 @@ export interface CreateBeepingAlarmProps {
   onSuccess: () => void;
 }
 
+export interface BeepingAlarmDetailsCardProps {
+  alarm: BeepingAlarm;
+  loading?: boolean;
+}
+
