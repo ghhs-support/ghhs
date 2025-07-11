@@ -16,6 +16,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AdminAccess from "./pages/AdminAccess";
 import BeepingAlarms from "./pages/Maintenance/BeepingAlarms";
+import BeepingAlarmDetails from "./pages/Maintenance/BeepingAlarmDetails";
 import Properties from "./pages/Properties/Properties";
 import PropertyDetails from "./pages/Properties/PropertyDetails";
 import { KindeProvider } from "@kinde-oss/kinde-auth-react";
@@ -73,6 +74,7 @@ export default function App() {
 
               {/* Maintenance */}
               <Route path="/maintenance/beeping-alarms" element={<BeepingAlarms />} />
+              <Route path="/maintenance/beeping-alarms/:alarmId" element={<BeepingAlarmDetails />} />
 
               {/* Properties */}
               <Route path="/properties" element={<Properties />} />

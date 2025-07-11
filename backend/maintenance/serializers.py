@@ -23,7 +23,7 @@ class BeepingAlarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = BeepingAlarm
         fields = [
-            'id', 'allocation', 'property', 'issue_type', 'status', 'notes',
+            'id', 'uid', 'allocation', 'property', 'issue_type', 'status', 'notes',
             'is_customer_contacted', 'created_at', 'updated_at'
         ]
 

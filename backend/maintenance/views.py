@@ -10,6 +10,7 @@ from common.pagination import CustomPageNumberPagination
 from django.db.models import Q
 from properties.models import Tenant as PropertyTenant, Property
 from django.utils.dateparse import parse_datetime
+from django.shortcuts import get_object_or_404
 import logging
 
 def normalize_phone_number(phone):
@@ -27,6 +28,14 @@ def issue_types(request):
     """Get all issue types for creating beeping alarms"""
     issue_types = IssueType.objects.filter(is_active=True).order_by('name')
     serializer = IssueTypeSerializer(issue_types, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@validate_kinde_token
+def beeping_alarm_detail(request, alarm_id):
+    """Get a single beeping alarm by ID"""
+    alarm = get_object_or_404(BeepingAlarm, id=alarm_id)
+    serializer = BeepingAlarmSerializer(alarm)
     return Response(serializer.data)
 
 @api_view(['GET', 'POST'])

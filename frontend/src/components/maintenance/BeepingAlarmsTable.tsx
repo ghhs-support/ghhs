@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TableCell, TableRow } from "../ui/table";
 import Badge from "../ui/badge/Badge";
 import { BeepingAlarm } from "../../types/maintenance";
@@ -31,6 +32,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
   createdAtToFilter,
   createdAtMode
 }) => {
+  const navigate = useNavigate();
   // Local state for client-side sorting
   const [localSortField, setLocalSortField] = useState<string | null>('created_at');
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -408,6 +410,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
     <TableRow 
       key={alarm.id}
       className="hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer transition-colors border-b border-gray-200 dark:border-gray-700"
+      onClick={() => navigate(`/maintenance/beeping-alarms/${alarm.id}`)}
     >
       <TableCell className="w-40 px-5 py-4 text-center border-r border-gray-200 dark:border-gray-700">
         <div className="text-theme-xs text-gray-800 dark:text-white/90 whitespace-nowrap font-medium">
@@ -453,7 +456,7 @@ const BeepingAlarmsTable: React.FC<BeepingAlarmsTableProps> = ({
         </div>
       </TableCell>
     </TableRow>
-  ), [formatAllocation, getStatusBadge, getCustomerContactedBadge, getAgencyPrivateBadge, formatPropertyAddress, formatTenant]);
+  ), [formatAllocation, getStatusBadge, getCustomerContactedBadge, getAgencyPrivateBadge, formatPropertyAddress, formatTenant, navigate]);
 
   return (
     <DataTable
