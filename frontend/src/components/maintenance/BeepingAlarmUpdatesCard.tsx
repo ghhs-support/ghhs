@@ -229,7 +229,7 @@ export default function BeepingAlarmUpdatesCard({
           </div>
         ) : (
           <>
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0">
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2 min-h-0">
               {updates.map((update) => (
                 <div
                   key={update.id}
